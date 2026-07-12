@@ -11,6 +11,7 @@ import {
 import { Device } from '../../entities/device.entity';
 import { AuditService } from '../audit/audit.service';
 import { EmployeeService } from '../employees/employee.service';
+import { NotificationService } from '../notifications/notification.service';
 import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 
 export interface DeviceSignals {
@@ -35,6 +36,12 @@ export interface RebindRequestInput {
 // Re-bind approvals default to HR; a tenant may route them to managers later.
 const REBIND_APPROVER_ROLES = ['hr_admin'];
 
+// Re-bind abuse detection defaults (FR-DB-07, FR-DB-08). Tenant-configurable
+// later (T-1C.12); for now these are the SRS defaults.
+const REBIND_COOLOFF_HOURS = 72;
+const REBIND_ABUSE_WINDOW_DAYS = 30;
+const REBIND_ABUSE_MAX = 2; // escalate when re-binds in the window exceed this
+
 @Injectable()
 export class DeviceService {
   constructor(
@@ -42,6 +49,7 @@ export class DeviceService {
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
     private readonly workflow: WorkflowService,
+    private readonly notifications: NotificationService,
     private readonly ctx: TenantContextService,
   ) {}
 
@@ -188,6 +196,22 @@ export class DeviceService {
     );
   }
 
+  // True when the employee was re-bound within the cool-off window, so the
+  // attendance mark carries the newly-re-bound soft flag (FR-DB-07).
+  async wasReboundWithin(
+    m: EntityManager,
+    employeeId: string,
+    hours = REBIND_COOLOFF_HOURS,
+  ): Promise<boolean> {
+    const count = await this.countRebindsSince(
+      m,
+      employeeId,
+      'make_interval(hours => :window)',
+      hours,
+    );
+    return count > 0;
+  }
+
   private async enroll(
     m: EntityManager,
     employeeId: string,
@@ -273,7 +297,62 @@ export class DeviceService {
       },
       m,
     );
+
+    await this.escalateIfAbusive(m, employeeId, request.id);
     return device;
+  }
+
+  // Flags an employee who re-binds too often (FR-DB-08). No case queue exists
+  // yet (T-1C.8), so escalation notifies HR and audits; the review case will
+  // attach to this signal when the queue lands.
+  private async escalateIfAbusive(
+    m: EntityManager,
+    employeeId: string,
+    requestId: string,
+  ): Promise<void> {
+    const count = await this.countRebindsSince(
+      m,
+      employeeId,
+      'make_interval(days => :window)',
+      REBIND_ABUSE_WINDOW_DAYS,
+    );
+    if (count <= REBIND_ABUSE_MAX) {
+      return;
+    }
+    await this.audit.record(
+      {
+        action: 'device.rebind_abuse',
+        resourceType: 'employee',
+        resourceId: employeeId,
+        after: { count, windowDays: REBIND_ABUSE_WINDOW_DAYS, requestId },
+      },
+      m,
+    );
+    await this.notifications.notify(
+      {
+        recipientRole: 'hr_admin',
+        type: 'device.rebind_abuse',
+        title: 'Frequent device changes',
+        body: `An employee has changed devices ${count} times in the last ${REBIND_ABUSE_WINDOW_DAYS} days and needs review.`,
+        data: { employeeId, count, windowDays: REBIND_ABUSE_WINDOW_DAYS },
+      },
+      m,
+    );
+  }
+
+  // Counts rebind history rows since now() minus the given interval expression.
+  private countRebindsSince(
+    m: EntityManager,
+    employeeId: string,
+    intervalExpr: string,
+    window: number,
+  ): Promise<number> {
+    return m
+      .createQueryBuilder(DeviceBindingHistory, 'h')
+      .where('h.employeeId = :employeeId', { employeeId })
+      .andWhere('h.action = :action', { action: 'rebind' })
+      .andWhere(`h.createdAt >= now() - ${intervalExpr}`, { window })
+      .getCount();
   }
 
   private recordHistory(

@@ -109,8 +109,10 @@ export class AttendanceService {
         );
       }
 
-      // 4. Soft-flag scoring (SRS 5.2.2/5.2.4).
-      const riskScore = scoreSoftFlags(input);
+      // 4. Soft-flag scoring (SRS 5.2.2/5.2.4). A device re-bound within the
+      // cool-off window adds the newly-re-bound signal (FR-DB-07).
+      const recentlyRebound = await this.devices.wasReboundWithin(m, employee.id);
+      const riskScore = scoreSoftFlags(input, recentlyRebound);
       const band = bandFor(riskScore);
 
       const event = await m.save(

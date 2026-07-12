@@ -10,6 +10,7 @@ const WEIGHTS = {
   devOptionsEnabled: 10,
   vpnActive: 10,
   lowAccuracy: 15,
+  reboundCoolOff: 20,
 };
 const SCORE_CEILING = 100;
 
@@ -25,7 +26,12 @@ export interface SignalPayload {
   vpnActive?: boolean;
 }
 
-export function scoreSoftFlags(p: SignalPayload): number {
+// recentlyRebound is derived server-side (marked from a device re-bound within
+// the cool-off window, FR-DB-07); it is not a client-supplied payload signal.
+export function scoreSoftFlags(
+  p: SignalPayload,
+  recentlyRebound = false,
+): number {
   let score = 0;
   if (p.rooted) score += WEIGHTS.rooted;
   if (p.emulator) score += WEIGHTS.emulator;
@@ -37,6 +43,7 @@ export function scoreSoftFlags(p: SignalPayload): number {
   if (typeof p.accuracyM === 'number' && p.accuracyM > 100) {
     score += WEIGHTS.lowAccuracy;
   }
+  if (recentlyRebound) score += WEIGHTS.reboundCoolOff;
   return Math.min(score, SCORE_CEILING);
 }
 
