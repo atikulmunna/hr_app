@@ -37,8 +37,43 @@ async function seed(): Promise<void> {
       );
     }
 
+    // Department and demo employees (linked to Keycloak users by email).
+    const empCount = await m.query(`SELECT count(*)::int AS n FROM employees`);
+    if (empCount[0].n === 0) {
+      const sg = await m.query(
+        `SELECT id FROM legal_entities WHERE country_code = 'SG' LIMIT 1`,
+      );
+      const sgId = sg[0].id;
+      const dept = await m.query(
+        `INSERT INTO departments (tenant_id, legal_entity_id, name, cost_center)
+         VALUES ($1, $2, 'Engineering', 'CC-ENG') RETURNING id`,
+        [tenantId, sgId],
+      );
+      const deptId = dept[0].id;
+
+      const mgr = await m.query(
+        `INSERT INTO employees
+           (tenant_id, legal_entity_id, department_id, employee_code, first_name, last_name, email, job_title, employment_type)
+         VALUES ($1, $2, $3, 'EMP-002', 'Demo', 'Manager', 'demo.manager@example.com', 'Engineering Manager', 'permanent')
+         RETURNING id`,
+        [tenantId, sgId, deptId],
+      );
+      const managerId = mgr[0].id;
+
+      await m.query(
+        `INSERT INTO employees
+           (tenant_id, legal_entity_id, department_id, manager_id, employee_code, first_name, last_name, email, phone, job_title, employment_type, hire_date)
+         VALUES
+           ($1, $2, $3, $4, 'EMP-001', 'Ayesha', 'Rahman', 'demo.employee@example.com', '+8801700000000', 'Software Engineer', 'permanent', '2024-02-01'),
+           ($1, $2, $3, NULL, 'EMP-003', 'Demo', 'Admin', 'demo.admin@example.com', NULL, 'HR Administrator', 'permanent', '2023-06-15')`,
+        [tenantId, sgId, deptId, managerId],
+      );
+    }
+
     // eslint-disable-next-line no-console
-    console.log(`Seeded tenant "example" (${tenantId}) with SG and BD entities.`);
+    console.log(
+      `Seeded tenant "example" (${tenantId}) with entities, a department, and demo employees.`,
+    );
   });
   await AppDataSource.destroy();
 }

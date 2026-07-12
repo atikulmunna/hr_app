@@ -4,10 +4,18 @@ export type Permission = string;
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   tenant_admin: ['*'],
-  hr_admin: ['entity:read', 'entity:manage', 'audit:read'],
-  manager: ['entity:read'],
-  recruiter: ['entity:read'],
-  auditor: ['entity:read', 'audit:read'],
+  hr_admin: [
+    'entity:read',
+    'entity:manage',
+    'audit:read',
+    'org:read',
+    'org:manage',
+    'employee:read',
+    'employee:manage',
+  ],
+  manager: ['entity:read', 'org:read', 'employee:read'],
+  recruiter: ['entity:read', 'employee:read'],
+  auditor: ['entity:read', 'audit:read', 'employee:read'],
   employee: ['self:read'],
 };
 
