@@ -8,6 +8,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EntitiesModule } from './modules/entities/entities.module';
 import { HealthModule } from './modules/health/health.module';
+import { NotificationModule } from './modules/notifications/notification.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     TenantModule,
     AuthModule,
     AuditModule,
+    NotificationModule,
     WorkflowModule,
     HealthModule,
     EntitiesModule,

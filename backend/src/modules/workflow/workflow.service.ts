@@ -10,6 +10,7 @@ import { TenantDbService } from '../../database/tenant-db.service';
 import { ApprovalRequest } from '../../entities/approval-request.entity';
 import { ApprovalStep } from '../../entities/approval-step.entity';
 import { AuditService } from '../audit/audit.service';
+import { NotificationService } from '../notifications/notification.service';
 
 export interface CreateApprovalInput {
   requestType: string;
@@ -34,6 +35,7 @@ export class WorkflowService {
     private readonly db: TenantDbService,
     private readonly ctx: TenantContextService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async createRequest(input: CreateApprovalInput): Promise<ApprovalView> {
@@ -75,6 +77,17 @@ export class WorkflowService {
           resourceType: 'approval_request',
           resourceId: request.id,
           after: { requestType: input.requestType, approverRoles: input.approverRoles },
+        },
+        m,
+      );
+      // Notify the first-level approvers that a request awaits them.
+      await this.notifications.notify(
+        {
+          recipientRole: input.approverRoles[0],
+          type: 'approval.pending',
+          title: 'Approval needed',
+          body: `A ${input.requestType} request is awaiting your approval.`,
+          data: { requestId: request.id, requestType: input.requestType },
         },
         m,
       );
@@ -163,6 +176,37 @@ export class WorkflowService {
         },
         m,
       );
+
+      if (request.status === 'pending') {
+        // Advanced a level: notify the next approvers.
+        const nextStep = await m.findOne(ApprovalStep, {
+          where: { requestId: id, stepOrder: request.currentStep },
+        });
+        if (nextStep) {
+          await this.notifications.notify(
+            {
+              recipientRole: nextStep.approverRole,
+              type: 'approval.pending',
+              title: 'Approval needed',
+              body: `A ${request.requestType} request is awaiting your approval.`,
+              data: { requestId: id, requestType: request.requestType },
+            },
+            m,
+          );
+        }
+      } else if (request.requesterSub) {
+        // Finalized: notify the requester of the outcome.
+        await this.notifications.notify(
+          {
+            recipientSub: request.requesterSub,
+            type: `approval.${request.status}`,
+            title: `Request ${request.status}`,
+            body: `Your ${request.requestType} request was ${request.status}.`,
+            data: { requestId: id, requestType: request.requestType },
+          },
+          m,
+        );
+      }
       return this.load(m, id);
     });
   }

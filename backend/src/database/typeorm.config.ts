@@ -3,6 +3,7 @@ import { ApprovalRequest } from '../entities/approval-request.entity';
 import { ApprovalStep } from '../entities/approval-step.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
+import { Notification } from '../entities/notification.entity';
 import { Tenant } from '../entities/tenant.entity';
 
 // Single source of TypeORM options.
@@ -23,7 +24,14 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
     username,
     password,
     database: process.env.DB_NAME ?? 'hris',
-    entities: [Tenant, LegalEntity, AuditLog, ApprovalRequest, ApprovalStep],
+    entities: [
+      Tenant,
+      LegalEntity,
+      AuditLog,
+      ApprovalRequest,
+      ApprovalStep,
+      Notification,
+    ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
     logging: ['error', 'warn'],
