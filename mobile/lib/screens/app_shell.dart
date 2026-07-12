@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/floating_nav_bar.dart';
+import 'attendance_screen.dart';
 import 'home_screen.dart';
-import 'placeholder_screen.dart';
+import 'leave_screen.dart';
+import 'pay_screen.dart';
+import 'team_screen.dart';
 
 /// Top-level navigation shell: a screen body with the floating pill nav.
 class AppShell extends StatefulWidget {
@@ -17,10 +20,10 @@ class _AppShellState extends State<AppShell> {
 
   static const _screens = <Widget>[
     HomeScreen(),
-    PlaceholderScreen(title: 'Leave', icon: Icons.beach_access_rounded),
-    PlaceholderScreen(title: 'Attendance', icon: Icons.fingerprint_rounded),
-    PlaceholderScreen(title: 'Team', icon: Icons.groups_rounded),
-    PlaceholderScreen(title: 'Pay', icon: Icons.payments_rounded),
+    LeaveScreen(),
+    AttendanceScreen(),
+    TeamScreen(),
+    PayScreen(),
   ];
 
   @override
