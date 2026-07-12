@@ -3,6 +3,7 @@ import { ApprovalRequest } from '../entities/approval-request.entity';
 import { ApprovalStep } from '../entities/approval-step.entity';
 import { AttendanceEvent } from '../entities/attendance-event.entity';
 import { AuditLog } from '../entities/audit-log.entity';
+import { CustomFieldDefinition } from '../entities/custom-field-definition.entity';
 import { Department } from '../entities/department.entity';
 import { Employee } from '../entities/employee.entity';
 import { Geofence } from '../entities/geofence.entity';
@@ -39,6 +40,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Employee,
       Geofence,
       AttendanceEvent,
+      CustomFieldDefinition,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,

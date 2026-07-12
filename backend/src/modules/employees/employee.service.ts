@@ -10,6 +10,7 @@ import {
   EmploymentType,
 } from '../../entities/employee.entity';
 import { AuditService } from '../audit/audit.service';
+import { CustomFieldService } from '../custom-fields/custom-field.service';
 
 export interface CreateEmployeeInput {
   legalEntityId: string;
@@ -25,6 +26,7 @@ export interface CreateEmployeeInput {
   hireDate?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  customFields?: Record<string, unknown>;
 }
 
 export type UpdateEmployeeInput = Partial<
@@ -53,6 +55,7 @@ export class EmployeeService {
   constructor(
     private readonly db: TenantDbService,
     private readonly audit: AuditService,
+    private readonly customFields: CustomFieldService,
   ) {}
 
   list(): Promise<Employee[]> {
@@ -77,6 +80,10 @@ export class EmployeeService {
       );
     }
     return this.db.withTenant(async (m) => {
+      const customFields = await this.customFields.resolveForEmployee(
+        m,
+        input.customFields,
+      );
       const employee = await m.save(
         m.create(Employee, {
           tenantId: this.db.tenantId,
@@ -93,6 +100,7 @@ export class EmployeeService {
           hireDate: input.hireDate,
           emergencyContactName: input.emergencyContactName,
           emergencyContactPhone: input.emergencyContactPhone,
+          customFields,
         }),
       );
       await this.audit.record(
@@ -110,15 +118,22 @@ export class EmployeeService {
 
   update(id: string, patch: UpdateEmployeeInput): Promise<Employee> {
     return this.db.withTenant(async (m) => {
-      const before = await this.findOrThrow(m, id);
-      const changes: Partial<Employee> = {};
+      const current = await this.findOrThrow(m, id);
+      const before = { ...current };
       for (const field of UPDATABLE_FIELDS) {
         if (patch[field] !== undefined) {
-          (changes as Record<string, unknown>)[field] = patch[field];
+          (current as unknown as Record<string, unknown>)[field] =
+            patch[field];
         }
       }
-      await m.update(Employee, { id }, changes);
-      const after = await this.findOrThrow(m, id);
+      if (patch.customFields !== undefined) {
+        current.customFields = await this.customFields.resolveForEmployee(
+          m,
+          patch.customFields,
+          before.customFields ?? {},
+        );
+      }
+      const after = await m.save(current);
       await this.audit.record(
         {
           action: 'employee.update',

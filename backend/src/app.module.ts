@@ -7,6 +7,7 @@ import { buildDataSourceOptions } from './database/typeorm.config';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CustomFieldModule } from './modules/custom-fields/custom-field.module';
 import { DepartmentModule } from './modules/departments/department.module';
 import { EmployeeModule } from './modules/employees/employee.module';
 import { EntitiesModule } from './modules/entities/entities.module';
@@ -26,6 +27,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     HealthModule,
     EntitiesModule,
     DepartmentModule,
+    CustomFieldModule,
     EmployeeModule,
     AttendanceModule,
   ],

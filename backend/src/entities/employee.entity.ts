@@ -65,6 +65,11 @@ export class Employee {
   @Column({ name: 'remote_allowed', default: false })
   remoteAllowed: boolean;
 
+  // Tenant-defined custom fields (key to value), validated on write against
+  // custom_field_definitions.
+  @Column({ name: 'custom_fields', type: 'jsonb', default: {} })
+  customFields: Record<string, unknown>;
+
   @Column({ name: 'hire_date', type: 'date', nullable: true })
   hireDate?: string;
 
