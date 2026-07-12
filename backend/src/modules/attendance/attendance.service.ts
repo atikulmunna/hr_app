@@ -9,11 +9,15 @@ import { Geofence } from '../../entities/geofence.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { DeviceService } from '../devices/device.service';
+import { NotificationService } from '../notifications/notification.service';
 import { EmployeeService } from '../employees/employee.service';
 import {
   AttendanceState,
   bandFor,
   computeState,
+  hasCoOccurrence,
+  hasCriticalSignal,
+  highConfidenceSignals,
   isAllowed,
   matchGeofence,
   scoreSoftFlags,
@@ -53,6 +57,7 @@ export class AttendanceService {
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
     private readonly devices: DeviceService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async today(user: AuthUser): Promise<AttendanceToday> {
@@ -110,10 +115,11 @@ export class AttendanceService {
       }
 
       // 4. Soft-flag scoring (SRS 5.2.2/5.2.4). A device re-bound within the
-      // cool-off window adds the newly-re-bound signal (FR-DB-07).
+      // cool-off window adds the newly-re-bound signal (FR-DB-07). A critical
+      // signal forces the Red band regardless of the sum (FR-AT-26).
       const recentlyRebound = await this.devices.wasReboundWithin(m, employee.id);
       const riskScore = scoreSoftFlags(input, recentlyRebound);
-      const band = bandFor(riskScore);
+      const band = bandFor(riskScore, hasCriticalSignal(input));
 
       const event = await m.save(
         m.create(AttendanceEvent, {
@@ -153,8 +159,44 @@ export class AttendanceService {
         },
         m,
       );
+
+      // Co-occurring high-confidence signals open a review case (FR-AT-27).
+      const coOccurring = highConfidenceSignals(input, recentlyRebound);
+      if (hasCoOccurrence(input, recentlyRebound)) {
+        await this.openReviewCase(m, employee.id, event.id, coOccurring);
+      }
       return event;
     });
+  }
+
+  // Flags a mark whose high-confidence signals co-occur for review (FR-AT-27).
+  // No review-case queue exists yet (T-1C.8); for now this audits and notifies
+  // HR, and the queue will attach to this signal when it lands.
+  private async openReviewCase(
+    m: EntityManager,
+    employeeId: string,
+    eventId: string,
+    signals: string[],
+  ): Promise<void> {
+    await this.audit.record(
+      {
+        action: 'attendance.review_case',
+        resourceType: 'attendance_event',
+        resourceId: eventId,
+        after: { employeeId, signals },
+      },
+      m,
+    );
+    await this.notifications.notify(
+      {
+        recipientRole: 'hr_admin',
+        type: 'attendance.review_case',
+        title: 'Attendance mark needs review',
+        body: `A mark raised multiple high-confidence signals: ${signals.join(', ')}.`,
+        data: { employeeId, eventId, signals },
+      },
+      m,
+    );
   }
 
   private todaysEvents(

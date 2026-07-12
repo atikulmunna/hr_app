@@ -47,10 +47,42 @@ export function scoreSoftFlags(
   return Math.min(score, SCORE_CEILING);
 }
 
-export function bandFor(score: number): RiskBand {
+// A critical signal forces the Red band regardless of the numeric sum
+// (FR-AT-26). Defaults per SRS 5.2.3: app-signature mismatch and a hooking
+// framework. Tenant-configurable later (T-1C.12).
+export function hasCriticalSignal(p: SignalPayload): boolean {
+  return p.hookingFramework === true || p.appSignatureValid === false;
+}
+
+export function bandFor(score: number, critical = false): RiskBand {
+  if (critical) return 'red';
   if (score >= 60) return 'red';
   if (score >= 30) return 'yellow';
   return 'clean';
+}
+
+// Independent high-confidence signals whose co-occurrence opens a review case
+// (FR-AT-27). Default set per SRS 5.2.3: any two of emulator, hooking framework,
+// signature mismatch, and a newly re-bound device.
+const COOCCURRENCE_THRESHOLD = 2;
+
+export function highConfidenceSignals(
+  p: SignalPayload,
+  recentlyRebound = false,
+): string[] {
+  const present: string[] = [];
+  if (p.emulator) present.push('emulator');
+  if (p.hookingFramework) present.push('hooking_framework');
+  if (p.appSignatureValid === false) present.push('signature_mismatch');
+  if (recentlyRebound) present.push('recently_rebound');
+  return present;
+}
+
+export function hasCoOccurrence(
+  p: SignalPayload,
+  recentlyRebound = false,
+): boolean {
+  return highConfidenceSignals(p, recentlyRebound).length >= COOCCURRENCE_THRESHOLD;
 }
 
 export function haversineMeters(
