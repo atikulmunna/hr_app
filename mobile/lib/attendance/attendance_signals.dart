@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart';
+import 'device_identity.dart';
 
 /// Raised when a location fix cannot be obtained (services off or permission
 /// denied). The message is safe to show to the user.
@@ -42,5 +43,7 @@ Future<Map<String, dynamic>> captureAttendanceSignals() async {
     'accuracyM': position.accuracy,
     'isMock': position.isMocked,
     'provider': 'gps',
+    'deviceFingerprint': await DeviceIdentity.fingerprint(),
+    'platform': DeviceIdentity.platform,
   };
 }

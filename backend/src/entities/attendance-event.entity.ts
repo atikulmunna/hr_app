@@ -76,6 +76,9 @@ export class AttendanceEvent {
   @Column({ name: 'app_signature_valid', nullable: true })
   appSignatureValid?: boolean;
 
+  @Column({ name: 'device_id', nullable: true })
+  deviceId?: string;
+
   @Column({ name: 'matched_geofence_id', nullable: true })
   matchedGeofenceId?: string;
 

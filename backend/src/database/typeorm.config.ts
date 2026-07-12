@@ -5,6 +5,7 @@ import { AttendanceEvent } from '../entities/attendance-event.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { CustomFieldDefinition } from '../entities/custom-field-definition.entity';
 import { Department } from '../entities/department.entity';
+import { Device } from '../entities/device.entity';
 import { Employee } from '../entities/employee.entity';
 import { EmploymentHistory } from '../entities/employment-history.entity';
 import { Geofence } from '../entities/geofence.entity';
@@ -43,6 +44,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Geofence,
       AttendanceEvent,
       CustomFieldDefinition,
+      Device,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,

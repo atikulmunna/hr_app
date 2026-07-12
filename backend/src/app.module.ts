@@ -9,6 +9,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomFieldModule } from './modules/custom-fields/custom-field.module';
 import { DepartmentModule } from './modules/departments/department.module';
+import { DeviceModule } from './modules/devices/device.module';
 import { EmployeeModule } from './modules/employees/employee.module';
 import { EntitiesModule } from './modules/entities/entities.module';
 import { HealthModule } from './modules/health/health.module';
@@ -29,6 +30,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     DepartmentModule,
     CustomFieldModule,
     EmployeeModule,
+    DeviceModule,
     AttendanceModule,
   ],
 })

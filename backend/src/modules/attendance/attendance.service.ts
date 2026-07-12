@@ -8,6 +8,7 @@ import {
 import { Geofence } from '../../entities/geofence.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
+import { DeviceService } from '../devices/device.service';
 import { EmployeeService } from '../employees/employee.service';
 import {
   AttendanceState,
@@ -35,6 +36,9 @@ export interface MarkEventInput {
   devOptionsEnabled?: boolean;
   appSignatureValid?: boolean;
   appVersion?: string;
+  deviceFingerprint?: string;
+  platform?: string;
+  deviceModel?: string;
 }
 
 export interface AttendanceToday {
@@ -48,6 +52,7 @@ export class AttendanceService {
     private readonly db: TenantDbService,
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
+    private readonly devices: DeviceService,
   ) {}
 
   async today(user: AuthUser): Promise<AttendanceToday> {
@@ -74,7 +79,16 @@ export class AttendanceService {
         );
       }
 
-      // 2. Hard-block gates (SRS 5.2.1).
+      // 2. Device binding gate (M-DB). Auto-enrolls the first device; a mark
+      // from any other device is hard-blocked until an approved re-bind. Runs
+      // in this transaction, so enrollment only sticks if the mark succeeds.
+      const binding = await this.devices.enforceBinding(m, employee.id, {
+        deviceFingerprint: input.deviceFingerprint,
+        platform: input.platform,
+        deviceModel: input.deviceModel,
+      });
+
+      // 3. Hard-block gates (SRS 5.2.1).
       if (input.lat == null || input.lng == null) {
         throw new BadRequestException(
           'Location is off or unavailable, so presence cannot be verified.',
@@ -95,7 +109,7 @@ export class AttendanceService {
         );
       }
 
-      // 3. Soft-flag scoring (SRS 5.2.2/5.2.4).
+      // 4. Soft-flag scoring (SRS 5.2.2/5.2.4).
       const riskScore = scoreSoftFlags(input);
       const band = bandFor(riskScore);
 
@@ -105,6 +119,7 @@ export class AttendanceService {
           employeeId: employee.id,
           eventType: input.eventType,
           origin: 'live',
+          deviceId: binding.deviceId,
           lat: input.lat,
           lng: input.lng,
           accuracyM: input.accuracyM,
