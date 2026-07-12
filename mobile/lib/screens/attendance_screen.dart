@@ -1,49 +1,118 @@
 import 'package:flutter/material.dart';
+import '../attendance/attendance_controller.dart';
+import '../attendance/attendance_scope.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_card.dart';
 import '../widgets/section_header.dart';
 
-/// Attendance (ESS): the manual check-in and check-out surface.
-class AttendanceScreen extends StatefulWidget {
+/// Attendance (ESS): the manual check-in and check-out surface, driven by the
+/// server-authoritative state from GET /me/attendance/today.
+class AttendanceScreen extends StatelessWidget {
   const AttendanceScreen({super.key});
 
   @override
-  State<AttendanceScreen> createState() => _AttendanceScreenState();
-}
-
-class _AttendanceScreenState extends State<AttendanceScreen> {
-  bool _checkedIn = true;
-
-  @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenHPad,
-        AppSpacing.screenTopPad,
-        AppSpacing.screenHPad,
-        AppSpacing.screenBottomPad,
-      ),
-      children: [
-        Text('Attendance', style: AppText.screenTitle),
-        const SizedBox(height: 24),
-        Center(child: _dial()),
-        const SizedBox(height: 8),
-        _geofenceCard(),
-        const SectionHeader("Today's timeline"),
-        _timeline(),
-        const SectionHeader('This week'),
-        _weekBars(),
-      ],
+    final controller = AttendanceScope.of(context);
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        return RefreshIndicator(
+          onRefresh: controller.load,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenHPad,
+              AppSpacing.screenTopPad,
+              AppSpacing.screenHPad,
+              AppSpacing.screenBottomPad,
+            ),
+            children: [
+              Text('Attendance', style: AppText.screenTitle),
+              const SizedBox(height: 24),
+              Center(child: _Dial(controller: controller)),
+              const SizedBox(height: 12),
+              if (controller.state == AttendanceState.checkedIn)
+                Center(child: _breakButton(context, controller)),
+              const SizedBox(height: 8),
+              const SectionHeader("Today's timeline"),
+              _timeline(controller),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _dial() {
-    final fill = _checkedIn ? AppColors.accent : AppColors.ink;
-    final onFill = _checkedIn ? AppColors.accentTextOnLime : AppColors.surface;
+  Widget _breakButton(BuildContext context, AttendanceController controller) {
+    return TextButton.icon(
+      onPressed: controller.marking
+          ? null
+          : () => _mark(context, controller, 'break_start'),
+      icon: const Icon(Icons.free_breakfast_outlined, size: 18),
+      label: const Text('Start break'),
+    );
+  }
+
+  Widget _timeline(AttendanceController controller) {
+    if (controller.events.isEmpty) {
+      return AppCard(
+        child: Text(
+          'No activity yet today.',
+          style: AppText.label.copyWith(color: AppColors.mutedLight),
+        ),
+      );
+    }
+    final rows = <Widget>[];
+    for (var i = 0; i < controller.events.length; i++) {
+      if (i > 0) {
+        rows.add(const Divider(height: 20, color: AppColors.hairline));
+      }
+      rows.add(_timelineRow(controller.events[i]));
+    }
+    return AppCard(child: Column(children: rows));
+  }
+
+  Widget _timelineRow(Map<String, dynamic> event) {
+    final type = event['eventType'] as String?;
+    final (color, label) = switch (type) {
+      'check_in' => (AppColors.successText, 'Checked in'),
+      'break_start' => (AppColors.warningText, 'Break started'),
+      'break_end' => (AppColors.warningText, 'Break ended'),
+      'check_out' => (AppColors.mutedLight, 'Checked out'),
+      _ => (AppColors.mutedLight, type ?? 'Event'),
+    };
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Text(label, style: AppText.rowTitle)),
+        Text(_formatTime(event['serverTs'] as String?), style: AppText.label),
+      ],
+    );
+  }
+}
+
+class _Dial extends StatelessWidget {
+  const _Dial({required this.controller});
+
+  final AttendanceController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCheckedIn = controller.isCheckedIn;
+    final closed = controller.state == AttendanceState.checkedOut;
+    final fill = isCheckedIn ? AppColors.accent : AppColors.ink;
+    final onFill = isCheckedIn ? AppColors.accentTextOnLime : AppColors.surface;
+
     return GestureDetector(
-      onTap: () => setState(() => _checkedIn = !_checkedIn),
+      onTap: (closed || controller.marking)
+          ? null
+          : () => _mark(context, controller, controller.primaryEvent!),
       child: Container(
         width: 200,
         height: 200,
@@ -54,21 +123,27 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             color: AppColors.surface.withValues(alpha: 0.6),
             width: 10,
           ),
-          boxShadow: _checkedIn ? AppShadows.limeButton : AppShadows.heroDark,
+          boxShadow: isCheckedIn ? AppShadows.limeButton : AppShadows.heroDark,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_checkedIn)
+            if (controller.marking)
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: CircularProgressIndicator(color: onFill, strokeWidth: 3),
+              )
+            else if (isCheckedIn)
               Text(
-                '7:32',
+                _formatShortTime(controller.checkInAt),
                 style: AppText.hero.copyWith(color: onFill),
               )
             else
               Icon(Icons.power_settings_new_rounded, size: 44, color: onFill),
             const SizedBox(height: 6),
             Text(
-              _checkedIn ? 'Tap to check out' : 'Tap to check in',
+              _dialLabel(controller),
               style: AppText.label.copyWith(color: onFill),
             ),
           ],
@@ -77,103 +152,62 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _geofenceCard() {
-    return AppCard(
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.subtleFill,
-              borderRadius: BorderRadius.circular(AppRadii.iconTile),
-            ),
-            child: const Icon(Icons.location_on_rounded, color: AppColors.ink),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Example Corp - Head office', style: AppText.rowTitle),
-                const SizedBox(height: 2),
-                Text(
-                  'Inside office radius - Wi-Fi verified',
-                  style: AppText.label.copyWith(color: AppColors.successText),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.verified_rounded, color: AppColors.successText),
-        ],
-      ),
-    );
+  String _dialLabel(AttendanceController controller) {
+    switch (controller.state) {
+      case AttendanceState.notCheckedIn:
+        return 'Tap to check in';
+      case AttendanceState.checkedIn:
+        return 'Tap to check out';
+      case AttendanceState.onBreak:
+        return 'Tap to end break';
+      case AttendanceState.checkedOut:
+        return 'Checked out';
+    }
   }
+}
 
-  Widget _timeline() {
-    return AppCard(
-      child: Column(
-        children: [
-          _timelineRow(AppColors.successText, 'Checked in', '09:02 AM'),
-          const Divider(height: 20, color: AppColors.hairline),
-          _timelineRow(AppColors.warningText, 'Break', '1:10 - 1:42 PM'),
-          const Divider(height: 20, color: AppColors.hairline),
-          _timelineRow(AppColors.mutedLight, 'Check out', 'Pending'),
-        ],
-      ),
-    );
-  }
+/// Marks an event and reports the outcome via a snackbar.
+Future<void> _mark(
+  BuildContext context,
+  AttendanceController controller,
+  String eventType,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final error = await controller.mark(eventType);
+  if (!context.mounted) return;
+  messenger.showSnackBar(
+    SnackBar(content: Text(error ?? _successText(eventType))),
+  );
+}
 
-  Widget _timelineRow(Color dot, String label, String value) {
-    return Row(
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Text(label, style: AppText.rowTitle)),
-        Text(value, style: AppText.label),
-      ],
-    );
+String _successText(String eventType) {
+  switch (eventType) {
+    case 'check_in':
+      return 'Checked in.';
+    case 'check_out':
+      return 'Checked out.';
+    case 'break_start':
+      return 'Break started.';
+    case 'break_end':
+      return 'Break ended.';
+    default:
+      return 'Done.';
   }
+}
 
-  Widget _weekBars() {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    const heights = [70.0, 90.0, 60.0, 100.0, 40.0];
-    const todayIndex = 3;
-    return AppCard(
-      child: SizedBox(
-        height: 130,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(days.length, (i) {
-            final isToday = i == todayIndex;
-            final isFuture = i > todayIndex;
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
-                  width: 26,
-                  height: heights[i],
-                  decoration: BoxDecoration(
-                    color: isToday
-                        ? AppColors.accent
-                        : isFuture
-                            ? AppColors.subtleFill
-                            : AppColors.ink,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(days[i], style: AppText.label.copyWith(fontSize: 12)),
-              ],
-            );
-          }),
-        ),
-      ),
-    );
-  }
+String _formatShortTime(DateTime? dt) {
+  if (dt == null) return '--:--';
+  final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+  final m = dt.minute.toString().padLeft(2, '0');
+  return '$h:$m';
+}
+
+String _formatTime(String? iso) {
+  if (iso == null) return '--:--';
+  final dt = DateTime.tryParse(iso)?.toLocal();
+  if (dt == null) return '--:--';
+  final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+  final m = dt.minute.toString().padLeft(2, '0');
+  final period = dt.hour < 12 ? 'AM' : 'PM';
+  return '$h:$m $period';
 }

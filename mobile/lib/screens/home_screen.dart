@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../attendance/attendance_controller.dart';
+import '../attendance/attendance_scope.dart';
 import '../auth/auth_scope.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
@@ -18,10 +20,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _checkedIn = true;
-
   @override
   Widget build(BuildContext context) {
+    final attendance = AttendanceScope.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenHPad,
@@ -33,12 +34,14 @@ class _HomeScreenState extends State<HomeScreen> {
         _greeting(),
         const SizedBox(height: 20),
         CheckInHero(
-          checkedIn: _checkedIn,
-          elapsed: _checkedIn ? '7h 32m' : '0h 00m',
-          subtitle: _checkedIn
-              ? 'Checked in - 09:02 AM - auto-detected'
-              : 'Tap to start your day',
-          onToggle: () => setState(() => _checkedIn = !_checkedIn),
+          checkedIn: attendance.isCheckedIn,
+          elapsed: _elapsed(attendance),
+          subtitle: _subtitle(attendance),
+          actionLabel: _actionLabel(attendance.state),
+          busy: attendance.marking,
+          onToggle: attendance.primaryEvent == null
+              ? null
+              : () => _mark(attendance, attendance.primaryEvent!),
         ),
         const SectionHeader('This month'),
         _statGrid(),
@@ -48,6 +51,63 @@ class _HomeScreenState extends State<HomeScreen> {
         _comingUp(),
       ],
     );
+  }
+
+  String _actionLabel(AttendanceState state) {
+    switch (state) {
+      case AttendanceState.notCheckedIn:
+        return 'Check in';
+      case AttendanceState.checkedIn:
+        return 'Check out';
+      case AttendanceState.onBreak:
+        return 'End break';
+      case AttendanceState.checkedOut:
+        return 'Checked out';
+    }
+  }
+
+  String _subtitle(AttendanceController a) {
+    switch (a.state) {
+      case AttendanceState.notCheckedIn:
+        return 'Tap to start your day';
+      case AttendanceState.checkedIn:
+        final at = a.checkInAt;
+        return at == null ? 'On the clock' : 'Checked in at ${_clock(at)}';
+      case AttendanceState.onBreak:
+        return 'On a break';
+      case AttendanceState.checkedOut:
+        return 'Checked out for today';
+    }
+  }
+
+  String _elapsed(AttendanceController a) {
+    final start = a.checkInAt;
+    if (start == null) return '0h 00m';
+    final end = a.isCheckedIn ? DateTime.now() : _lastEventTime(a) ?? start;
+    final d = end.difference(start);
+    final h = d.inHours;
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    return '${h}h ${m}m';
+  }
+
+  DateTime? _lastEventTime(AttendanceController a) {
+    if (a.events.isEmpty) return null;
+    final ts = a.events.last['serverTs'] as String?;
+    return ts == null ? null : DateTime.tryParse(ts)?.toLocal();
+  }
+
+  String _clock(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour < 12 ? 'AM' : 'PM';
+    return '$h:$m $period';
+  }
+
+  Future<void> _mark(AttendanceController a, String eventType) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final error = await a.mark(eventType);
+    if (!mounted) return;
+    messenger.showSnackBar(SnackBar(content: Text(error ?? 'Done.')));
   }
 
   Widget _greeting() {

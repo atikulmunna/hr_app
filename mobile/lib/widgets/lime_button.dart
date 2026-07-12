@@ -20,32 +20,36 @@ class LimeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onPressed == null;
     return GestureDetector(
       onTap: onPressed,
-      child: Container(
-        width: expand ? double.infinity : null,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.accent,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.limeButton,
-        ),
-        child: Row(
-          mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 18, color: AppColors.accentTextOnLime),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              label,
-              style: AppText.pill.copyWith(
-                color: AppColors.accentTextOnLime,
-                fontSize: 14,
+      child: Opacity(
+        opacity: disabled ? 0.45 : 1,
+        child: Container(
+          width: expand ? double.infinity : null,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.accent,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppShadows.limeButton,
+          ),
+          child: Row(
+            mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: AppColors.accentTextOnLime),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                label,
+                style: AppText.pill.copyWith(
+                  color: AppColors.accentTextOnLime,
+                  fontSize: 14,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

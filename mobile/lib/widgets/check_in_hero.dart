@@ -12,12 +12,16 @@ class CheckInHero extends StatelessWidget {
     required this.checkedIn,
     required this.elapsed,
     required this.subtitle,
+    required this.actionLabel,
+    this.busy = false,
     this.onToggle,
   });
 
   final bool checkedIn;
   final String elapsed;
   final String subtitle;
+  final String actionLabel;
+  final bool busy;
   final VoidCallback? onToggle;
 
   @override
@@ -52,9 +56,9 @@ class CheckInHero extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           LimeButton(
-            label: checkedIn ? 'Check out' : 'Check in',
+            label: busy ? 'Working...' : actionLabel,
             icon: Icons.power_settings_new_rounded,
-            onPressed: onToggle,
+            onPressed: busy ? null : onToggle,
           ),
         ],
       ),
