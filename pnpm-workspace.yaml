@@ -1,4 +1,7 @@
 packages:
   - backend
+  - web
   - packages/*
-  # web (React) and mobile (Flutter) are added in later tasks
+  # mobile (Flutter) is not a pnpm package
+allowBuilds:
+  esbuild: true
