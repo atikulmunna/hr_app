@@ -153,6 +153,83 @@ body {
   font-weight: 600;
   margin-bottom: 2px;
 }
+.notif-title.big {
+  font-size: 1.15rem;
+  margin-bottom: 10px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+.master .list {
+  gap: 8px;
+}
+.employee-row {
+  text-align: left;
+  cursor: pointer;
+  padding: 12px 14px;
+}
+.employee-row.active {
+  border-color: var(--ink);
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.stack h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.line:first-of-type {
+  border-top: none;
+}
+.pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.pill.active {
+  background: color-mix(in srgb, var(--accent) 55%, white);
+  color: var(--accent-ink);
+}
+.pill.retired {
+  background: var(--line);
+  color: var(--muted);
+}
+.small-btn {
+  padding: 5px 12px;
+  font-size: 0.82rem;
+}
+.assign-row {
+  margin-top: 12px;
+}
+.assign-row select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font: inherit;
+}
 .section-head h2 {
   margin: 0;
   font-size: 1.15rem;

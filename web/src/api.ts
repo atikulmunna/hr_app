@@ -23,6 +23,44 @@ export interface ApprovalRequest {
 
 export type Decision = 'approve' | 'reject';
 
+export interface Employee {
+  id: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  jobTitle?: string;
+  employmentType: string;
+  status: string;
+  remoteAllowed: boolean;
+}
+
+export interface Device {
+  id: string;
+  deviceFingerprint: string;
+  platform?: string;
+  model?: string;
+  status: string;
+  boundAt: string;
+  retiredAt?: string | null;
+}
+
+export interface DeviceHistoryEntry {
+  id: string;
+  action: string;
+  reasonCode?: string | null;
+  createdAt: string;
+}
+
+export interface Geofence {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusM: number;
+  active: boolean;
+}
+
 export interface AppNotification {
   id: string;
   type: string;
@@ -70,4 +108,21 @@ export const api = {
     request<AppNotification[]>(token, '/notifications'),
   markNotificationRead: (token: string, id: string) =>
     request<unknown>(token, `/notifications/${id}/read`, { method: 'POST' }),
+  employees: (token: string) => request<Employee[]>(token, '/employees'),
+  employeeDevices: (token: string, id: string) =>
+    request<Device[]>(token, `/employees/${id}/devices`),
+  employeeDeviceHistory: (token: string, id: string) =>
+    request<DeviceHistoryEntry[]>(token, `/employees/${id}/device-history`),
+  employeeGeofences: (token: string, id: string) =>
+    request<Geofence[]>(token, `/employees/${id}/geofences`),
+  geofences: (token: string) => request<Geofence[]>(token, '/geofences'),
+  assignGeofence: (token: string, id: string, geofenceId: string) =>
+    request<unknown>(token, `/employees/${id}/geofences`, {
+      method: 'POST',
+      body: JSON.stringify({ geofenceId }),
+    }),
+  unassignGeofence: (token: string, id: string, geofenceId: string) =>
+    request<unknown>(token, `/employees/${id}/geofences/${geofenceId}`, {
+      method: 'DELETE',
+    }),
 };

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { Approvals } from './pages/Approvals';
+import { Employees } from './pages/Employees';
 import { Inbox } from './pages/Inbox';
 
-type Tab = 'approvals' | 'inbox';
+type Tab = 'approvals' | 'inbox' | 'employees';
 
 export default function App() {
   const auth = useAuth();
@@ -50,6 +51,12 @@ export default function App() {
           >
             Inbox
           </button>
+          <button
+            className={`tab ${tab === 'employees' ? 'active' : ''}`}
+            onClick={() => setTab('employees')}
+          >
+            Employees
+          </button>
         </nav>
         <div className="spacer" />
         <span className="muted">{name}</span>
@@ -58,11 +65,9 @@ export default function App() {
         </button>
       </header>
       <main className="content">
-        {tab === 'approvals' ? (
-          <Approvals token={auth.user!.access_token} />
-        ) : (
-          <Inbox token={auth.user!.access_token} />
-        )}
+        {tab === 'approvals' && <Approvals token={auth.user!.access_token} />}
+        {tab === 'inbox' && <Inbox token={auth.user!.access_token} />}
+        {tab === 'employees' && <Employees token={auth.user!.access_token} />}
       </main>
     </div>
   );
