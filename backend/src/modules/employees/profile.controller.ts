@@ -12,4 +12,9 @@ export class ProfileController {
   profile(@CurrentUser() user: AuthUser) {
     return this.employees.myProfile(user.sub, user.email);
   }
+
+  @Get('history')
+  history(@CurrentUser() user: AuthUser) {
+    return this.employees.myHistory(user.sub, user.email);
+  }
 }

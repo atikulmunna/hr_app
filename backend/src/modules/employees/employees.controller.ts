@@ -29,6 +29,12 @@ export class EmployeesController {
     return this.employees.get(id);
   }
 
+  @RequirePermissions('employee:read')
+  @Get(':id/history')
+  history(@Param('id') id: string) {
+    return this.employees.history(id);
+  }
+
   @RequirePermissions('employee:manage')
   @Post()
   create(@Body() body: CreateEmployeeInput) {

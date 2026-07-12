@@ -6,6 +6,7 @@ import { AuditLog } from '../entities/audit-log.entity';
 import { CustomFieldDefinition } from '../entities/custom-field-definition.entity';
 import { Department } from '../entities/department.entity';
 import { Employee } from '../entities/employee.entity';
+import { EmploymentHistory } from '../entities/employment-history.entity';
 import { Geofence } from '../entities/geofence.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
 import { Notification } from '../entities/notification.entity';
@@ -38,6 +39,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Notification,
       Department,
       Employee,
+      EmploymentHistory,
       Geofence,
       AttendanceEvent,
       CustomFieldDefinition,

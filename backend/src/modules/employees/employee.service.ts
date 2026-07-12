@@ -9,6 +9,10 @@ import {
   Employee,
   EmploymentType,
 } from '../../entities/employee.entity';
+import {
+  EmploymentChangeType,
+  EmploymentHistory,
+} from '../../entities/employment-history.entity';
 import { AuditService } from '../audit/audit.service';
 import { CustomFieldService } from '../custom-fields/custom-field.service';
 
@@ -49,6 +53,31 @@ const UPDATABLE_FIELDS: (keyof UpdateEmployeeInput)[] = [
   'emergencyContactPhone',
   'status',
 ];
+
+// Classifies an employment change for the timeline, or null when only
+// non-employment fields (name, contact) changed. Status takes precedence, then
+// a department or manager move (transfer), then a job or type change.
+function deriveEmploymentChange(
+  before: Employee,
+  after: Employee,
+): EmploymentChangeType | null {
+  if (before.status !== after.status) {
+    return 'status_change';
+  }
+  if (
+    before.departmentId !== after.departmentId ||
+    before.managerId !== after.managerId
+  ) {
+    return 'transfer';
+  }
+  if (
+    before.jobTitle !== after.jobTitle ||
+    before.employmentType !== after.employmentType
+  ) {
+    return 'role_change';
+  }
+  return null;
+}
 
 @Injectable()
 export class EmployeeService {
@@ -103,6 +132,7 @@ export class EmployeeService {
           customFields,
         }),
       );
+      await this.recordHistory(m, employee, 'hired');
       await this.audit.record(
         {
           action: 'employee.create',
@@ -134,6 +164,10 @@ export class EmployeeService {
         );
       }
       const after = await m.save(current);
+      const change = deriveEmploymentChange(before, after);
+      if (change) {
+        await this.recordHistory(m, after, change);
+      }
       await this.audit.record(
         {
           action: 'employee.update',
@@ -146,6 +180,43 @@ export class EmployeeService {
       );
       return after;
     });
+  }
+
+  history(employeeId: string): Promise<EmploymentHistory[]> {
+    return this.db.withTenant((m) =>
+      m.find(EmploymentHistory, {
+        where: { employeeId },
+        order: { effectiveDate: 'DESC', createdAt: 'DESC' },
+      }),
+    );
+  }
+
+  async myHistory(
+    sub: string | undefined,
+    email: string | undefined,
+  ): Promise<EmploymentHistory[]> {
+    const me = await this.myProfile(sub, email);
+    return this.history(me.id);
+  }
+
+  // Appends a timeline entry capturing the employee's state as of this change.
+  private recordHistory(
+    m: EntityManager,
+    employee: Employee,
+    changeType: EmploymentChangeType,
+  ): Promise<EmploymentHistory> {
+    return m.save(
+      m.create(EmploymentHistory, {
+        tenantId: this.db.tenantId,
+        employeeId: employee.id,
+        changeType,
+        departmentId: employee.departmentId,
+        managerId: employee.managerId,
+        jobTitle: employee.jobTitle,
+        employmentType: employee.employmentType,
+        status: employee.status,
+      }),
+    );
   }
 
   // The caller's own profile. Links the Keycloak identity to the employee by
