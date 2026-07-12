@@ -1,4 +1,6 @@
 import { DataSourceOptions } from 'typeorm';
+import { ApprovalRequest } from '../entities/approval-request.entity';
+import { ApprovalStep } from '../entities/approval-step.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
 import { Tenant } from '../entities/tenant.entity';
@@ -21,7 +23,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
     username,
     password,
     database: process.env.DB_NAME ?? 'hris',
-    entities: [Tenant, LegalEntity, AuditLog],
+    entities: [Tenant, LegalEntity, AuditLog, ApprovalRequest, ApprovalStep],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
     logging: ['error', 'warn'],
