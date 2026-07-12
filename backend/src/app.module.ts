@@ -12,6 +12,7 @@ import { DepartmentModule } from './modules/departments/department.module';
 import { DeviceModule } from './modules/devices/device.module';
 import { EmployeeModule } from './modules/employees/employee.module';
 import { EntitiesModule } from './modules/entities/entities.module';
+import { GeofenceModule } from './modules/geofences/geofence.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
@@ -31,6 +32,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     CustomFieldModule,
     EmployeeModule,
     DeviceModule,
+    GeofenceModule,
     AttendanceModule,
   ],
 })

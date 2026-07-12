@@ -85,6 +85,10 @@ export class AttendanceEvent {
   @Column({ name: 'geofence_pass', nullable: true })
   geofencePass?: boolean;
 
+  // True when recorded outside all fences under the remote-allowed policy.
+  @Column({ default: false })
+  remote: boolean;
+
   @Column({ name: 'risk_score', default: 0 })
   riskScore: number;
 

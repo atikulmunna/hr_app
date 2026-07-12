@@ -5,10 +5,10 @@ import {
   AttendanceEvent,
   AttendanceEventType,
 } from '../../entities/attendance-event.entity';
-import { Geofence } from '../../entities/geofence.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { DeviceService } from '../devices/device.service';
+import { GeofenceService } from '../geofences/geofence.service';
 import { NotificationService } from '../notifications/notification.service';
 import { EmployeeService } from '../employees/employee.service';
 import {
@@ -57,6 +57,7 @@ export class AttendanceService {
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
     private readonly devices: DeviceService,
+    private readonly geofences: GeofenceService,
     private readonly notifications: NotificationService,
   ) {}
 
@@ -102,7 +103,7 @@ export class AttendanceService {
       if (input.isMock === true) {
         throw new BadRequestException('A mock location provider was detected.');
       }
-      const fences = await m.find(Geofence, { where: { active: true } });
+      const fences = await this.geofences.effectiveFences(m, employee.id);
       const matched =
         fences.length > 0
           ? matchGeofence(input.lat, input.lng, fences)
@@ -113,6 +114,8 @@ export class AttendanceService {
           'You are outside a permitted work location.',
         );
       }
+      // Recorded outside all fences under the remote-allowed policy (FR-AT-29).
+      const remote = !geofencePass && employee.remoteAllowed;
 
       // 4. Soft-flag scoring (SRS 5.2.2/5.2.4). A device re-bound within the
       // cool-off window adds the newly-re-bound signal (FR-DB-07). A critical
@@ -144,6 +147,7 @@ export class AttendanceService {
           appSignatureValid: input.appSignatureValid,
           matchedGeofenceId: matched?.id,
           geofencePass,
+          remote,
           riskScore,
           band,
           appVersion: input.appVersion,
@@ -155,7 +159,7 @@ export class AttendanceService {
           action: `attendance.${input.eventType}`,
           resourceType: 'attendance_event',
           resourceId: event.id,
-          after: { band, riskScore, geofencePass },
+          after: { band, riskScore, geofencePass, remote },
         },
         m,
       );

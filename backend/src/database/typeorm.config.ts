@@ -8,6 +8,7 @@ import { Department } from '../entities/department.entity';
 import { Device } from '../entities/device.entity';
 import { DeviceBindingHistory } from '../entities/device-binding-history.entity';
 import { Employee } from '../entities/employee.entity';
+import { EmployeeGeofence } from '../entities/employee-geofence.entity';
 import { EmploymentHistory } from '../entities/employment-history.entity';
 import { Geofence } from '../entities/geofence.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
@@ -41,6 +42,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Notification,
       Department,
       Employee,
+      EmployeeGeofence,
       EmploymentHistory,
       Geofence,
       AttendanceEvent,
