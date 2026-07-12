@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'device_identity.dart';
+import 'device_integrity.dart';
 
 /// Raised when a location fix cannot be obtained (services off or permission
 /// denied). The message is safe to show to the user.
@@ -37,6 +38,8 @@ Future<Map<String, dynamic>> captureAttendanceSignals() async {
     locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
   );
 
+  final integrity = await DeviceIntegrity.read();
+
   return {
     'lat': position.latitude,
     'lng': position.longitude,
@@ -45,5 +48,8 @@ Future<Map<String, dynamic>> captureAttendanceSignals() async {
     'provider': 'gps',
     'deviceFingerprint': await DeviceIdentity.fingerprint(),
     'platform': DeviceIdentity.platform,
+    // rooted / emulator / adbEnabled / devOptionsEnabled / vpnActive; absent on
+    // non-Android hosts, where they are posted as null and scored as unflagged.
+    ...integrity,
   };
 }
