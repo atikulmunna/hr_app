@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { Approvals } from './pages/Approvals';
+import { Inbox } from './pages/Inbox';
+
+type Tab = 'approvals' | 'inbox';
 
 export default function App() {
   const auth = useAuth();
+  const [tab, setTab] = useState<Tab>('approvals');
 
   if (auth.isLoading) {
     return <div className="center muted">Loading...</div>;
@@ -32,6 +37,20 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <strong>HR Console</strong>
+        <nav className="tabs">
+          <button
+            className={`tab ${tab === 'approvals' ? 'active' : ''}`}
+            onClick={() => setTab('approvals')}
+          >
+            Approvals
+          </button>
+          <button
+            className={`tab ${tab === 'inbox' ? 'active' : ''}`}
+            onClick={() => setTab('inbox')}
+          >
+            Inbox
+          </button>
+        </nav>
         <div className="spacer" />
         <span className="muted">{name}</span>
         <button className="btn" onClick={() => void auth.removeUser()}>
@@ -39,7 +58,11 @@ export default function App() {
         </button>
       </header>
       <main className="content">
-        <Approvals token={auth.user!.access_token} />
+        {tab === 'approvals' ? (
+          <Approvals token={auth.user!.access_token} />
+        ) : (
+          <Inbox token={auth.user!.access_token} />
+        )}
       </main>
     </div>
   );

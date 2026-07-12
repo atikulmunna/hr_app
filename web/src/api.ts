@@ -23,6 +23,16 @@ export interface ApprovalRequest {
 
 export type Decision = 'approve' | 'reject';
 
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  body?: string;
+  data?: Record<string, unknown>;
+  readAt?: string | null;
+  createdAt: string;
+}
+
 async function request<T>(
   token: string,
   path: string,
@@ -56,4 +66,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ decision, comment }),
     }),
+  notifications: (token: string) =>
+    request<AppNotification[]>(token, '/notifications'),
+  markNotificationRead: (token: string, id: string) =>
+    request<unknown>(token, `/notifications/${id}/read`, { method: 'POST' }),
 };

@@ -99,11 +99,59 @@ body {
   padding-top: 24px;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: 20px;
+}
+.tab {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tab.active {
+  background: var(--ink);
+  color: #fff;
+}
+
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+.count {
+  display: inline-block;
+  margin-left: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.75rem;
+  min-width: 20px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 0 6px;
+  vertical-align: middle;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  display: inline-block;
+}
+.card.unread {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+}
+.notif-title {
+  font-weight: 600;
+  margin-bottom: 2px;
 }
 .section-head h2 {
   margin: 0;
