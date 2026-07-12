@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_dimens.dart';
 import '../theme/app_typography.dart';
+import 'dark_hero_card.dart';
 import 'lime_button.dart';
 
 /// The dark check-in hero with a lime radial glow. Attendance is a check-in and
@@ -22,19 +22,7 @@ class CheckInHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: AppColors.ink,
-        borderRadius: BorderRadius.circular(AppRadii.hero),
-        boxShadow: AppShadows.heroDark,
-        gradient: const RadialGradient(
-          center: Alignment(1.1, -1.1),
-          radius: 1.2,
-          colors: [Color(0x33C6F24A), Color(0x00141410)],
-          stops: [0, 0.6],
-        ),
-      ),
+    return DarkHeroCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

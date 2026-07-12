@@ -21,11 +21,11 @@ class FloatingNavBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
 
   static const items = <NavItem>[
-    NavItem(Icons.home_rounded, 'Home'),
-    NavItem(Icons.beach_access_rounded, 'Leave'),
-    NavItem(Icons.fingerprint_rounded, 'Attendance'),
-    NavItem(Icons.groups_rounded, 'Team'),
-    NavItem(Icons.payments_rounded, 'Pay'),
+    NavItem(Icons.home_outlined, 'Home'),
+    NavItem(Icons.calendar_today_outlined, 'Leave'),
+    NavItem(Icons.power_settings_new_rounded, 'Attendance'),
+    NavItem(Icons.people_outline, 'Team'),
+    NavItem(Icons.credit_card_outlined, 'Pay'),
   ];
 
   @override
@@ -46,19 +46,22 @@ class FloatingNavBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(items.length, (i) {
               if (i == 2) {
-                return GestureDetector(
-                  onTap: () => onSelect(i),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: const BoxDecoration(
-                      color: AppColors.accent,
-                      shape: BoxShape.circle,
-                      boxShadow: AppShadows.limeButton,
-                    ),
-                    child: const Icon(
-                      Icons.fingerprint_rounded,
-                      color: AppColors.ink,
+                return Transform.translate(
+                  offset: const Offset(0, -6),
+                  child: GestureDetector(
+                    onTap: () => onSelect(i),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        color: AppColors.accent,
+                        shape: BoxShape.circle,
+                        boxShadow: AppShadows.limeButton,
+                      ),
+                      child: const Icon(
+                        Icons.power_settings_new_rounded,
+                        color: AppColors.ink,
+                      ),
                     ),
                   ),
                 );

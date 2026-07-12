@@ -119,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: AppSpacing.cardGap,
       crossAxisSpacing: AppSpacing.cardGap,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.35,
       children: const [
         StatTile(value: '21/22', label: 'Present days', delta: '+2 on time'),
         StatTile(value: '12.5', label: 'Leave balance', highlight: true),
