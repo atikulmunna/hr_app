@@ -1,0 +1,4 @@
+packages:
+  - backend
+  - packages/*
+  # web (React) and mobile (Flutter) are added in later tasks

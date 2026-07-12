@@ -1,0 +1,83 @@
+{
+  "realm": "example",
+  "enabled": true,
+  "displayName": "Example Corp",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 300,
+  "clients": [
+    {
+      "clientId": "hris-web",
+      "name": "HRIS Web Console",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "hris-mobile",
+      "name": "HRIS Mobile App",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["com.example.hris://auth/*", "http://localhost/*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+    {
+      "clientId": "hris-backend",
+      "name": "HRIS Backend Service",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "backend-dev-secret",
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "employee", "description": "Self-service employee" },
+      { "name": "manager", "description": "Manager self-service" },
+      { "name": "hr_admin", "description": "HR administrator" },
+      { "name": "recruiter", "description": "Recruiter" },
+      { "name": "tenant_admin", "description": "Tenant administrator" },
+      { "name": "auditor", "description": "Auditor and reviewer" }
+    ]
+  },
+  "users": [
+    {
+      "username": "demo.employee",
+      "enabled": true,
+      "email": "demo.employee@example.com",
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Employee",
+      "credentials": [
+        { "type": "password", "value": "demo123", "temporary": false }
+      ],
+      "realmRoles": ["employee"]
+    },
+    {
+      "username": "demo.admin",
+      "enabled": true,
+      "email": "demo.admin@example.com",
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Admin",
+      "credentials": [
+        { "type": "password", "value": "admin123", "temporary": false }
+      ],
+      "realmRoles": ["hr_admin"]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "hris-platform",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@11.5.1",
+  "description": "Multi-tenant HRIS platform with mobile attendance and verification",
+  "scripts": {
+    "db:up": "docker compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "db:logs": "docker compose -f infra/docker-compose.yml logs -f postgres",
+    "backend:dev": "pnpm --filter @hris/backend start:dev",
+    "backend:migrate": "pnpm --filter @hris/backend migration:run",
+    "backend:seed": "pnpm --filter @hris/backend seed"
+  }
+}

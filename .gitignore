@@ -1,0 +1,83 @@
+# ---------------------------------------------------------------------------
+# Local-only planning and spec files (repo hygiene, never commit)
+# ---------------------------------------------------------------------------
+CLAUDE.md
+tasks.md
+*srs*
+*SRS*
+*.docx
+# planning and design notes
+*plan*.md
+*planning*.md
+*notes*.md
+/docs/private/
+
+# ---------------------------------------------------------------------------
+# Secrets and environment
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+
+# ---------------------------------------------------------------------------
+# Node / TypeScript (backend NestJS, web React)
+# ---------------------------------------------------------------------------
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ---------------------------------------------------------------------------
+# Flutter / Dart (mobile)
+# ---------------------------------------------------------------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+**/doc/api/
+*.g.dart.lock
+# Android
+**/android/.gradle/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/release/
+**/android/**/GeneratedPluginRegistrant.java
+# iOS
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Runner/GeneratedPluginRegistrant.*
+*.ipa
+*.apk
+*.aab
+
+# ---------------------------------------------------------------------------
+# IDE / OS
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Claude Code local state
+# ---------------------------------------------------------------------------
+.claude/
