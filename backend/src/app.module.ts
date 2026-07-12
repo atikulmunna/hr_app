@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TenantModule } from './common/tenant/tenant.module';
 import { TenantMiddleware } from './common/tenant/tenant.middleware';
 import { buildDataSourceOptions } from './database/typeorm.config';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DepartmentModule } from './modules/departments/department.module';
@@ -26,6 +27,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     EntitiesModule,
     DepartmentModule,
     EmployeeModule,
+    AttendanceModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -70,9 +70,22 @@ async function seed(): Promise<void> {
       );
     }
 
+    // A geofence for the Bangladesh head office for attendance marking.
+    const geoCount = await m.query(`SELECT count(*)::int AS n FROM geofences`);
+    if (geoCount[0].n === 0) {
+      const bd = await m.query(
+        `SELECT id FROM legal_entities WHERE country_code = 'BD' LIMIT 1`,
+      );
+      await m.query(
+        `INSERT INTO geofences (tenant_id, legal_entity_id, name, latitude, longitude, radius_m)
+         VALUES ($1, $2, 'Head office', 23.727500, 90.390000, 250)`,
+        [tenantId, bd[0].id],
+      );
+    }
+
     // eslint-disable-next-line no-console
     console.log(
-      `Seeded tenant "example" (${tenantId}) with entities, a department, and demo employees.`,
+      `Seeded tenant "example" (${tenantId}) with entities, a department, employees, and a geofence.`,
     );
   });
   await AppDataSource.destroy();

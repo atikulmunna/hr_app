@@ -1,9 +1,11 @@
 import { DataSourceOptions } from 'typeorm';
 import { ApprovalRequest } from '../entities/approval-request.entity';
 import { ApprovalStep } from '../entities/approval-step.entity';
+import { AttendanceEvent } from '../entities/attendance-event.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { Department } from '../entities/department.entity';
 import { Employee } from '../entities/employee.entity';
+import { Geofence } from '../entities/geofence.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
 import { Notification } from '../entities/notification.entity';
 import { Tenant } from '../entities/tenant.entity';
@@ -35,6 +37,8 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Notification,
       Department,
       Employee,
+      Geofence,
+      AttendanceEvent,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,

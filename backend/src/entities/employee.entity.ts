@@ -61,6 +61,10 @@ export class Employee {
   @Column({ default: 'active' })
   status: EmployeeStatus;
 
+  // Permits marking attendance outside all geofences (field/remote staff).
+  @Column({ name: 'remote_allowed', default: false })
+  remoteAllowed: boolean;
+
   @Column({ name: 'hire_date', type: 'date', nullable: true })
   hireDate?: string;
 
