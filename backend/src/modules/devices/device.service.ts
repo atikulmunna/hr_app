@@ -1,9 +1,17 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { TenantContextService } from '../../common/tenant/tenant-context.service';
 import { TenantDbService } from '../../database/tenant-db.service';
+import { ApprovalRequest } from '../../entities/approval-request.entity';
+import {
+  DeviceBindingAction,
+  DeviceBindingHistory,
+  REBIND_REASON_CODES,
+} from '../../entities/device-binding-history.entity';
 import { Device } from '../../entities/device.entity';
 import { AuditService } from '../audit/audit.service';
 import { EmployeeService } from '../employees/employee.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 
 export interface DeviceSignals {
   deviceFingerprint?: string;
@@ -14,7 +22,18 @@ export interface DeviceSignals {
 export interface BindingResult {
   deviceId: string;
   enrolled: boolean;
+  rebound: boolean;
 }
+
+export interface RebindRequestInput {
+  reasonCode?: string;
+  deviceFingerprint?: string;
+  platform?: string;
+  deviceModel?: string;
+}
+
+// Re-bind approvals default to HR; a tenant may route them to managers later.
+const REBIND_APPROVER_ROLES = ['hr_admin'];
 
 @Injectable()
 export class DeviceService {
@@ -22,6 +41,8 @@ export class DeviceService {
     private readonly db: TenantDbService,
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
+    private readonly workflow: WorkflowService,
+    private readonly ctx: TenantContextService,
   ) {}
 
   listForEmployee(employeeId: string): Promise<Device[]> {
@@ -41,10 +62,87 @@ export class DeviceService {
     return this.listForEmployee(me.id);
   }
 
+  historyForEmployee(employeeId: string): Promise<DeviceBindingHistory[]> {
+    return this.db.withTenant((m) =>
+      m.find(DeviceBindingHistory, {
+        where: { employeeId },
+        order: { createdAt: 'DESC' },
+      }),
+    );
+  }
+
+  async historyMine(
+    sub: string | undefined,
+    email: string | undefined,
+  ): Promise<DeviceBindingHistory[]> {
+    const me = await this.employees.myProfile(sub, email);
+    return this.historyForEmployee(me.id);
+  }
+
+  // Raises a device-change request for the employee's current device. The app
+  // submits the new device's fingerprint; on approval the next mark from that
+  // device switches the binding (see enforceBinding). Approver defaults to HR.
+  async requestRebind(
+    sub: string | undefined,
+    email: string | undefined,
+    input: RebindRequestInput,
+  ): Promise<ApprovalView> {
+    const reasonCode = input.reasonCode?.trim();
+    if (!reasonCode || !REBIND_REASON_CODES.includes(reasonCode as never)) {
+      throw new BadRequestException(
+        `reasonCode must be one of: ${REBIND_REASON_CODES.join(', ')}.`,
+      );
+    }
+    const fingerprint = input.deviceFingerprint?.trim();
+    if (!fingerprint) {
+      throw new BadRequestException(
+        'This device could not be identified, so a device change cannot be requested.',
+      );
+    }
+
+    const me = await this.employees.myProfile(sub, email);
+
+    await this.db.withTenant(async (m) => {
+      const active = await m.findOne(Device, {
+        where: { employeeId: me.id, status: 'active' },
+      });
+      if (!active) {
+        throw new BadRequestException(
+          'You have no registered device yet; your next check-in will register this one.',
+        );
+      }
+      if (active.deviceFingerprint === fingerprint) {
+        throw new BadRequestException(
+          'This device is already registered for your account.',
+        );
+      }
+      const pending = await this.findPendingRebind(m, me.id, fingerprint);
+      if (pending) {
+        throw new BadRequestException(
+          'A device-change request for this device is already awaiting approval.',
+        );
+      }
+    });
+
+    return this.workflow.createRequest({
+      requestType: 'device_rebind',
+      resourceType: 'device',
+      payload: {
+        employeeId: me.id,
+        reasonCode,
+        newFingerprint: fingerprint,
+        platform: input.platform,
+        deviceModel: input.deviceModel,
+      },
+      approverRoles: REBIND_APPROVER_ROLES,
+    });
+  }
+
   // Enforces one-active-device binding within the caller's tenant transaction.
-  // Auto-enrolls the first device (enrollment grace, O-01); a mark from any
-  // other device is hard-blocked until an approved re-bind. Returns the device
-  // to stamp on the attendance event.
+  // Auto-enrolls the first device (enrollment grace, O-01). On a mismatch it
+  // applies an approved re-bind if one exists for this device; otherwise the
+  // mark is hard-blocked until an approved re-bind. Returns the device to stamp
+  // on the attendance event.
   async enforceBinding(
     m: EntityManager,
     employeeId: string,
@@ -63,16 +161,31 @@ export class DeviceService {
 
     if (!active) {
       const device = await this.enroll(m, employeeId, fingerprint, signals);
-      return { deviceId: device.id, enrolled: true };
+      return { deviceId: device.id, enrolled: true, rebound: false };
     }
 
-    if (active.deviceFingerprint !== fingerprint) {
-      throw new BadRequestException(
-        'This device is not registered for your account. A device change must be approved by HR.',
+    if (active.deviceFingerprint === fingerprint) {
+      return { deviceId: active.id, enrolled: false, rebound: false };
+    }
+
+    // Mismatch: switch the binding only if an approved re-bind authorises this
+    // exact device; otherwise hard-block (FR-DB-03).
+    const approved = await this.findApprovedRebind(m, employeeId, fingerprint);
+    if (approved) {
+      const device = await this.applyRebind(
+        m,
+        active,
+        employeeId,
+        fingerprint,
+        signals,
+        approved,
       );
+      return { deviceId: device.id, enrolled: false, rebound: true };
     }
 
-    return { deviceId: active.id, enrolled: false };
+    throw new BadRequestException(
+      'This device is not registered for your account. A device change must be approved by HR.',
+    );
   }
 
   private async enroll(
@@ -91,6 +204,7 @@ export class DeviceService {
         status: 'active',
       }),
     );
+    await this.recordHistory(m, { employeeId, deviceId: device.id, action: 'enroll' });
     await this.audit.record(
       {
         action: 'device.enroll',
@@ -101,5 +215,121 @@ export class DeviceService {
       m,
     );
     return device;
+  }
+
+  // Retires the current device and activates the new one, atomically within the
+  // mark transaction, and marks the approval applied so it is used only once.
+  private async applyRebind(
+    m: EntityManager,
+    current: Device,
+    employeeId: string,
+    fingerprint: string,
+    signals: DeviceSignals,
+    request: ApprovalRequest,
+  ): Promise<Device> {
+    const reasonCode = (request.payload as { reasonCode?: string })?.reasonCode;
+
+    current.status = 'retired';
+    current.retiredAt = new Date();
+    await m.save(current);
+    await this.recordHistory(m, {
+      employeeId,
+      deviceId: current.id,
+      action: 'retire',
+      requestId: request.id,
+    });
+
+    const device = await m.save(
+      m.create(Device, {
+        tenantId: this.db.tenantId,
+        employeeId,
+        deviceFingerprint: fingerprint,
+        platform: signals.platform,
+        model: signals.deviceModel,
+        status: 'active',
+      }),
+    );
+    await this.recordHistory(m, {
+      employeeId,
+      deviceId: device.id,
+      action: 'rebind',
+      reasonCode,
+      requestId: request.id,
+    });
+
+    request.payload = {
+      ...(request.payload as Record<string, unknown>),
+      appliedAt: new Date().toISOString(),
+    };
+    await m.save(request);
+
+    await this.audit.record(
+      {
+        action: 'device.rebind',
+        resourceType: 'device',
+        resourceId: device.id,
+        before: { deviceId: current.id },
+        after: { deviceId: device.id, reasonCode, requestId: request.id },
+      },
+      m,
+    );
+    return device;
+  }
+
+  private recordHistory(
+    m: EntityManager,
+    entry: {
+      employeeId: string;
+      deviceId: string;
+      action: DeviceBindingAction;
+      reasonCode?: string;
+      requestId?: string;
+    },
+  ): Promise<DeviceBindingHistory> {
+    return m.save(
+      m.create(DeviceBindingHistory, {
+        tenantId: this.db.tenantId,
+        employeeId: entry.employeeId,
+        deviceId: entry.deviceId,
+        action: entry.action,
+        reasonCode: entry.reasonCode,
+        requestId: entry.requestId,
+        actorSub: this.ctx.actor?.sub,
+      }),
+    );
+  }
+
+  private findPendingRebind(
+    m: EntityManager,
+    employeeId: string,
+    fingerprint: string,
+  ): Promise<ApprovalRequest | null> {
+    return this.rebindQuery(m, employeeId, fingerprint)
+      .andWhere('r.status = :status', { status: 'pending' })
+      .getOne();
+  }
+
+  private findApprovedRebind(
+    m: EntityManager,
+    employeeId: string,
+    fingerprint: string,
+  ): Promise<ApprovalRequest | null> {
+    return this.rebindQuery(m, employeeId, fingerprint)
+      .andWhere('r.status = :status', { status: 'approved' })
+      .andWhere("r.payload->>'appliedAt' IS NULL")
+      .orderBy('r.createdAt', 'DESC')
+      .getOne();
+  }
+
+  private rebindQuery(
+    m: EntityManager,
+    employeeId: string,
+    fingerprint: string,
+  ) {
+    return m
+      .createQueryBuilder(ApprovalRequest, 'r')
+      .where('r.requestType = :type', { type: 'device_rebind' })
+      .andWhere("r.payload->>'employeeId' = :employeeId", { employeeId })
+      .andWhere("r.payload->>'newFingerprint' = :fingerprint", { fingerprint });
   }
 }

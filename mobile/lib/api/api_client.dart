@@ -27,6 +27,10 @@ class ApiClient {
   Future<Map<String, dynamic>> markAttendance(Map<String, dynamic> body) =>
       _postJson('/me/attendance/events', body);
 
+  /// Raises an approval-gated device-change request for the current device.
+  Future<Map<String, dynamic>> requestDeviceRebind(Map<String, dynamic> body) =>
+      _postJson('/me/devices/rebind-requests', body);
+
   Future<Map<String, dynamic>> _getJson(String path) async {
     final token = await _token();
     final res = await http.get(

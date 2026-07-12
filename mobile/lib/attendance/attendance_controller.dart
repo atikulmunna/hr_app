@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../api/api_client.dart';
 import 'attendance_signals.dart';
+import 'device_identity.dart';
 
 /// The server-authoritative attendance state for today. Mirrors the backend
 /// state machine (SRS 5.1.1).
@@ -36,6 +37,10 @@ class AttendanceController extends ChangeNotifier {
   bool loading = false;
   bool marking = false;
   String? error;
+
+  /// True when the last mark was hard-blocked because this device is not the
+  /// employee's bound device, so the UI can offer a device-change request.
+  bool needsRebind = false;
 
   bool get isCheckedIn =>
       state == AttendanceState.checkedIn || state == AttendanceState.onBreak;
@@ -88,6 +93,7 @@ class AttendanceController extends ChangeNotifier {
     if (marking) return null;
     marking = true;
     error = null;
+    needsRebind = false;
     notifyListeners();
     try {
       final signals = await captureAttendanceSignals();
@@ -99,6 +105,9 @@ class AttendanceController extends ChangeNotifier {
       return e.message;
     } on ApiException catch (e) {
       error = e.message;
+      // The device-binding gate is the one block an employee can act on, by
+      // requesting an approved re-bind (FR-DB-04).
+      needsRebind = e.status == 400 && e.message.contains('not registered');
       return e.message;
     } catch (e) {
       error = e.toString();
@@ -106,6 +115,25 @@ class AttendanceController extends ChangeNotifier {
     } finally {
       marking = false;
       notifyListeners();
+    }
+  }
+
+  /// Submits an approval-gated device-change request for this device with the
+  /// reason the employee picked. Returns null on success, or an error message.
+  Future<String?> requestRebind(String reasonCode) async {
+    try {
+      await _api.requestDeviceRebind({
+        'reasonCode': reasonCode,
+        'deviceFingerprint': await DeviceIdentity.fingerprint(),
+        'platform': DeviceIdentity.platform,
+      });
+      needsRebind = false;
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
     }
   }
 

@@ -34,6 +34,7 @@ class AttendanceScreen extends StatelessWidget {
               const SizedBox(height: 12),
               if (controller.state == AttendanceState.checkedIn)
                 Center(child: _breakButton(context, controller)),
+              if (controller.needsRebind) _rebindCard(context, controller),
               const SizedBox(height: 8),
               const SectionHeader("Today's timeline"),
               _timeline(controller),
@@ -51,6 +52,35 @@ class AttendanceScreen extends StatelessWidget {
           : () => _mark(context, controller, 'break_start'),
       icon: const Icon(Icons.free_breakfast_outlined, size: 18),
       label: const Text('Start break'),
+    );
+  }
+
+  Widget _rebindCard(BuildContext context, AttendanceController controller) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This device is not registered', style: AppText.rowTitle),
+            const SizedBox(height: 6),
+            Text(
+              'Attendance is locked to your registered device. Request a device '
+              'change and HR will review it.',
+              style: AppText.label.copyWith(color: AppColors.mutedLight),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: () => _startRebind(context, controller),
+                icon: const Icon(Icons.phonelink_setup_outlined, size: 18),
+                label: const Text('Request device change'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -164,6 +194,53 @@ class _Dial extends StatelessWidget {
         return 'Checked out';
     }
   }
+}
+
+/// The device-change reasons offered to the employee, mapped to backend codes.
+const _rebindReasons = <(String, String)>[
+  ('upgraded', 'New or upgraded phone'),
+  ('replaced', 'Replaced or repaired'),
+  ('lost', 'Lost device'),
+  ('stolen', 'Stolen device'),
+  ('other', 'Other'),
+];
+
+/// Opens the reason picker and, once a reason is chosen, submits the re-bind
+/// request and reports the outcome via a snackbar.
+Future<void> _startRebind(
+  BuildContext context,
+  AttendanceController controller,
+) async {
+  final reason = await showModalBottomSheet<String>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: SectionHeader('Reason for device change'),
+          ),
+          for (final (code, label) in _rebindReasons)
+            ListTile(
+              title: Text(label),
+              onTap: () => Navigator.of(sheetContext).pop(code),
+            ),
+        ],
+      ),
+    ),
+  );
+  if (reason == null || !context.mounted) return;
+
+  final messenger = ScaffoldMessenger.of(context);
+  final error = await controller.requestRebind(reason);
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        error ?? 'Device-change request sent. HR will review it.',
+      ),
+    ),
+  );
 }
 
 /// Marks an event and reports the outcome via a snackbar.
