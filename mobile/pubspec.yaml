@@ -38,6 +38,11 @@ dependencies:
   # Hanken Grotesk (design handoff typeface), fetched by the google_fonts package.
   google_fonts: ^6.2.1
 
+  # Auth and networking
+  flutter_appauth: ^8.0.0        # OIDC/PKCE login against Keycloak
+  flutter_secure_storage: ^9.2.2 # encrypted token storage
+  http: ^1.2.2                   # backend API calls
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

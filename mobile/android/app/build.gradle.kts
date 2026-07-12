@@ -28,6 +28,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // OIDC redirect scheme for flutter_appauth (Keycloak redirect
+        // com.example.hris://auth). Matches the hris-mobile client in the realm.
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.example.hris"
     }
 
     buildTypes {

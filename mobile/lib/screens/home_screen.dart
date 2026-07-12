@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../auth/auth_scope.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 import '../theme/app_typography.dart';
@@ -50,6 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _greeting() {
+    final profile = AuthScope.of(context).profile;
+    final first = (profile?['firstName'] as String?)?.trim() ?? '';
+    final last = (profile?['lastName'] as String?)?.trim() ?? '';
+    final name = '$first $last'.trim().isEmpty ? 'Employee' : '$first $last';
+    final initials =
+        ((first.isNotEmpty ? first[0] : '') + (last.isNotEmpty ? last[0] : ''))
+            .toUpperCase();
     return Row(
       children: [
         Expanded(
@@ -58,27 +66,52 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text('Good morning', style: AppText.label),
               const SizedBox(height: 2),
-              Text('Ayesha Rahman', style: AppText.screenTitle),
+              Text(name, style: AppText.screenTitle),
             ],
           ),
         ),
         _circleIcon(Icons.notifications_none_rounded, dot: true),
         const SizedBox(width: 10),
-        Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: AppColors.ink,
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            'AR',
-            style: AppText.pill.copyWith(color: AppColors.surface),
+        GestureDetector(
+          onTap: _confirmSignOut,
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.ink,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              initials.isEmpty ? '-' : initials,
+              style: AppText.pill.copyWith(color: AppColors.surface),
+            ),
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await AuthScope.of(context).signOut();
+    }
   }
 
   Widget _circleIcon(IconData icon, {bool dot = false}) {
