@@ -17,6 +17,16 @@ type Tab =
   | 'leave'
   | 'shifts';
 
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'approvals', label: 'Approvals' },
+  { key: 'review', label: 'Review' },
+  { key: 'inbox', label: 'Inbox' },
+  { key: 'employees', label: 'Employees' },
+  { key: 'geofences', label: 'Geofences' },
+  { key: 'leave', label: 'Leave' },
+  { key: 'shifts', label: 'Shifts' },
+];
+
 export default function App() {
   const auth = useAuth();
   const [tab, setTab] = useState<Tab>('approvals');
@@ -45,68 +55,40 @@ export default function App() {
   const profile = auth.user?.profile;
   const name = profile?.preferred_username ?? profile?.name ?? 'HR user';
 
+  const token = auth.user!.access_token;
+
   return (
-    <div className="app">
-      <header className="topbar">
-        <strong>HR Console</strong>
-        <nav className="tabs">
-          <button
-            className={`tab ${tab === 'approvals' ? 'active' : ''}`}
-            onClick={() => setTab('approvals')}
-          >
-            Approvals
-          </button>
-          <button
-            className={`tab ${tab === 'review' ? 'active' : ''}`}
-            onClick={() => setTab('review')}
-          >
-            Review
-          </button>
-          <button
-            className={`tab ${tab === 'inbox' ? 'active' : ''}`}
-            onClick={() => setTab('inbox')}
-          >
-            Inbox
-          </button>
-          <button
-            className={`tab ${tab === 'employees' ? 'active' : ''}`}
-            onClick={() => setTab('employees')}
-          >
-            Employees
-          </button>
-          <button
-            className={`tab ${tab === 'geofences' ? 'active' : ''}`}
-            onClick={() => setTab('geofences')}
-          >
-            Geofences
-          </button>
-          <button
-            className={`tab ${tab === 'leave' ? 'active' : ''}`}
-            onClick={() => setTab('leave')}
-          >
-            Leave
-          </button>
-          <button
-            className={`tab ${tab === 'shifts' ? 'active' : ''}`}
-            onClick={() => setTab('shifts')}
-          >
-            Shifts
-          </button>
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="brand">HR Console</div>
+        <nav className="nav">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              className={`nav-item ${tab === t.key ? 'active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
         </nav>
-        <div className="spacer" />
-        <span className="muted">{name}</span>
-        <button className="btn" onClick={() => void auth.removeUser()}>
-          Sign out
-        </button>
-      </header>
-      <main className="content">
-        {tab === 'approvals' && <Approvals token={auth.user!.access_token} />}
-        {tab === 'review' && <Review token={auth.user!.access_token} />}
-        {tab === 'inbox' && <Inbox token={auth.user!.access_token} />}
-        {tab === 'employees' && <Employees token={auth.user!.access_token} />}
-        {tab === 'geofences' && <Geofences token={auth.user!.access_token} />}
-        {tab === 'leave' && <Leave token={auth.user!.access_token} />}
-        {tab === 'shifts' && <Shifts token={auth.user!.access_token} />}
+        <div className="sidebar-foot">
+          <span className="muted small">{name}</span>
+          <button className="btn" onClick={() => void auth.removeUser()}>
+            Sign out
+          </button>
+        </div>
+      </aside>
+      <main className="main">
+        <div className="main-inner">
+          {tab === 'approvals' && <Approvals token={token} />}
+          {tab === 'review' && <Review token={token} />}
+          {tab === 'inbox' && <Inbox token={token} />}
+          {tab === 'employees' && <Employees token={token} />}
+          {tab === 'geofences' && <Geofences token={token} />}
+          {tab === 'leave' && <Leave token={token} />}
+          {tab === 'shifts' && <Shifts token={token} />}
+        </div>
       </main>
     </div>
   );
