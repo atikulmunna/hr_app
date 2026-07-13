@@ -4,8 +4,9 @@ import { Approvals } from './pages/Approvals';
 import { Employees } from './pages/Employees';
 import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
+import { Review } from './pages/Review';
 
-type Tab = 'approvals' | 'inbox' | 'employees' | 'geofences';
+type Tab = 'approvals' | 'review' | 'inbox' | 'employees' | 'geofences';
 
 export default function App() {
   const auth = useAuth();
@@ -47,6 +48,12 @@ export default function App() {
             Approvals
           </button>
           <button
+            className={`tab ${tab === 'review' ? 'active' : ''}`}
+            onClick={() => setTab('review')}
+          >
+            Review
+          </button>
+          <button
             className={`tab ${tab === 'inbox' ? 'active' : ''}`}
             onClick={() => setTab('inbox')}
           >
@@ -73,6 +80,7 @@ export default function App() {
       </header>
       <main className="content">
         {tab === 'approvals' && <Approvals token={auth.user!.access_token} />}
+        {tab === 'review' && <Review token={auth.user!.access_token} />}
         {tab === 'inbox' && <Inbox token={auth.user!.access_token} />}
         {tab === 'employees' && <Employees token={auth.user!.access_token} />}
         {tab === 'geofences' && <Geofences token={auth.user!.access_token} />}

@@ -13,6 +13,7 @@ import { EmploymentHistory } from '../entities/employment-history.entity';
 import { Geofence } from '../entities/geofence.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
 import { Notification } from '../entities/notification.entity';
+import { ReviewCase } from '../entities/review-case.entity';
 import { Tenant } from '../entities/tenant.entity';
 
 // Single source of TypeORM options.
@@ -49,6 +50,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       CustomFieldDefinition,
       Device,
       DeviceBindingHistory,
+      ReviewCase,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,

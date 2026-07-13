@@ -9,7 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { DeviceService } from '../devices/device.service';
 import { GeofenceService } from '../geofences/geofence.service';
-import { NotificationService } from '../notifications/notification.service';
+import { ReviewService } from '../review/review.service';
 import { EmployeeService } from '../employees/employee.service';
 import {
   AttendanceState,
@@ -58,7 +58,7 @@ export class AttendanceService {
     private readonly employees: EmployeeService,
     private readonly devices: DeviceService,
     private readonly geofences: GeofenceService,
-    private readonly notifications: NotificationService,
+    private readonly review: ReviewService,
   ) {}
 
   async today(user: AuthUser): Promise<AttendanceToday> {
@@ -164,43 +164,18 @@ export class AttendanceService {
         m,
       );
 
-      // Co-occurring high-confidence signals open a review case (FR-AT-27).
-      const coOccurring = highConfidenceSignals(input, recentlyRebound);
-      if (hasCoOccurrence(input, recentlyRebound)) {
-        await this.openReviewCase(m, employee.id, event.id, coOccurring);
+      // Flag the mark for HR review when it lands in the Red band or its
+      // high-confidence signals co-occur (FR-AT-10, FR-AT-27).
+      if (band === 'red' || hasCoOccurrence(input, recentlyRebound)) {
+        await this.review.openCase(m, {
+          employeeId: employee.id,
+          eventId: event.id,
+          reason: band === 'red' ? 'red_band' : 'co_occurrence',
+          signals: highConfidenceSignals(input, recentlyRebound),
+        });
       }
       return event;
     });
-  }
-
-  // Flags a mark whose high-confidence signals co-occur for review (FR-AT-27).
-  // No review-case queue exists yet (T-1C.8); for now this audits and notifies
-  // HR, and the queue will attach to this signal when it lands.
-  private async openReviewCase(
-    m: EntityManager,
-    employeeId: string,
-    eventId: string,
-    signals: string[],
-  ): Promise<void> {
-    await this.audit.record(
-      {
-        action: 'attendance.review_case',
-        resourceType: 'attendance_event',
-        resourceId: eventId,
-        after: { employeeId, signals },
-      },
-      m,
-    );
-    await this.notifications.notify(
-      {
-        recipientRole: 'hr_admin',
-        type: 'attendance.review_case',
-        title: 'Attendance mark needs review',
-        body: `A mark raised multiple high-confidence signals: ${signals.join(', ')}.`,
-        data: { employeeId, eventId, signals },
-      },
-      m,
-    );
   }
 
   private todaysEvents(

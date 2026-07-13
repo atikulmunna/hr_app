@@ -15,6 +15,7 @@ import { EntitiesModule } from './modules/entities/entities.module';
 import { GeofenceModule } from './modules/geofences/geofence.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationModule } from './modules/notifications/notification.module';
+import { ReviewModule } from './modules/review/review.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     EmployeeModule,
     DeviceModule,
     GeofenceModule,
+    ReviewModule,
     AttendanceModule,
   ],
 })

@@ -12,6 +12,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'org:manage',
     'employee:read',
     'employee:manage',
+    'attendance:review',
   ],
   manager: ['entity:read', 'org:read', 'employee:read'],
   recruiter: ['entity:read', 'employee:read'],

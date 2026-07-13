@@ -104,6 +104,42 @@ export interface CreateGeofenceBody {
   legalEntityId?: string;
 }
 
+export interface ReviewCase {
+  id: string;
+  status: string;
+  reason: string;
+  signals: string[];
+  createdAt: string;
+  resolutionNote?: string | null;
+  resolvedAt?: string | null;
+  eventId: string;
+  eventType: string;
+  serverTs: string;
+  band: string;
+  riskScore: number;
+  lat?: number | null;
+  lng?: number | null;
+  remote: boolean;
+  geofencePass?: boolean | null;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  employeeCode: string;
+}
+
+export interface RiskRow {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  employeeCode: string;
+  openCases: number;
+  totalCases: number;
+  recentRedMarks: number;
+  lastFlaggedAt: string;
+}
+
+export type ReviewDecision = 'accept' | 'reject' | 'adjust';
+
 export interface AppNotification {
   id: string;
   type: string;
@@ -151,6 +187,20 @@ export const api = {
     request<AppNotification[]>(token, '/notifications'),
   markNotificationRead: (token: string, id: string) =>
     request<unknown>(token, `/notifications/${id}/read`, { method: 'POST' }),
+  reviewCases: (token: string, status = 'open') =>
+    request<ReviewCase[]>(token, `/review-cases?status=${status}`),
+  reviewRisk: (token: string) =>
+    request<RiskRow[]>(token, '/review-cases/risk'),
+  resolveReviewCase: (
+    token: string,
+    id: string,
+    decision: ReviewDecision,
+    note?: string,
+  ) =>
+    request<unknown>(token, `/review-cases/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ decision, note }),
+    }),
   employees: (token: string) => request<Employee[]>(token, '/employees'),
   createEmployee: (token: string, body: CreateEmployeeBody) =>
     request<Employee>(token, '/employees', {
