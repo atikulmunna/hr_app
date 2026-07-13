@@ -11,6 +11,8 @@ import { Employee } from '../entities/employee.entity';
 import { EmployeeGeofence } from '../entities/employee-geofence.entity';
 import { EmploymentHistory } from '../entities/employment-history.entity';
 import { Geofence } from '../entities/geofence.entity';
+import { Holiday } from '../entities/holiday.entity';
+import { LeaveType } from '../entities/leave-type.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
 import { Notification } from '../entities/notification.entity';
 import { ReviewCase } from '../entities/review-case.entity';
@@ -51,6 +53,8 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Device,
       DeviceBindingHistory,
       ReviewCase,
+      LeaveType,
+      Holiday,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,

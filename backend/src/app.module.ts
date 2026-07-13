@@ -14,6 +14,7 @@ import { EmployeeModule } from './modules/employees/employee.module';
 import { EntitiesModule } from './modules/entities/entities.module';
 import { GeofenceModule } from './modules/geofences/geofence.module';
 import { HealthModule } from './modules/health/health.module';
+import { LeaveModule } from './modules/leave/leave.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { ReviewModule } from './modules/review/review.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
@@ -35,6 +36,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     DeviceModule,
     GeofenceModule,
     ReviewModule,
+    LeaveModule,
     AttendanceModule,
   ],
 })

@@ -104,6 +104,43 @@ export interface CreateGeofenceBody {
   legalEntityId?: string;
 }
 
+export interface LeaveType {
+  id: string;
+  code: string;
+  name: string;
+  legalEntityId?: string | null;
+  annualQuota: number;
+  carryForwardCap: number;
+  noticeDays: number;
+  paid: boolean;
+  encashable: boolean;
+  active: boolean;
+}
+
+export interface CreateLeaveTypeBody {
+  code: string;
+  name: string;
+  legalEntityId?: string;
+  annualQuota: number;
+  carryForwardCap: number;
+  noticeDays: number;
+  paid: boolean;
+  encashable: boolean;
+}
+
+export interface Holiday {
+  id: string;
+  holidayDate: string;
+  name: string;
+  legalEntityId?: string | null;
+}
+
+export interface CreateHolidayBody {
+  holidayDate: string;
+  name: string;
+  legalEntityId?: string;
+}
+
 export interface ReviewCase {
   id: string;
   status: string;
@@ -214,6 +251,29 @@ export const api = {
     }),
   entities: (token: string) => request<LegalEntity[]>(token, '/entities'),
   departments: (token: string) => request<Department[]>(token, '/departments'),
+  leaveTypes: (token: string) => request<LeaveType[]>(token, '/leave-types'),
+  createLeaveType: (token: string, body: CreateLeaveTypeBody) =>
+    request<LeaveType>(token, '/leave-types', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateLeaveType: (
+    token: string,
+    id: string,
+    patch: Partial<CreateLeaveTypeBody> & { active?: boolean },
+  ) =>
+    request<LeaveType>(token, `/leave-types/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  holidays: (token: string) => request<Holiday[]>(token, '/holidays'),
+  createHoliday: (token: string, body: CreateHolidayBody) =>
+    request<Holiday>(token, '/holidays', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  deleteHoliday: (token: string, id: string) =>
+    request<unknown>(token, `/holidays/${id}`, { method: 'DELETE' }),
   employeeDevices: (token: string, id: string) =>
     request<Device[]>(token, `/employees/${id}/devices`),
   employeeDeviceHistory: (token: string, id: string) =>
