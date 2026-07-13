@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  AbsenceRecord,
   ApiError,
   AttendanceSummary,
   Department,
@@ -28,6 +29,14 @@ const EMPLOYMENT_TYPES = [
   'consultant',
 ];
 const STATUSES = ['active', 'on_leave', 'terminated'];
+
+type DetailTab = 'devices' | 'geofences' | 'leave' | 'attendance';
+const DETAIL_TABS: { key: DetailTab; label: string }[] = [
+  { key: 'devices', label: 'Devices' },
+  { key: 'geofences', label: 'Geofences' },
+  { key: 'leave', label: 'Leave' },
+  { key: 'attendance', label: 'Attendance' },
+];
 
 export function Employees({ token }: { token: string }) {
   const [list, setList] = useState<Employee[]>([]);
@@ -294,14 +303,16 @@ function EmployeeDetail({
   const [shift, setShift] = useState<Shift | null>(null);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
+  const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [detailTab, setDetailTab] = useState<DetailTab>('devices');
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [d, h, g, all, lv, sh, allSh, sum] = await Promise.all([
+      const [d, h, g, all, lv, sh, allSh, sum, abs] = await Promise.all([
         api.employeeDevices(token, employee.id),
         api.employeeDeviceHistory(token, employee.id),
         api.employeeGeofences(token, employee.id),
@@ -310,6 +321,7 @@ function EmployeeDetail({
         api.employeeShift(token, employee.id),
         api.shifts(token),
         api.employeeSummary(token, employee.id, daysAgo(13), daysAgo(0)),
+        api.employeeAbsences(token, employee.id),
       ]);
       setDevices(d);
       setHistory(h);
@@ -319,6 +331,7 @@ function EmployeeDetail({
       setShift(sh);
       setAllShifts(allSh);
       setSummary(sum);
+      setAbsences(abs);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     }
@@ -326,6 +339,7 @@ function EmployeeDetail({
 
   useEffect(() => {
     setEditing(false);
+    setDetailTab('devices');
     void load();
   }, [load]);
 
@@ -371,6 +385,18 @@ function EmployeeDetail({
     setBusy(true);
     try {
       await api.unassignShift(token, employee.id);
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reverseAbsence = async (id: string) => {
+    setBusy(true);
+    try {
+      await api.reverseAbsence(token, id);
       await load();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
@@ -439,6 +465,20 @@ function EmployeeDetail({
 
       {error && <div className="banner error">{error}</div>}
 
+      <div className="filters">
+        {DETAIL_TABS.map((t) => (
+          <button
+            key={t.key}
+            className={`tab ${detailTab === t.key ? 'active' : ''}`}
+            onClick={() => setDetailTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {detailTab === 'devices' && (
+        <>
       <div className="card">
         <h3>Devices</h3>
         {devices.length === 0 && <p className="muted small">No devices bound.</p>}
@@ -468,7 +508,10 @@ function EmployeeDetail({
           </div>
         ))}
       </div>
+        </>
+      )}
 
+      {detailTab === 'geofences' && (
       <div className="card">
         <h3>Geofences</h3>
         {assigned.length === 0 && (
@@ -512,7 +555,9 @@ function EmployeeDetail({
           </div>
         )}
       </div>
+      )}
 
+      {detailTab === 'leave' && (
       <div className="card">
         <h3>Leave requests</h3>
         {leave.length === 0 && <p className="muted small">No requests.</p>}
@@ -531,7 +576,10 @@ function EmployeeDetail({
           </div>
         ))}
       </div>
+      )}
 
+      {detailTab === 'attendance' && (
+        <>
       <div className="card">
         <h3>Shift</h3>
         {shift ? (
@@ -596,6 +644,33 @@ function EmployeeDetail({
               </div>
             ))}
         </div>
+      )}
+
+      {absences.length > 0 && (
+        <div className="card">
+          <h3>Absences</h3>
+          {absences.map((a) => (
+            <div className="line" key={a.id}>
+              <span className={`pill day-${a.reversedAt ? 'leave' : 'absent'}`}>
+                {a.reversedAt ? 'reversed' : 'absent'}
+              </span>
+              <span className="grow">{a.absenceDate}</span>
+              {a.reversedAt ? (
+                <span className="muted small">{a.reversalReason ?? ''}</span>
+              ) : (
+                <button
+                  className="btn small-btn"
+                  disabled={busy}
+                  onClick={() => void reverseAbsence(a.id)}
+                >
+                  Reverse
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -183,6 +183,14 @@ export interface AttendanceSummary {
   };
 }
 
+export interface AbsenceRecord {
+  id: string;
+  absenceDate: string;
+  reversedAt: string | null;
+  reversalReason: string | null;
+  createdAt: string;
+}
+
 export interface LeaveRequestRow {
   id: string;
   startDate: string;
@@ -355,6 +363,13 @@ export const api = {
       token,
       `/employees/${id}/attendance-summary?from=${from}&to=${to}`,
     ),
+  employeeAbsences: (token: string, id: string) =>
+    request<AbsenceRecord[]>(token, `/employees/${id}/absences`),
+  reverseAbsence: (token: string, id: string, reason?: string) =>
+    request<unknown>(token, `/attendance/absences/${id}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
   shifts: (token: string) => request<Shift[]>(token, '/shifts'),
   createShift: (token: string, body: CreateShiftBody) =>
     request<Shift>(token, '/shifts', {

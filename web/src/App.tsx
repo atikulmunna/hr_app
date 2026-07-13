@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { Approvals } from './pages/Approvals';
 import { Employees } from './pages/Employees';
@@ -27,9 +27,20 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'shifts', label: 'Shifts' },
 ];
 
+const TAB_STORAGE_KEY = 'hris.console.tab';
+
+function initialTab(): Tab {
+  const saved = localStorage.getItem(TAB_STORAGE_KEY);
+  return TABS.some((t) => t.key === saved) ? (saved as Tab) : 'approvals';
+}
+
 export default function App() {
   const auth = useAuth();
-  const [tab, setTab] = useState<Tab>('approvals');
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  useEffect(() => {
+    localStorage.setItem(TAB_STORAGE_KEY, tab);
+  }, [tab]);
 
   if (auth.isLoading) {
     return <div className="center muted">Loading...</div>;
