@@ -17,6 +17,7 @@ import { HealthModule } from './modules/health/health.module';
 import { LeaveModule } from './modules/leave/leave.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { ReviewModule } from './modules/review/review.module';
+import { ShiftModule } from './modules/shifts/shift.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 
 @Module({
@@ -37,6 +38,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     GeofenceModule,
     ReviewModule,
     LeaveModule,
+    ShiftModule,
     AttendanceModule,
   ],
 })

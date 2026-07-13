@@ -9,12 +9,14 @@ import { Device } from '../entities/device.entity';
 import { DeviceBindingHistory } from '../entities/device-binding-history.entity';
 import { Employee } from '../entities/employee.entity';
 import { EmployeeGeofence } from '../entities/employee-geofence.entity';
+import { EmployeeShift } from '../entities/employee-shift.entity';
 import { EmploymentHistory } from '../entities/employment-history.entity';
 import { Geofence } from '../entities/geofence.entity';
 import { Holiday } from '../entities/holiday.entity';
 import { LeaveRequest } from '../entities/leave-request.entity';
 import { LeaveType } from '../entities/leave-type.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
+import { Shift } from '../entities/shift.entity';
 import { Notification } from '../entities/notification.entity';
 import { ReviewCase } from '../entities/review-case.entity';
 import { Tenant } from '../entities/tenant.entity';
@@ -57,6 +59,8 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       LeaveType,
       Holiday,
       LeaveRequest,
+      Shift,
+      EmployeeShift,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,

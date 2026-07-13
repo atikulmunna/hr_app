@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ApiError,
+  AttendanceSummary,
   Department,
   Device,
   DeviceHistoryEntry,
@@ -8,8 +9,16 @@ import {
   Geofence,
   LeaveRequestRow,
   LegalEntity,
+  Shift,
   api,
 } from '../api';
+
+// Inclusive date string N days before today, as YYYY-MM-DD.
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
 
 const EMPLOYMENT_TYPES = [
   'permanent',
@@ -282,6 +291,9 @@ function EmployeeDetail({
   const [assigned, setAssigned] = useState<Geofence[]>([]);
   const [allFences, setAllFences] = useState<Geofence[]>([]);
   const [leave, setLeave] = useState<LeaveRequestRow[]>([]);
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [allShifts, setAllShifts] = useState<Shift[]>([]);
+  const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -289,18 +301,24 @@ function EmployeeDetail({
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [d, h, g, all, lv] = await Promise.all([
+      const [d, h, g, all, lv, sh, allSh, sum] = await Promise.all([
         api.employeeDevices(token, employee.id),
         api.employeeDeviceHistory(token, employee.id),
         api.employeeGeofences(token, employee.id),
         api.geofences(token),
         api.employeeLeaveRequests(token, employee.id),
+        api.employeeShift(token, employee.id),
+        api.shifts(token),
+        api.employeeSummary(token, employee.id, daysAgo(13), daysAgo(0)),
       ]);
       setDevices(d);
       setHistory(h);
       setAssigned(g);
       setAllFences(all);
       setLeave(lv);
+      setShift(sh);
+      setAllShifts(allSh);
+      setSummary(sum);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     }
@@ -336,8 +354,34 @@ function EmployeeDetail({
     }
   };
 
+  const assignShift = async (shiftId: string) => {
+    if (!shiftId) return;
+    setBusy(true);
+    try {
+      await api.assignShift(token, employee.id, shiftId);
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const unassignShift = async () => {
+    setBusy(true);
+    try {
+      await api.unassignShift(token, employee.id);
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const assignedIds = new Set(assigned.map((g) => g.id));
   const assignable = allFences.filter((g) => !assignedIds.has(g.id));
+  const activeShifts = allShifts.filter((s) => s.active);
 
   return (
     <div className="stack">
@@ -487,6 +531,72 @@ function EmployeeDetail({
           </div>
         ))}
       </div>
+
+      <div className="card">
+        <h3>Shift</h3>
+        {shift ? (
+          <div className="line">
+            <span className="grow">
+              {shift.name}{' '}
+              <span className="muted small">
+                {shift.startTime.slice(0, 5)} to {shift.endTime.slice(0, 5)}
+              </span>
+            </span>
+            <button
+              className="btn small-btn"
+              disabled={busy}
+              onClick={() => void unassignShift()}
+            >
+              Unassign
+            </button>
+          </div>
+        ) : (
+          <p className="muted small">No shift assigned.</p>
+        )}
+        {activeShifts.length > 0 && (
+          <div className="assign-row">
+            <select
+              disabled={busy}
+              value=""
+              onChange={(e) => void assignShift(e.target.value)}
+            >
+              <option value="" disabled>
+                {shift ? 'Change shift...' : 'Assign a shift...'}
+              </option>
+              {activeShifts.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {summary && summary.shift && (
+        <div className="card">
+          <h3>Attendance (last 14 days)</h3>
+          <div className="muted small case-meta">
+            present {summary.totals.presentDays} · late{' '}
+            {summary.totals.lateDays} · absent {summary.totals.absentDays} ·
+            leave {summary.totals.leaveDays} · worked{' '}
+            {summary.totals.workedHours} h · overtime{' '}
+            {summary.totals.overtimeHours} h
+          </div>
+          {summary.days
+            .filter((d) => d.status !== 'off')
+            .map((d) => (
+              <div className="line" key={d.day}>
+                <span className={`pill day-${d.status}`}>{d.status}</span>
+                <span className="grow muted small">{d.day}</span>
+                <span className="muted small">
+                  {d.workedHours != null ? `${d.workedHours} h` : ''}
+                  {d.overtimeHours > 0 ? ` (+${d.overtimeHours} OT)` : ''}
+                </span>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

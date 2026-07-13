@@ -310,6 +310,27 @@ body {
   background: color-mix(in srgb, var(--danger) 18%, white);
   color: var(--danger);
 }
+.pill.day-present {
+  background: color-mix(in srgb, var(--accent) 45%, white);
+  color: var(--accent-ink);
+}
+.pill.day-late {
+  background: #fdf1c7;
+  color: #8a6d00;
+}
+.pill.day-absent {
+  background: color-mix(in srgb, var(--danger) 18%, white);
+  color: var(--danger);
+}
+.pill.day-leave,
+.pill.day-holiday {
+  background: var(--line);
+  color: var(--muted);
+}
+.pill.day-scheduled {
+  background: var(--line);
+  color: var(--muted);
+}
 .risk {
   margin-bottom: 16px;
 }

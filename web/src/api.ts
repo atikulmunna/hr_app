@@ -135,6 +135,54 @@ export interface Holiday {
   legalEntityId?: string | null;
 }
 
+export interface Shift {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  breakMinutes: number;
+  graceMinutes: number;
+  active: boolean;
+  legalEntityId?: string | null;
+}
+
+export interface CreateShiftBody {
+  name: string;
+  startTime: string;
+  endTime: string;
+  breakMinutes: number;
+  graceMinutes: number;
+  legalEntityId?: string;
+}
+
+export interface DaySummary {
+  day: string;
+  status: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  workedHours: number | null;
+  overtimeHours: number;
+}
+
+export interface AttendanceSummary {
+  shift: {
+    id: string;
+    name: string;
+    startTime: string;
+    endTime: string;
+    expectedHours: number;
+  } | null;
+  days: DaySummary[];
+  totals: {
+    presentDays: number;
+    lateDays: number;
+    absentDays: number;
+    leaveDays: number;
+    workedHours: number;
+    overtimeHours: number;
+  };
+}
+
 export interface LeaveRequestRow {
   id: string;
   startDate: string;
@@ -293,6 +341,35 @@ export const api = {
     request<Geofence[]>(token, `/employees/${id}/geofences`),
   employeeLeaveRequests: (token: string, id: string) =>
     request<LeaveRequestRow[]>(token, `/employees/${id}/leave/requests`),
+  employeeShift: (token: string, id: string) =>
+    request<Shift | null>(token, `/employees/${id}/shift`),
+  assignShift: (token: string, id: string, shiftId: string) =>
+    request<unknown>(token, `/employees/${id}/shift`, {
+      method: 'POST',
+      body: JSON.stringify({ shiftId }),
+    }),
+  unassignShift: (token: string, id: string) =>
+    request<unknown>(token, `/employees/${id}/shift`, { method: 'DELETE' }),
+  employeeSummary: (token: string, id: string, from: string, to: string) =>
+    request<AttendanceSummary>(
+      token,
+      `/employees/${id}/attendance-summary?from=${from}&to=${to}`,
+    ),
+  shifts: (token: string) => request<Shift[]>(token, '/shifts'),
+  createShift: (token: string, body: CreateShiftBody) =>
+    request<Shift>(token, '/shifts', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateShift: (
+    token: string,
+    id: string,
+    patch: Partial<CreateShiftBody> & { active?: boolean },
+  ) =>
+    request<Shift>(token, `/shifts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
   geofences: (token: string) => request<Geofence[]>(token, '/geofences'),
   createGeofence: (token: string, body: CreateGeofenceBody) =>
     request<Geofence>(token, '/geofences', {

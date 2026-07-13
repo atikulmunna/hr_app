@@ -6,6 +6,7 @@ import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
 import { Leave } from './pages/Leave';
 import { Review } from './pages/Review';
+import { Shifts } from './pages/Shifts';
 
 type Tab =
   | 'approvals'
@@ -13,7 +14,8 @@ type Tab =
   | 'inbox'
   | 'employees'
   | 'geofences'
-  | 'leave';
+  | 'leave'
+  | 'shifts';
 
 export default function App() {
   const auth = useAuth();
@@ -84,6 +86,12 @@ export default function App() {
           >
             Leave
           </button>
+          <button
+            className={`tab ${tab === 'shifts' ? 'active' : ''}`}
+            onClick={() => setTab('shifts')}
+          >
+            Shifts
+          </button>
         </nav>
         <div className="spacer" />
         <span className="muted">{name}</span>
@@ -98,6 +106,7 @@ export default function App() {
         {tab === 'employees' && <Employees token={auth.user!.access_token} />}
         {tab === 'geofences' && <Geofences token={auth.user!.access_token} />}
         {tab === 'leave' && <Leave token={auth.user!.access_token} />}
+        {tab === 'shifts' && <Shifts token={auth.user!.access_token} />}
       </main>
     </div>
   );
