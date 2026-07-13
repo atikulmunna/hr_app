@@ -39,6 +39,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+# Local dev server logs
+*.log
 .pnpm-store/
 
 # ---------------------------------------------------------------------------

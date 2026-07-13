@@ -30,6 +30,7 @@ export interface Employee {
   lastName: string;
   email?: string;
   jobTitle?: string;
+  departmentId?: string;
   employmentType: string;
   status: string;
   remoteAllowed: boolean;
@@ -59,6 +60,48 @@ export interface Geofence {
   longitude: number;
   radiusM: number;
   active: boolean;
+}
+
+export interface LegalEntity {
+  id: string;
+  name: string;
+  countryCode: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  legalEntityId: string;
+}
+
+export interface CreateEmployeeBody {
+  legalEntityId: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  jobTitle?: string;
+  employmentType?: string;
+  departmentId?: string;
+}
+
+export interface UpdateEmployeeBody {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  jobTitle?: string;
+  employmentType?: string;
+  departmentId?: string;
+  status?: string;
+  remoteAllowed?: boolean;
+}
+
+export interface CreateGeofenceBody {
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusM: number;
+  legalEntityId?: string;
 }
 
 export interface AppNotification {
@@ -109,6 +152,18 @@ export const api = {
   markNotificationRead: (token: string, id: string) =>
     request<unknown>(token, `/notifications/${id}/read`, { method: 'POST' }),
   employees: (token: string) => request<Employee[]>(token, '/employees'),
+  createEmployee: (token: string, body: CreateEmployeeBody) =>
+    request<Employee>(token, '/employees', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateEmployee: (token: string, id: string, patch: UpdateEmployeeBody) =>
+    request<Employee>(token, `/employees/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  entities: (token: string) => request<LegalEntity[]>(token, '/entities'),
+  departments: (token: string) => request<Department[]>(token, '/departments'),
   employeeDevices: (token: string, id: string) =>
     request<Device[]>(token, `/employees/${id}/devices`),
   employeeDeviceHistory: (token: string, id: string) =>
@@ -116,6 +171,16 @@ export const api = {
   employeeGeofences: (token: string, id: string) =>
     request<Geofence[]>(token, `/employees/${id}/geofences`),
   geofences: (token: string) => request<Geofence[]>(token, '/geofences'),
+  createGeofence: (token: string, body: CreateGeofenceBody) =>
+    request<Geofence>(token, '/geofences', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  setGeofenceActive: (token: string, id: string, active: boolean) =>
+    request<Geofence>(token, `/geofences/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active }),
+    }),
   assignGeofence: (token: string, id: string, geofenceId: string) =>
     request<unknown>(token, `/employees/${id}/geofences`, {
       method: 'POST',

@@ -37,6 +37,7 @@ export type UpdateEmployeeInput = Partial<
   Omit<CreateEmployeeInput, 'employeeCode' | 'legalEntityId'>
 > & {
   status?: Employee['status'];
+  remoteAllowed?: boolean;
 };
 
 const UPDATABLE_FIELDS: (keyof UpdateEmployeeInput)[] = [
@@ -52,6 +53,7 @@ const UPDATABLE_FIELDS: (keyof UpdateEmployeeInput)[] = [
   'emergencyContactName',
   'emergencyContactPhone',
   'status',
+  'remoteAllowed',
 ];
 
 // Classifies an employment change for the timeline, or null when only

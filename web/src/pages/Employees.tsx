@@ -1,41 +1,62 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ApiError,
+  Department,
   Device,
   DeviceHistoryEntry,
   Employee,
   Geofence,
+  LegalEntity,
   api,
 } from '../api';
 
+const EMPLOYMENT_TYPES = [
+  'permanent',
+  'contract',
+  'probation',
+  'intern',
+  'consultant',
+];
+const STATUSES = ['active', 'on_leave', 'terminated'];
+
 export function Employees({ token }: { token: string }) {
   const [list, setList] = useState<Employee[]>([]);
-  const [selected, setSelected] = useState<Employee | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const rows = await api.employees(token);
+      setList(rows);
+      setSelectedId((prev) =>
+        prev && rows.some((r) => r.id === prev) ? prev : (rows[0]?.id ?? null),
+      );
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    api
-      .employees(token)
-      .then((rows) => {
-        if (!active) return;
-        setList(rows);
-        setSelected((prev) => prev ?? rows[0] ?? null);
-      })
-      .catch((e) => active && setError(e instanceof ApiError ? e.message : String(e)))
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [token]);
+    void load();
+  }, [load]);
+
+  const selected = list.find((e) => e.id === selectedId) ?? null;
 
   return (
     <section className="split">
       <div className="master">
         <div className="section-head">
           <h2>Employees</h2>
+          <button
+            className="btn primary small-btn"
+            onClick={() => setCreating((v) => !v)}
+          >
+            {creating ? 'Cancel' : 'New'}
+          </button>
         </div>
         {error && <div className="banner error">{error}</div>}
         {loading && <p className="muted">Loading...</p>}
@@ -43,8 +64,13 @@ export function Employees({ token }: { token: string }) {
           {list.map((e) => (
             <button
               key={e.id}
-              className={`card employee-row ${selected?.id === e.id ? 'active' : ''}`}
-              onClick={() => setSelected(e)}
+              className={`card employee-row ${
+                selectedId === e.id ? 'active' : ''
+              }`}
+              onClick={() => {
+                setCreating(false);
+                setSelectedId(e.id);
+              }}
             >
               <div className="notif-title">
                 {e.firstName} {e.lastName}
@@ -57,8 +83,18 @@ export function Employees({ token }: { token: string }) {
         </div>
       </div>
       <div className="detail">
-        {selected ? (
-          <EmployeeDetail token={token} employee={selected} />
+        {creating ? (
+          <NewEmployeeForm
+            token={token}
+            onError={setError}
+            onCreated={(created) => {
+              setCreating(false);
+              setSelectedId(created.id);
+              void load();
+            }}
+          />
+        ) : selected ? (
+          <EmployeeDetail token={token} employee={selected} onUpdated={load} />
         ) : (
           <p className="muted">Select an employee.</p>
         )}
@@ -67,12 +103,178 @@ export function Employees({ token }: { token: string }) {
   );
 }
 
+function NewEmployeeForm({
+  token,
+  onCreated,
+  onError,
+}: {
+  token: string;
+  onCreated: (created: Employee) => void;
+  onError: (message: string) => void;
+}) {
+  const [entities, setEntities] = useState<LegalEntity[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [form, setForm] = useState({
+    legalEntityId: '',
+    employeeCode: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    jobTitle: '',
+    employmentType: 'permanent',
+    departmentId: '',
+  });
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    Promise.all([api.entities(token), api.departments(token)])
+      .then(([ents, depts]) => {
+        setEntities(ents);
+        setDepartments(depts);
+        setForm((f) => ({ ...f, legalEntityId: ents[0]?.id ?? '' }));
+      })
+      .catch((e) => onError(e instanceof ApiError ? e.message : String(e)));
+  }, [token, onError]);
+
+  const set = (key: keyof typeof form, value: string) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const deptOptions = departments.filter(
+    (d) => d.legalEntityId === form.legalEntityId,
+  );
+
+  const submit = async () => {
+    if (
+      !form.legalEntityId ||
+      !form.employeeCode.trim() ||
+      !form.firstName.trim() ||
+      !form.lastName.trim()
+    ) {
+      onError('Legal entity, code, first name, and last name are required.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const created = await api.createEmployee(token, {
+        legalEntityId: form.legalEntityId,
+        employeeCode: form.employeeCode.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim() || undefined,
+        jobTitle: form.jobTitle.trim() || undefined,
+        employmentType: form.employmentType,
+        departmentId: form.departmentId || undefined,
+      });
+      onCreated(created);
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card form">
+      <div className="notif-title big">New employee</div>
+      <div className="field">
+        <label>Legal entity</label>
+        <select
+          value={form.legalEntityId}
+          onChange={(e) => set('legalEntityId', e.target.value)}
+        >
+          {entities.map((ent) => (
+            <option key={ent.id} value={ent.id}>
+              {ent.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label>Employee code</label>
+          <input
+            value={form.employeeCode}
+            onChange={(e) => set('employeeCode', e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>Employment type</label>
+          <select
+            value={form.employmentType}
+            onChange={(e) => set('employmentType', e.target.value)}
+          >
+            {EMPLOYMENT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label>First name</label>
+          <input
+            value={form.firstName}
+            onChange={(e) => set('firstName', e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>Last name</label>
+          <input
+            value={form.lastName}
+            onChange={(e) => set('lastName', e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="field">
+        <label>Email</label>
+        <input value={form.email} onChange={(e) => set('email', e.target.value)} />
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label>Job title</label>
+          <input
+            value={form.jobTitle}
+            onChange={(e) => set('jobTitle', e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>Department</label>
+          <select
+            value={form.departmentId}
+            onChange={(e) => set('departmentId', e.target.value)}
+          >
+            <option value="">None</option>
+            {deptOptions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="actions">
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          Create employee
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EmployeeDetail({
   token,
   employee,
+  onUpdated,
 }: {
   token: string;
   employee: Employee;
+  onUpdated: () => Promise<void>;
 }) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [history, setHistory] = useState<DeviceHistoryEntry[]>([]);
@@ -80,6 +282,7 @@ function EmployeeDetail({
   const [allFences, setAllFences] = useState<Geofence[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -100,6 +303,7 @@ function EmployeeDetail({
   }, [token, employee.id]);
 
   useEffect(() => {
+    setEditing(false);
     void load();
   }, [load]);
 
@@ -134,31 +338,55 @@ function EmployeeDetail({
   return (
     <div className="stack">
       <div className="card">
-        <div className="notif-title big">
-          {employee.firstName} {employee.lastName}
+        <div className="row">
+          <div className="notif-title big grow">
+            {employee.firstName} {employee.lastName}
+          </div>
+          <button
+            className="btn small-btn"
+            onClick={() => setEditing((v) => !v)}
+          >
+            {editing ? 'Close' : 'Edit'}
+          </button>
         </div>
-        <dl className="payload">
-          <div>
-            <dt>Code</dt>
-            <dd>{employee.employeeCode}</dd>
-          </div>
-          <div>
-            <dt>Email</dt>
-            <dd>{employee.email ?? '-'}</dd>
-          </div>
-          <div>
-            <dt>Type</dt>
-            <dd>{employee.employmentType}</dd>
-          </div>
-          <div>
-            <dt>Status</dt>
-            <dd>{employee.status}</dd>
-          </div>
-          <div>
-            <dt>Remote allowed</dt>
-            <dd>{employee.remoteAllowed ? 'yes' : 'no'}</dd>
-          </div>
-        </dl>
+        {editing ? (
+          <EditEmployeeForm
+            token={token}
+            employee={employee}
+            onError={setError}
+            onSaved={async () => {
+              setEditing(false);
+              await onUpdated();
+            }}
+          />
+        ) : (
+          <dl className="payload">
+            <div>
+              <dt>Code</dt>
+              <dd>{employee.employeeCode}</dd>
+            </div>
+            <div>
+              <dt>Email</dt>
+              <dd>{employee.email ?? '-'}</dd>
+            </div>
+            <div>
+              <dt>Job title</dt>
+              <dd>{employee.jobTitle ?? '-'}</dd>
+            </div>
+            <div>
+              <dt>Type</dt>
+              <dd>{employee.employmentType}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{employee.status}</dd>
+            </div>
+            <div>
+              <dt>Remote allowed</dt>
+              <dd>{employee.remoteAllowed ? 'yes' : 'no'}</dd>
+            </div>
+          </dl>
+        )}
       </div>
 
       {error && <div className="banner error">{error}</div>}
@@ -235,6 +463,137 @@ function EmployeeDetail({
             </select>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function EditEmployeeForm({
+  token,
+  employee,
+  onSaved,
+  onError,
+}: {
+  token: string;
+  employee: Employee;
+  onSaved: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [form, setForm] = useState({
+    firstName: employee.firstName,
+    lastName: employee.lastName,
+    email: employee.email ?? '',
+    jobTitle: employee.jobTitle ?? '',
+    employmentType: employee.employmentType,
+    status: employee.status,
+    remoteAllowed: employee.remoteAllowed,
+  });
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      onError('First and last name are required.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.updateEmployee(token, employee.id, {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim() || undefined,
+        jobTitle: form.jobTitle.trim() || undefined,
+        employmentType: form.employmentType,
+        status: form.status,
+        remoteAllowed: form.remoteAllowed,
+      });
+      await onSaved();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="form">
+      <div className="field-row">
+        <div className="field">
+          <label>First name</label>
+          <input
+            value={form.firstName}
+            onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>Last name</label>
+          <input
+            value={form.lastName}
+            onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="field">
+        <label>Email</label>
+        <input
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label>Job title</label>
+        <input
+          value={form.jobTitle}
+          onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
+        />
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label>Employment type</label>
+          <select
+            value={form.employmentType}
+            onChange={(e) =>
+              setForm({ ...form, employmentType: e.target.value })
+            }
+          >
+            {EMPLOYMENT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>Status</label>
+          <select
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+          >
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={form.remoteAllowed}
+          onChange={(e) =>
+            setForm({ ...form, remoteAllowed: e.target.checked })
+          }
+        />
+        Remote attendance allowed
+      </label>
+      <div className="actions">
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          Save changes
+        </button>
       </div>
     </div>
   );

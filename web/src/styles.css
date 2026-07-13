@@ -235,6 +235,47 @@ body {
   font-size: 1.15rem;
 }
 
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+.field-row {
+  display: flex;
+  gap: 14px;
+}
+@media (max-width: 520px) {
+  .field-row {
+    flex-direction: column;
+  }
+}
+.field label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.field input,
+.field select {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font: inherit;
+  color: var(--ink);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
 .banner {
   padding: 12px 16px;
   border-radius: 10px;

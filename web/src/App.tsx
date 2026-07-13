@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { Approvals } from './pages/Approvals';
 import { Employees } from './pages/Employees';
+import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
 
-type Tab = 'approvals' | 'inbox' | 'employees';
+type Tab = 'approvals' | 'inbox' | 'employees' | 'geofences';
 
 export default function App() {
   const auth = useAuth();
@@ -57,6 +58,12 @@ export default function App() {
           >
             Employees
           </button>
+          <button
+            className={`tab ${tab === 'geofences' ? 'active' : ''}`}
+            onClick={() => setTab('geofences')}
+          >
+            Geofences
+          </button>
         </nav>
         <div className="spacer" />
         <span className="muted">{name}</span>
@@ -68,6 +75,7 @@ export default function App() {
         {tab === 'approvals' && <Approvals token={auth.user!.access_token} />}
         {tab === 'inbox' && <Inbox token={auth.user!.access_token} />}
         {tab === 'employees' && <Employees token={auth.user!.access_token} />}
+        {tab === 'geofences' && <Geofences token={auth.user!.access_token} />}
       </main>
     </div>
   );
