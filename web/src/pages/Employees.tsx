@@ -6,6 +6,7 @@ import {
   DeviceHistoryEntry,
   Employee,
   Geofence,
+  LeaveRequestRow,
   LegalEntity,
   api,
 } from '../api';
@@ -280,6 +281,7 @@ function EmployeeDetail({
   const [history, setHistory] = useState<DeviceHistoryEntry[]>([]);
   const [assigned, setAssigned] = useState<Geofence[]>([]);
   const [allFences, setAllFences] = useState<Geofence[]>([]);
+  const [leave, setLeave] = useState<LeaveRequestRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -287,16 +289,18 @@ function EmployeeDetail({
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [d, h, g, all] = await Promise.all([
+      const [d, h, g, all, lv] = await Promise.all([
         api.employeeDevices(token, employee.id),
         api.employeeDeviceHistory(token, employee.id),
         api.employeeGeofences(token, employee.id),
         api.geofences(token),
+        api.employeeLeaveRequests(token, employee.id),
       ]);
       setDevices(d);
       setHistory(h);
       setAssigned(g);
       setAllFences(all);
+      setLeave(lv);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     }
@@ -463,6 +467,25 @@ function EmployeeDetail({
             </select>
           </div>
         )}
+      </div>
+
+      <div className="card">
+        <h3>Leave requests</h3>
+        {leave.length === 0 && <p className="muted small">No requests.</p>}
+        {leave.map((l) => (
+          <div className="line" key={l.id}>
+            <span className={`pill status-${l.status ?? 'pending'}`}>
+              {l.status ?? 'pending'}
+            </span>
+            <span className="grow">
+              {l.typeName}{' '}
+              <span className="muted small">
+                {l.startDate} to {l.endDate}
+              </span>
+            </span>
+            <span className="muted small">{l.workingDays} d</span>
+          </div>
+        ))}
       </div>
     </div>
   );

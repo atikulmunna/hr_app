@@ -135,6 +135,17 @@ export interface Holiday {
   legalEntityId?: string | null;
 }
 
+export interface LeaveRequestRow {
+  id: string;
+  startDate: string;
+  endDate: string;
+  workingDays: number;
+  reason?: string | null;
+  typeName: string;
+  typeCode: string;
+  status: string | null;
+}
+
 export interface CreateHolidayBody {
   holidayDate: string;
   name: string;
@@ -280,6 +291,8 @@ export const api = {
     request<DeviceHistoryEntry[]>(token, `/employees/${id}/device-history`),
   employeeGeofences: (token: string, id: string) =>
     request<Geofence[]>(token, `/employees/${id}/geofences`),
+  employeeLeaveRequests: (token: string, id: string) =>
+    request<LeaveRequestRow[]>(token, `/employees/${id}/leave/requests`),
   geofences: (token: string) => request<Geofence[]>(token, '/geofences'),
   createGeofence: (token: string, body: CreateGeofenceBody) =>
     request<Geofence>(token, '/geofences', {

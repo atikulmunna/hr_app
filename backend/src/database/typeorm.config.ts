@@ -12,6 +12,7 @@ import { EmployeeGeofence } from '../entities/employee-geofence.entity';
 import { EmploymentHistory } from '../entities/employment-history.entity';
 import { Geofence } from '../entities/geofence.entity';
 import { Holiday } from '../entities/holiday.entity';
+import { LeaveRequest } from '../entities/leave-request.entity';
 import { LeaveType } from '../entities/leave-type.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
 import { Notification } from '../entities/notification.entity';
@@ -55,6 +56,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       ReviewCase,
       LeaveType,
       Holiday,
+      LeaveRequest,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
