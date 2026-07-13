@@ -23,6 +23,12 @@ export class TenantContextService {
     this.als.run({ tenantId }, callback);
   }
 
+  // Runs async work under a fresh tenant context. Used by background jobs that
+  // have no request to inherit a tenant from (e.g. the absence job).
+  runWith<T>(tenantId: string, fn: () => Promise<T>): Promise<T> {
+    return this.als.run({ tenantId }, fn);
+  }
+
   get tenantId(): string | undefined {
     return this.als.getStore()?.tenantId;
   }

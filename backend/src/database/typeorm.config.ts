@@ -1,4 +1,5 @@
 import { DataSourceOptions } from 'typeorm';
+import { AbsenceRecord } from '../entities/absence-record.entity';
 import { ApprovalRequest } from '../entities/approval-request.entity';
 import { ApprovalStep } from '../entities/approval-step.entity';
 import { AttendanceEvent } from '../entities/attendance-event.entity';
@@ -61,6 +62,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       LeaveRequest,
       Shift,
       EmployeeShift,
+      AbsenceRecord,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
