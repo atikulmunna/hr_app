@@ -17,6 +17,7 @@ import { Holiday } from '../entities/holiday.entity';
 import { LeaveRequest } from '../entities/leave-request.entity';
 import { LeaveType } from '../entities/leave-type.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
+import { RegularizationRequest } from '../entities/regularization-request.entity';
 import { Shift } from '../entities/shift.entity';
 import { Notification } from '../entities/notification.entity';
 import { ReviewCase } from '../entities/review-case.entity';
@@ -63,6 +64,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Shift,
       EmployeeShift,
       AbsenceRecord,
+      RegularizationRequest,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,

@@ -17,6 +17,7 @@ import { GeofenceModule } from './modules/geofences/geofence.module';
 import { HealthModule } from './modules/health/health.module';
 import { LeaveModule } from './modules/leave/leave.module';
 import { NotificationModule } from './modules/notifications/notification.module';
+import { RegularizationModule } from './modules/attendance/regularization.module';
 import { ReviewModule } from './modules/review/review.module';
 import { ShiftModule } from './modules/shifts/shift.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
@@ -40,6 +41,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     GeofenceModule,
     ReviewModule,
     LeaveModule,
+    RegularizationModule,
     ShiftModule,
     AttendanceModule,
   ],

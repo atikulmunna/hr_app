@@ -208,6 +208,29 @@ export interface CreateHolidayBody {
   legalEntityId?: string;
 }
 
+export type CorrectionType = 'missing_check_in' | 'missing_check_out' | 'both';
+
+export interface RegularizationRow {
+  id: string;
+  targetDate: string;
+  correctionType: CorrectionType;
+  requestedCheckIn: string | null;
+  requestedCheckOut: string | null;
+  reason: string;
+  origin: string;
+  appliedAt: string | null;
+  createdAt: string;
+  status: string;
+}
+
+export interface AdminRegularizationBody {
+  targetDate: string;
+  correctionType: CorrectionType;
+  requestedCheckIn?: string;
+  requestedCheckOut?: string;
+  reason: string;
+}
+
 export interface ReviewCase {
   id: string;
   status: string;
@@ -370,6 +393,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
+  employeeRegularizations: (token: string, id: string) =>
+    request<RegularizationRow[]>(
+      token,
+      `/employees/${id}/attendance/regularizations`,
+    ),
+  adminRegularization: (token: string, id: string, body: AdminRegularizationBody) =>
+    request<RegularizationRow>(
+      token,
+      `/employees/${id}/attendance/regularizations`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
   shifts: (token: string) => request<Shift[]>(token, '/shifts'),
   createShift: (token: string, body: CreateShiftBody) =>
     request<Shift>(token, '/shifts', {

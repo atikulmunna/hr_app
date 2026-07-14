@@ -10,6 +10,7 @@ import {
   Geofence,
   LeaveRequestRow,
   LegalEntity,
+  RegularizationRow,
   Shift,
   api,
 } from '../api';
@@ -304,6 +305,7 @@ function EmployeeDetail({
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
+  const [regularizations, setRegularizations] = useState<RegularizationRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -312,7 +314,7 @@ function EmployeeDetail({
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [d, h, g, all, lv, sh, allSh, sum, abs] = await Promise.all([
+      const [d, h, g, all, lv, sh, allSh, sum, abs, reg] = await Promise.all([
         api.employeeDevices(token, employee.id),
         api.employeeDeviceHistory(token, employee.id),
         api.employeeGeofences(token, employee.id),
@@ -322,6 +324,7 @@ function EmployeeDetail({
         api.shifts(token),
         api.employeeSummary(token, employee.id, daysAgo(13), daysAgo(0)),
         api.employeeAbsences(token, employee.id),
+        api.employeeRegularizations(token, employee.id),
       ]);
       setDevices(d);
       setHistory(h);
@@ -332,6 +335,7 @@ function EmployeeDetail({
       setAllShifts(allSh);
       setSummary(sum);
       setAbsences(abs);
+      setRegularizations(reg);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     }
@@ -670,8 +674,194 @@ function EmployeeDetail({
           ))}
         </div>
       )}
+
+      <RegularizationsCard
+        token={token}
+        employeeId={employee.id}
+        rows={regularizations}
+        onError={setError}
+        onChanged={load}
+      />
         </>
       )}
+    </div>
+  );
+}
+
+function RegularizationsCard({
+  token,
+  employeeId,
+  rows,
+  onError,
+  onChanged,
+}: {
+  token: string;
+  employeeId: string;
+  rows: RegularizationRow[];
+  onError: (message: string) => void;
+  onChanged: () => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+
+  return (
+    <div className="card">
+      <div className="row">
+        <h3 className="grow">Regularizations</h3>
+        <button className="btn small-btn" onClick={() => setAdding((v) => !v)}>
+          {adding ? 'Cancel' : 'Add correction'}
+        </button>
+      </div>
+      {adding && (
+        <AdminRegularizationForm
+          token={token}
+          employeeId={employeeId}
+          onError={onError}
+          onDone={async () => {
+            setAdding(false);
+            await onChanged();
+          }}
+        />
+      )}
+      {rows.length === 0 && !adding && (
+        <p className="muted small">No regularizations.</p>
+      )}
+      {rows.map((r) => (
+        <div className="line" key={r.id}>
+          <span className={`pill status-${r.status}`}>{r.status}</span>
+          <span className="grow">
+            {r.targetDate}{' '}
+            <span className="muted small">{CORRECTION_LABELS[r.correctionType]}</span>
+          </span>
+          <span className="tag">{r.origin}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const CORRECTION_LABELS: Record<string, string> = {
+  missing_check_in: 'check-in',
+  missing_check_out: 'check-out',
+  both: 'check-in and check-out',
+};
+
+function AdminRegularizationForm({
+  token,
+  employeeId,
+  onDone,
+  onError,
+}: {
+  token: string;
+  employeeId: string;
+  onDone: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [form, setForm] = useState({
+    targetDate: daysAgo(1),
+    correctionType: 'both' as 'missing_check_in' | 'missing_check_out' | 'both',
+    checkIn: '09:00',
+    checkOut: '17:00',
+    reason: '',
+  });
+  const [busy, setBusy] = useState(false);
+
+  const set = (key: keyof typeof form, value: string) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const needsIn = form.correctionType !== 'missing_check_out';
+  const needsOut = form.correctionType !== 'missing_check_in';
+
+  const submit = async () => {
+    if (!form.reason.trim()) {
+      onError('A reason is required for the correction.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.adminRegularization(token, employeeId, {
+        targetDate: form.targetDate,
+        correctionType: form.correctionType,
+        requestedCheckIn: needsIn
+          ? `${form.targetDate}T${form.checkIn}:00Z`
+          : undefined,
+        requestedCheckOut: needsOut
+          ? `${form.targetDate}T${form.checkOut}:00Z`
+          : undefined,
+        reason: form.reason.trim(),
+      });
+      await onDone();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="form">
+      <div className="field-row">
+        <div className="field">
+          <label>Date</label>
+          <input
+            type="date"
+            value={form.targetDate}
+            onChange={(e) => set('targetDate', e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>Correction</label>
+          <select
+            value={form.correctionType}
+            onChange={(e) => set('correctionType', e.target.value)}
+          >
+            <option value="both">Check-in and check-out</option>
+            <option value="missing_check_in">Check-in only</option>
+            <option value="missing_check_out">Check-out only</option>
+          </select>
+        </div>
+      </div>
+      <div className="field-row">
+        {needsIn && (
+          <div className="field">
+            <label>Check-in (UTC)</label>
+            <input
+              type="time"
+              value={form.checkIn}
+              onChange={(e) => set('checkIn', e.target.value)}
+            />
+          </div>
+        )}
+        {needsOut && (
+          <div className="field">
+            <label>Check-out (UTC)</label>
+            <input
+              type="time"
+              value={form.checkOut}
+              onChange={(e) => set('checkOut', e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+      <div className="field">
+        <label>Reason</label>
+        <input
+          value={form.reason}
+          onChange={(e) => set('reason', e.target.value)}
+        />
+      </div>
+      <p className="muted small">
+        An admin correction is applied immediately with origin admin, not routed
+        for approval.
+      </p>
+      <div className="actions">
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          Apply correction
+        </button>
+      </div>
     </div>
   );
 }

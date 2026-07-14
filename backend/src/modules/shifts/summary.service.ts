@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { TenantDbService } from '../../database/tenant-db.service';
 import { Employee } from '../../entities/employee.entity';
 import { Shift } from '../../entities/shift.entity';
+import { RegularizationService } from '../attendance/regularization.service';
 import { ShiftService } from './shift.service';
 
 export type DayStatus =
@@ -60,6 +61,7 @@ export class SummaryService {
   constructor(
     private readonly db: TenantDbService,
     private readonly shifts: ShiftService,
+    private readonly regularization: RegularizationService,
   ) {}
 
   async summary(
@@ -80,6 +82,10 @@ export class SummaryService {
     }
 
     return this.db.withTenant(async (m) => {
+      // Materialize any approved regularizations first so a corrected day
+      // reads as present rather than absent (T-1C.11, FR-AT-38).
+      await this.regularization.syncApproved(m, employeeId);
+
       const shift = await this.shifts.assignedShift(m, employeeId);
       if (!shift) {
         return emptySummary();

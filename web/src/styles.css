@@ -336,6 +336,7 @@ body {
 .pill.active,
 .pill.band-clean,
 .pill.status-approved,
+.pill.status-applied,
 .pill.day-present {
   background: var(--success-bg);
   color: var(--success);
