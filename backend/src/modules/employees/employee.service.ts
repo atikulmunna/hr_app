@@ -99,6 +99,12 @@ export class EmployeeService {
     return this.db.withTenant((m) => this.findOrThrow(m, id));
   }
 
+  findByCode(code: string): Promise<Employee | null> {
+    return this.db.withTenant((m) =>
+      m.findOne(Employee, { where: { employeeCode: code } }),
+    );
+  }
+
   create(input: CreateEmployeeInput): Promise<Employee> {
     if (
       !input?.legalEntityId ||

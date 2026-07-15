@@ -97,6 +97,12 @@ export interface UpdateEmployeeBody {
   remoteAllowed?: boolean;
 }
 
+export interface ImportResult {
+  created: number;
+  updated: number;
+  errors: { row: number; employeeCode: string | null; message: string }[];
+}
+
 export interface CreateGeofenceBody {
   name: string;
   latitude: number;
@@ -425,6 +431,20 @@ export const api = {
       body: JSON.stringify(patch),
     }),
   employees: (token: string) => request<Employee[]>(token, '/employees'),
+  exportEmployeesCsv: async (token: string): Promise<string> => {
+    const res = await fetch(`${config.apiBase}/employees/export`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new ApiError(res.status, res.statusText);
+    }
+    return res.text();
+  },
+  importEmployeesCsv: (token: string, csv: string) =>
+    request<ImportResult>(token, '/employees/import', {
+      method: 'POST',
+      body: JSON.stringify({ csv }),
+    }),
   createEmployee: (token: string, body: CreateEmployeeBody) =>
     request<Employee>(token, '/employees', {
       method: 'POST',

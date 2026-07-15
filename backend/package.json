@@ -21,6 +21,8 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/schedule": "^6.1.3",
     "@nestjs/typeorm": "^11.0.0",
+    "csv-parse": "^7.0.1",
+    "csv-stringify": "^6.8.1",
     "dotenv": "^16.4.5",
     "jose": "^5.9.6",
     "pg": "^8.13.1",

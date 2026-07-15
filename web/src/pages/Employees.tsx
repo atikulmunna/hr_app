@@ -50,7 +50,9 @@ export function Employees({ token }: { token: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -70,6 +72,48 @@ export function Employees({ token }: { token: string }) {
     void load();
   }, [load]);
 
+  const exportAll = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const csv = await api.exportEmployeesCsv(token);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'employees.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const importFile = async (file: File) => {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const csv = await file.text();
+      const result = await api.importEmployeesCsv(token, csv);
+      setNotice(
+        `Import complete: ${result.created} created, ${result.updated} updated` +
+          (result.errors.length
+            ? `, ${result.errors.length} failed (line ${result.errors
+                .map((e) => e.row)
+                .join(', ')}).`
+            : '.'),
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const selected = list.find((e) => e.id === selectedId) ?? null;
 
   return (
@@ -77,14 +121,33 @@ export function Employees({ token }: { token: string }) {
       <div className="master">
         <div className="section-head">
           <h2>Employees</h2>
-          <button
-            className="btn primary small-btn"
-            onClick={() => setCreating((v) => !v)}
-          >
-            {creating ? 'Cancel' : 'New'}
-          </button>
+          <div className="head-actions">
+            <button className="btn small-btn" disabled={busy} onClick={() => void exportAll()}>
+              Export
+            </button>
+            <label className="btn small-btn">
+              Import
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void importFile(file);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            <button
+              className="btn primary small-btn"
+              onClick={() => setCreating((v) => !v)}
+            >
+              {creating ? 'Cancel' : 'New'}
+            </button>
+          </div>
         </div>
         {error && <div className="banner error">{error}</div>}
+        {notice && <div className="banner success">{notice}</div>}
         {loading && <p className="muted">Loading...</p>}
         <div className="list">
           {list.map((e) => (
