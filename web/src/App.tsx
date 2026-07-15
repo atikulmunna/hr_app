@@ -91,7 +91,7 @@ export default function App() {
         </nav>
         <div className="sidebar-foot">
           <span className="muted small">{name}</span>
-          <button className="btn" onClick={() => void auth.removeUser()}>
+          <button className="btn" onClick={() => void auth.signoutRedirect()}>
             Sign out
           </button>
         </div>
