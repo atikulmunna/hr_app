@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConsentModule } from '../consent/consent.module';
 import { DeviceModule } from '../devices/device.module';
 import { EmployeeModule } from '../employees/employee.module';
 import { GeofenceModule } from '../geofences/geofence.module';
@@ -12,7 +13,13 @@ import { AttendanceController } from './attendance.controller';
 import { AttendanceService } from './attendance.service';
 
 @Module({
-  imports: [EmployeeModule, DeviceModule, GeofenceModule, ReviewModule],
+  imports: [
+    EmployeeModule,
+    DeviceModule,
+    GeofenceModule,
+    ReviewModule,
+    ConsentModule,
+  ],
   controllers: [
     AttendanceController,
     AbsenceController,

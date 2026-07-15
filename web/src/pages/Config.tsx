@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, AttendanceConfig, api } from '../api';
+import { ApiError, AttendanceConfig, ConsentStatement, api } from '../api';
+
+const CONSENT_SIGNALS = ['location', 'device_integrity', 'network'];
 
 const SIGNAL_LABELS: Record<string, string> = {
   rooted: 'Rooted device',
@@ -238,6 +240,126 @@ export function Config({ token }: { token: string }) {
           </div>
         </div>
       </div>
+
+      <ConsentStatements token={token} />
     </section>
+  );
+}
+
+function ConsentStatements({ token }: { token: string }) {
+  const [statements, setStatements] = useState<ConsentStatement[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [platform, setPlatform] = useState('android');
+  const [body, setBody] = useState('');
+  const [signals, setSignals] = useState<string[]>([...CONSENT_SIGNALS]);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setStatements(await api.consentStatements(token));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const toggleSignal = (s: string) => {
+    setSignals((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
+  };
+
+  const publish = async () => {
+    if (!body.trim()) {
+      setError('A purpose statement body is required.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await api.publishConsentStatement(token, {
+        platform,
+        body: body.trim(),
+        signals,
+      });
+      setBody('');
+      await load();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const active = statements.filter((s) => s.active);
+
+  return (
+    <div className="card">
+      <h3>Consent purpose statement</h3>
+      <p className="muted small">
+        The plain-language statement an employee accepts before their first mark.
+        Publishing a new version supersedes the current one and requires everyone
+        to re-consent.
+      </p>
+      {error && <div className="banner error">{error}</div>}
+
+      {active.length === 0 && (
+        <p className="muted small">No active statement published.</p>
+      )}
+      {active.map((s) => (
+        <div className="line" key={s.id}>
+          <span className="pill status-approved">
+            {s.platform} v{s.version}
+          </span>
+          <span className="grow">{s.body}</span>
+          <span className="muted small">{s.signals.join(', ')}</span>
+        </div>
+      ))}
+
+      <div className="form" style={{ marginTop: 12 }}>
+        <div className="field-row">
+          <div className="field">
+            <label>Platform</label>
+            <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
+              <option value="android">android</option>
+              <option value="ios">ios</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Collected signals</label>
+            <div className="filters">
+              {CONSENT_SIGNALS.map((s) => (
+                <label className="check inline" key={s}>
+                  <input
+                    type="checkbox"
+                    checked={signals.includes(s)}
+                    onChange={() => toggleSignal(s)}
+                  />
+                  {s}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="field">
+          <label>Statement</label>
+          <textarea
+            className="note-input"
+            rows={3}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="We collect your location and device integrity signals at each check-in to verify on-site presence."
+          />
+        </div>
+        <div className="actions">
+          <button className="btn primary" disabled={busy} onClick={() => void publish()}>
+            Publish new version
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { DeviceService } from '../devices/device.service';
+import { ConsentService } from '../consent/consent.service';
 import { GeofenceService } from '../geofences/geofence.service';
 import { ReviewService } from '../review/review.service';
 import { EmployeeService } from '../employees/employee.service';
@@ -64,6 +65,7 @@ export class AttendanceService {
     private readonly geofences: GeofenceService,
     private readonly review: ReviewService,
     private readonly config: AttendanceConfigService,
+    private readonly consent: ConsentService,
   ) {}
 
   async today(user: AuthUser): Promise<AttendanceToday> {
@@ -94,6 +96,10 @@ export class AttendanceService {
       // optional marking window (T-1C.12).
       const config = await this.config.effective(m);
       this.assertWithinMarkingWindow(config);
+
+      // Consent gate (FR-M13-01): once a purpose statement is published for the
+      // platform, the employee must have accepted its current version.
+      await this.consent.assertConsented(m, employee.id, input.platform);
 
       // 2. Device binding gate (M-DB). Auto-enrolls the first device; a mark
       // from any other device is hard-blocked until an approved re-bind. Runs

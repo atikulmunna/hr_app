@@ -261,6 +261,22 @@ export interface TeamLeaveRow {
   status: string;
 }
 
+export interface ConsentStatement {
+  id: string;
+  platform: string;
+  version: number;
+  body: string;
+  signals: string[];
+  active: boolean;
+  createdAt: string;
+}
+
+export interface PublishConsentBody {
+  platform: string;
+  body: string;
+  signals: string[];
+}
+
 export interface AttendanceConfig {
   weights: Record<string, number>;
   yellowThreshold: number;
@@ -380,6 +396,13 @@ export const api = {
     ),
   teamLeave: (token: string, from: string, to: string) =>
     request<TeamLeaveRow[]>(token, `/me/team/leave?from=${from}&to=${to}`),
+  consentStatements: (token: string) =>
+    request<ConsentStatement[]>(token, '/consent/statements'),
+  publishConsentStatement: (token: string, body: PublishConsentBody) =>
+    request<ConsentStatement>(token, '/consent/statements', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   attendanceConfig: (token: string) =>
     request<AttendanceConfig>(token, '/attendance/config'),
   updateAttendanceConfig: (

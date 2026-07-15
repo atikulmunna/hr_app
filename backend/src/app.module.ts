@@ -8,6 +8,7 @@ import { buildDataSourceOptions } from './database/typeorm.config';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ConsentModule } from './modules/consent/consent.module';
 import { CustomFieldModule } from './modules/custom-fields/custom-field.module';
 import { DepartmentModule } from './modules/departments/department.module';
 import { DeviceModule } from './modules/devices/device.module';
@@ -44,6 +45,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     LeaveModule,
     RegularizationModule,
     ShiftModule,
+    ConsentModule,
     AttendanceModule,
     MssModule,
   ],
