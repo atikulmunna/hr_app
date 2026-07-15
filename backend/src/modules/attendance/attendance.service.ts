@@ -11,16 +11,20 @@ import { DeviceService } from '../devices/device.service';
 import { GeofenceService } from '../geofences/geofence.service';
 import { ReviewService } from '../review/review.service';
 import { EmployeeService } from '../employees/employee.service';
+import { AttendanceConfigService } from './attendance-config.service';
 import {
   AttendanceState,
+  RiskConfig,
   bandFor,
   computeState,
+  hardBlockedSignal,
   hasCoOccurrence,
   hasCriticalSignal,
-  highConfidenceSignals,
+  highConfidencePresent,
   isAllowed,
   matchGeofence,
-  scoreSoftFlags,
+  presentSignals,
+  scoreSignals,
 } from './scoring';
 
 export interface MarkEventInput {
@@ -59,6 +63,7 @@ export class AttendanceService {
     private readonly devices: DeviceService,
     private readonly geofences: GeofenceService,
     private readonly review: ReviewService,
+    private readonly config: AttendanceConfigService,
   ) {}
 
   async today(user: AuthUser): Promise<AttendanceToday> {
@@ -84,6 +89,11 @@ export class AttendanceService {
           this.sequenceReason(state, input.eventType),
         );
       }
+
+      // Tenant attendance config drives scoring, banding, hard blocks, and the
+      // optional marking window (T-1C.12).
+      const config = await this.config.effective(m);
+      this.assertWithinMarkingWindow(config);
 
       // 2. Device binding gate (M-DB). Auto-enrolls the first device; a mark
       // from any other device is hard-blocked until an approved re-bind. Runs
@@ -118,11 +128,19 @@ export class AttendanceService {
       const remote = !geofencePass && employee.remoteAllowed;
 
       // 4. Soft-flag scoring (SRS 5.2.2/5.2.4). A device re-bound within the
-      // cool-off window adds the newly-re-bound signal (FR-DB-07). A critical
-      // signal forces the Red band regardless of the sum (FR-AT-26).
+      // cool-off window adds the newly-re-bound signal (FR-DB-07). A tenant may
+      // promote a soft signal to a hard block, which rejects the mark (FR-AT-16).
+      // A critical signal forces the Red band regardless of the sum (FR-AT-26).
       const recentlyRebound = await this.devices.wasReboundWithin(m, employee.id);
-      const riskScore = scoreSoftFlags(input, recentlyRebound);
-      const band = bandFor(riskScore, hasCriticalSignal(input));
+      const signals = presentSignals(input, recentlyRebound, config);
+      const blocked = hardBlockedSignal(signals, config);
+      if (blocked) {
+        throw new BadRequestException(
+          `A ${blocked.replace(/_/g, ' ')} signal is not permitted for attendance here.`,
+        );
+      }
+      const riskScore = scoreSignals(signals, config);
+      const band = bandFor(riskScore, hasCriticalSignal(signals, config), config);
 
       const event = await m.save(
         m.create(AttendanceEvent, {
@@ -166,12 +184,12 @@ export class AttendanceService {
 
       // Flag the mark for HR review when it lands in the Red band or its
       // high-confidence signals co-occur (FR-AT-10, FR-AT-27).
-      if (band === 'red' || hasCoOccurrence(input, recentlyRebound)) {
+      if (band === 'red' || hasCoOccurrence(signals, config)) {
         await this.review.openCase(m, {
           employeeId: employee.id,
           eventId: event.id,
           reason: band === 'red' ? 'red_band' : 'co_occurrence',
-          signals: highConfidenceSignals(input, recentlyRebound),
+          signals: highConfidencePresent(signals),
         });
       }
       return event;
@@ -188,6 +206,26 @@ export class AttendanceService {
       .andWhere("e.serverTs >= date_trunc('day', now())")
       .orderBy('e.serverTs', 'ASC')
       .getMany();
+  }
+
+  // Enforces the optional tenant marking window (FR-AT-15). Compared in UTC for
+  // now, consistent with the rest of attendance; per-entity timezone lands with
+  // the shift/timezone work. Off unless both bounds are configured.
+  private assertWithinMarkingWindow(config: RiskConfig): void {
+    if (!config.markingStart || !config.markingEnd) {
+      return;
+    }
+    const now = new Date();
+    const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const [sh, sm] = config.markingStart.split(':');
+    const [eh, em] = config.markingEnd.split(':');
+    const start = Number(sh) * 60 + Number(sm);
+    const end = Number(eh) * 60 + Number(em);
+    if (minutes < start || minutes > end) {
+      throw new BadRequestException(
+        `Attendance can only be marked between ${config.markingStart} and ${config.markingEnd} UTC.`,
+      );
+    }
   }
 
   private sequenceReason(

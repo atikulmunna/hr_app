@@ -231,6 +231,20 @@ export interface AdminRegularizationBody {
   reason: string;
 }
 
+export interface AttendanceConfig {
+  weights: Record<string, number>;
+  yellowThreshold: number;
+  redThreshold: number;
+  scoreCeiling: number;
+  accuracyLimitM: number;
+  criticalSignals: string[];
+  cooccurrenceThreshold: number;
+  hardBlockSignals: string[];
+  offlineWindowHours: number;
+  markingStart: string | null;
+  markingEnd: string | null;
+}
+
 export interface ReviewCase {
   id: string;
   status: string;
@@ -327,6 +341,16 @@ export const api = {
     request<unknown>(token, `/review-cases/${id}/resolve`, {
       method: 'POST',
       body: JSON.stringify({ decision, note }),
+    }),
+  attendanceConfig: (token: string) =>
+    request<AttendanceConfig>(token, '/attendance/config'),
+  updateAttendanceConfig: (
+    token: string,
+    patch: Partial<AttendanceConfig>,
+  ) =>
+    request<AttendanceConfig>(token, '/attendance/config', {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
     }),
   employees: (token: string) => request<Employee[]>(token, '/employees'),
   createEmployee: (token: string, body: CreateEmployeeBody) =>

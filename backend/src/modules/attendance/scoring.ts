@@ -1,18 +1,72 @@
 import { AttendanceEventType, RiskBand } from '../../entities/attendance-event.entity';
 
-// Soft-flag weights (SRS 5.2.2 defaults, the ones computable from the payload).
-const WEIGHTS = {
+// Canonical soft-flag signal keys. This one vocabulary is shared by weights,
+// the critical set, the co-occurrence set, and the hard-block set, so tenant
+// config (T-1C.12) refers to signals by a single stable name.
+export const SIGNAL_KEYS = [
+  'rooted',
+  'emulator',
+  'hooking_framework',
+  'signature_mismatch',
+  'adb_enabled',
+  'dev_options_enabled',
+  'vpn_active',
+  'low_accuracy',
+  'recently_rebound',
+] as const;
+export type SignalKey = (typeof SIGNAL_KEYS)[number];
+
+// Recommended default weights (SRS 5.2.2), the ones computable from the payload.
+export const DEFAULT_WEIGHTS: Record<SignalKey, number> = {
   rooted: 25,
   emulator: 30,
-  hookingFramework: 35,
-  appSignatureInvalid: 40,
-  adbEnabled: 10,
-  devOptionsEnabled: 10,
-  vpnActive: 10,
-  lowAccuracy: 15,
-  reboundCoolOff: 20,
+  hooking_framework: 35,
+  signature_mismatch: 40,
+  adb_enabled: 10,
+  dev_options_enabled: 10,
+  vpn_active: 10,
+  low_accuracy: 15,
+  recently_rebound: 20,
 };
-const SCORE_CEILING = 100;
+
+// Independent high-confidence signals whose co-occurrence opens a review case
+// (FR-AT-27). The set is fixed; the count threshold is tenant-configurable.
+export const HIGH_CONFIDENCE_SIGNALS: SignalKey[] = [
+  'emulator',
+  'hooking_framework',
+  'signature_mismatch',
+  'recently_rebound',
+];
+
+// The tenant-tunable scoring and banding knobs (FR-AT-15, FR-AT-16). Defaults
+// match the SRS. The service merges a tenant's stored overrides onto these.
+export interface RiskConfig {
+  weights: Record<string, number>;
+  yellowThreshold: number;
+  redThreshold: number;
+  scoreCeiling: number;
+  accuracyLimitM: number;
+  criticalSignals: string[];
+  cooccurrenceThreshold: number;
+  hardBlockSignals: string[];
+  offlineWindowHours: number;
+  markingStart: string | null;
+  markingEnd: string | null;
+}
+
+export const DEFAULT_RISK_CONFIG: RiskConfig = {
+  weights: DEFAULT_WEIGHTS,
+  yellowThreshold: 30,
+  redThreshold: 60,
+  scoreCeiling: 100,
+  accuracyLimitM: 100,
+  criticalSignals: ['hooking_framework', 'signature_mismatch'],
+  cooccurrenceThreshold: 2,
+  hardBlockSignals: [],
+  offlineWindowHours: 12,
+  markingStart: null,
+  markingEnd: null,
+};
 
 export interface SignalPayload {
   isMock?: boolean;
@@ -26,63 +80,76 @@ export interface SignalPayload {
   vpnActive?: boolean;
 }
 
-// recentlyRebound is derived server-side (marked from a device re-bound within
-// the cool-off window, FR-DB-07); it is not a client-supplied payload signal.
-export function scoreSoftFlags(
+// The soft-flag signals present on a mark. recentlyRebound is derived
+// server-side (a device re-bound within the cool-off window, FR-DB-07); it is
+// not a client-supplied payload signal. low_accuracy uses the tenant limit.
+export function presentSignals(
   p: SignalPayload,
-  recentlyRebound = false,
-): number {
-  let score = 0;
-  if (p.rooted) score += WEIGHTS.rooted;
-  if (p.emulator) score += WEIGHTS.emulator;
-  if (p.hookingFramework) score += WEIGHTS.hookingFramework;
-  if (p.appSignatureValid === false) score += WEIGHTS.appSignatureInvalid;
-  if (p.adbEnabled) score += WEIGHTS.adbEnabled;
-  if (p.devOptionsEnabled) score += WEIGHTS.devOptionsEnabled;
-  if (p.vpnActive) score += WEIGHTS.vpnActive;
-  if (typeof p.accuracyM === 'number' && p.accuracyM > 100) {
-    score += WEIGHTS.lowAccuracy;
-  }
-  if (recentlyRebound) score += WEIGHTS.reboundCoolOff;
-  return Math.min(score, SCORE_CEILING);
-}
-
-// A critical signal forces the Red band regardless of the numeric sum
-// (FR-AT-26). Defaults per SRS 5.2.3: app-signature mismatch and a hooking
-// framework. Tenant-configurable later (T-1C.12).
-export function hasCriticalSignal(p: SignalPayload): boolean {
-  return p.hookingFramework === true || p.appSignatureValid === false;
-}
-
-export function bandFor(score: number, critical = false): RiskBand {
-  if (critical) return 'red';
-  if (score >= 60) return 'red';
-  if (score >= 30) return 'yellow';
-  return 'clean';
-}
-
-// Independent high-confidence signals whose co-occurrence opens a review case
-// (FR-AT-27). Default set per SRS 5.2.3: any two of emulator, hooking framework,
-// signature mismatch, and a newly re-bound device.
-const COOCCURRENCE_THRESHOLD = 2;
-
-export function highConfidenceSignals(
-  p: SignalPayload,
-  recentlyRebound = false,
-): string[] {
-  const present: string[] = [];
+  recentlyRebound: boolean,
+  config: RiskConfig,
+): SignalKey[] {
+  const present: SignalKey[] = [];
+  if (p.rooted) present.push('rooted');
   if (p.emulator) present.push('emulator');
   if (p.hookingFramework) present.push('hooking_framework');
   if (p.appSignatureValid === false) present.push('signature_mismatch');
+  if (p.adbEnabled) present.push('adb_enabled');
+  if (p.devOptionsEnabled) present.push('dev_options_enabled');
+  if (p.vpnActive) present.push('vpn_active');
+  if (typeof p.accuracyM === 'number' && p.accuracyM > config.accuracyLimitM) {
+    present.push('low_accuracy');
+  }
   if (recentlyRebound) present.push('recently_rebound');
   return present;
 }
 
-export function hasCoOccurrence(
-  p: SignalPayload,
-  recentlyRebound = false,
+export function scoreSignals(signals: SignalKey[], config: RiskConfig): number {
+  const weights = { ...DEFAULT_WEIGHTS, ...config.weights };
+  let score = 0;
+  for (const s of signals) {
+    score += weights[s] ?? 0;
+  }
+  return Math.min(score, config.scoreCeiling);
+}
+
+// A critical signal forces the Red band regardless of the numeric sum
+// (FR-AT-26).
+export function hasCriticalSignal(
+  signals: SignalKey[],
+  config: RiskConfig,
 ): boolean {
-  return highConfidenceSignals(p, recentlyRebound).length >= COOCCURRENCE_THRESHOLD;
+  return signals.some((s) => config.criticalSignals.includes(s));
+}
+
+export function bandFor(
+  score: number,
+  critical: boolean,
+  config: RiskConfig,
+): RiskBand {
+  if (critical) return 'red';
+  if (score >= config.redThreshold) return 'red';
+  if (score >= config.yellowThreshold) return 'yellow';
+  return 'clean';
+}
+
+export function highConfidencePresent(signals: SignalKey[]): SignalKey[] {
+  return signals.filter((s) => HIGH_CONFIDENCE_SIGNALS.includes(s));
+}
+
+export function hasCoOccurrence(
+  signals: SignalKey[],
+  config: RiskConfig,
+): boolean {
+  return highConfidencePresent(signals).length >= config.cooccurrenceThreshold;
+}
+
+// The first present signal a tenant has promoted to a hard block (FR-AT-16),
+// or null. A hard-blocked signal rejects the mark rather than scoring it.
+export function hardBlockedSignal(
+  signals: SignalKey[],
+  config: RiskConfig,
+): SignalKey | null {
+  return signals.find((s) => config.hardBlockSignals.includes(s)) ?? null;
 }
 
 export function haversineMeters(

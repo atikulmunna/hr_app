@@ -6,12 +6,23 @@ import { ReviewModule } from '../review/review.module';
 import { AbsenceController } from './absence.controller';
 import { AbsenceScheduler } from './absence.scheduler';
 import { AbsenceService } from './absence.service';
+import { AttendanceConfigController } from './attendance-config.controller';
+import { AttendanceConfigService } from './attendance-config.service';
 import { AttendanceController } from './attendance.controller';
 import { AttendanceService } from './attendance.service';
 
 @Module({
   imports: [EmployeeModule, DeviceModule, GeofenceModule, ReviewModule],
-  controllers: [AttendanceController, AbsenceController],
-  providers: [AttendanceService, AbsenceService, AbsenceScheduler],
+  controllers: [
+    AttendanceController,
+    AbsenceController,
+    AttendanceConfigController,
+  ],
+  providers: [
+    AttendanceService,
+    AbsenceService,
+    AbsenceScheduler,
+    AttendanceConfigService,
+  ],
 })
 export class AttendanceModule {}

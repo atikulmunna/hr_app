@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { Approvals } from './pages/Approvals';
+import { Config } from './pages/Config';
 import { Employees } from './pages/Employees';
 import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
@@ -15,7 +16,8 @@ type Tab =
   | 'employees'
   | 'geofences'
   | 'leave'
-  | 'shifts';
+  | 'shifts'
+  | 'config';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'approvals', label: 'Approvals' },
@@ -25,6 +27,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'geofences', label: 'Geofences' },
   { key: 'leave', label: 'Leave' },
   { key: 'shifts', label: 'Shifts' },
+  { key: 'config', label: 'Config' },
 ];
 
 const TAB_STORAGE_KEY = 'hris.console.tab';
@@ -99,6 +102,7 @@ export default function App() {
           {tab === 'geofences' && <Geofences token={token} />}
           {tab === 'leave' && <Leave token={token} />}
           {tab === 'shifts' && <Shifts token={token} />}
+          {tab === 'config' && <Config token={token} />}
         </div>
       </main>
     </div>
