@@ -321,6 +321,8 @@ export interface ReviewCase {
   firstName: string;
   lastName: string;
   employeeCode: string;
+  enrichmentStatus: string;
+  enrichmentSignals: string[];
 }
 
 export interface RiskRow {

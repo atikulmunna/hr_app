@@ -11,6 +11,10 @@ import { AttendanceConfigController } from './attendance-config.controller';
 import { AttendanceConfigService } from './attendance-config.service';
 import { AttendanceController } from './attendance.controller';
 import { AttendanceService } from './attendance.service';
+import { EnrichmentController } from './enrichment.controller';
+import { EnrichmentScheduler } from './enrichment.scheduler';
+import { EnrichmentService } from './enrichment.service';
+import { IpGeoResolver } from './ip-geo.resolver';
 
 @Module({
   imports: [
@@ -24,12 +28,16 @@ import { AttendanceService } from './attendance.service';
     AttendanceController,
     AbsenceController,
     AttendanceConfigController,
+    EnrichmentController,
   ],
   providers: [
     AttendanceService,
     AbsenceService,
     AbsenceScheduler,
     AttendanceConfigService,
+    EnrichmentService,
+    EnrichmentScheduler,
+    IpGeoResolver,
   ],
 })
 export class AttendanceModule {}

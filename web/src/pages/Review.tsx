@@ -13,7 +13,19 @@ const SIGNAL_LABELS: Record<string, string> = {
   hooking_framework: 'hooking framework',
   emulator: 'emulator',
   recently_rebound: 'recently re-bound',
+  impossible_travel: 'impossible travel',
+  ip_geo_mismatch: 'IP-geo mismatch',
 };
+
+const REASON_LABELS: Record<string, string> = {
+  red_band: 'Red band',
+  co_occurrence: 'Co-occurring signals',
+  enrichment: 'Enrichment',
+};
+
+function signalList(signals: string[]): string {
+  return signals.map((s) => SIGNAL_LABELS[s] ?? s).join(', ');
+}
 
 export function Review({ token }: { token: string }) {
   const [cases, setCases] = useState<ReviewCase[]>([]);
@@ -134,6 +146,9 @@ function CaseCard({
       <div className="row-title">
         <span className={`pill band-${data.band}`}>{data.band}</span>
         <span className="tag">score {data.riskScore}</span>
+        {data.enrichmentStatus === 'pending' && (
+          <span className="tag">score pending</span>
+        )}
         <span className="notif-title">
           {data.firstName} {data.lastName}
         </span>
@@ -146,9 +161,10 @@ function CaseCard({
       </div>
 
       <div className="muted small case-meta">
-        {data.reason === 'red_band' ? 'Red band' : 'Co-occurring signals'}
-        {data.signals.length > 0 &&
-          `: ${data.signals.map((s) => SIGNAL_LABELS[s] ?? s).join(', ')}`}
+        {REASON_LABELS[data.reason] ?? data.reason}
+        {data.signals.length > 0 && `: ${signalList(data.signals)}`}
+        {data.enrichmentSignals.length > 0 &&
+          ` · enrichment: ${signalList(data.enrichmentSignals)}`}
       </div>
       <div className="muted small case-meta">
         {data.remote ? 'remote' : data.geofencePass ? 'inside geofence' : 'outside geofence'}

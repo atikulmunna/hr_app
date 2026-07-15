@@ -209,6 +209,7 @@ export class RegularizationService {
           remote: false,
           riskScore: 0,
           band: 'clean',
+          enrichmentStatus: 'done',
         }),
       );
     }

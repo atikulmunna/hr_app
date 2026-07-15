@@ -95,6 +95,14 @@ export class AttendanceEvent {
   @Column({ default: 'clean' })
   band: RiskBand;
 
+  // Async enrichment (T-1C.5): pending until the background pass adds signals
+  // computed after the response (impossible travel, IP-geo) and re-bands.
+  @Column({ name: 'enrichment_status', default: 'pending' })
+  enrichmentStatus: 'pending' | 'done';
+
+  @Column({ name: 'enrichment_signals', type: 'text', array: true, default: {} })
+  enrichmentSignals: string[];
+
   @Column({ name: 'app_version', nullable: true })
   appVersion?: string;
 

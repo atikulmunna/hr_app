@@ -18,6 +18,12 @@ const REVIEW_ROLE = 'hr_admin';
 const PATTERN_WINDOW_DAYS = 30;
 const PATTERN_MAX = 3;
 
+const CASE_REASONS: Record<string, string> = {
+  red_band: 'A mark scored in the Red band.',
+  co_occurrence: 'A mark raised multiple high-confidence signals.',
+  enrichment: 'Enrichment raised a mark to the Red band.',
+};
+
 // Maps an HR decision to the case status it records (FR-AT-12).
 const RESOLUTION: Record<string, ReviewCaseStatus> = {
   accept: 'accepted',
@@ -41,6 +47,8 @@ const LIST_SQL = `
          e.id AS "eventId", e.event_type AS "eventType", e.server_ts AS "serverTs",
          e.band, e.risk_score AS "riskScore", e.lat, e.lng, e.remote,
          e.geofence_pass AS "geofencePass",
+         e.enrichment_status AS "enrichmentStatus",
+         e.enrichment_signals AS "enrichmentSignals",
          emp.id AS "employeeId", emp.first_name AS "firstName",
          emp.last_name AS "lastName", emp.employee_code AS "employeeCode"
   FROM review_cases rc
@@ -215,10 +223,7 @@ export class ReviewService {
   }
 
   private caseSummary(input: OpenCaseInput): string {
-    const base =
-      input.reason === 'red_band'
-        ? 'A mark scored in the Red band.'
-        : 'A mark raised multiple high-confidence signals.';
+    const base = CASE_REASONS[input.reason] ?? CASE_REASONS.co_occurrence;
     return input.signals.length
       ? `${base} Signals: ${input.signals.join(', ')}.`
       : base;

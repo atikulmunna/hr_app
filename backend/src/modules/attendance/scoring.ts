@@ -13,6 +13,10 @@ export const SIGNAL_KEYS = [
   'vpn_active',
   'low_accuracy',
   'recently_rebound',
+  // Enrichment-only signals, added by the async worker (T-1C.5), never present
+  // in the synchronous payload.
+  'impossible_travel',
+  'ip_geo_mismatch',
 ] as const;
 export type SignalKey = (typeof SIGNAL_KEYS)[number];
 
@@ -27,6 +31,8 @@ export const DEFAULT_WEIGHTS: Record<SignalKey, number> = {
   vpn_active: 10,
   low_accuracy: 15,
   recently_rebound: 20,
+  impossible_travel: 40,
+  ip_geo_mismatch: 25,
 };
 
 // Independent high-confidence signals whose co-occurrence opens a review case
