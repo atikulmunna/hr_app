@@ -19,6 +19,7 @@ import { HealthModule } from './modules/health/health.module';
 import { LeaveModule } from './modules/leave/leave.module';
 import { MssModule } from './modules/mss/mss.module';
 import { NotificationModule } from './modules/notifications/notification.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
 import { RegularizationModule } from './modules/attendance/regularization.module';
 import { ReviewModule } from './modules/review/review.module';
 import { ShiftModule } from './modules/shifts/shift.module';
@@ -48,6 +49,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     ConsentModule,
     AttendanceModule,
     MssModule,
+    PrivacyModule,
   ],
 })
 export class AppModule implements NestModule {

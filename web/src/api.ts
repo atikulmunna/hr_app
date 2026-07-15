@@ -34,6 +34,7 @@ export interface Employee {
   employmentType: string;
   status: string;
   remoteAllowed: boolean;
+  erasedAt?: string | null;
 }
 
 export interface Device {
@@ -261,6 +262,14 @@ export interface TeamLeaveRow {
   status: string;
 }
 
+export interface ErasureResult {
+  employeeId: string;
+  erasedAt: string;
+  erased: string[];
+  retained: string[];
+  note: string;
+}
+
 export interface ConsentStatement {
   id: string;
   platform: string;
@@ -473,6 +482,12 @@ export const api = {
     ),
   employeeAbsences: (token: string, id: string) =>
     request<AbsenceRecord[]>(token, `/employees/${id}/absences`),
+  dataExport: (token: string, id: string) =>
+    request<Record<string, unknown>>(token, `/employees/${id}/data-export`),
+  eraseEmployee: (token: string, id: string) =>
+    request<ErasureResult>(token, `/employees/${id}/erasure`, {
+      method: 'POST',
+    }),
   reverseAbsence: (token: string, id: string, reason?: string) =>
     request<unknown>(token, `/attendance/absences/${id}/reverse`, {
       method: 'POST',

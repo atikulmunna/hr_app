@@ -79,6 +79,9 @@ export class Employee {
   @Column({ name: 'emergency_contact_phone', nullable: true })
   emergencyContactPhone?: string;
 
+  @Column({ name: 'erased_at', type: 'timestamptz', nullable: true })
+  erasedAt?: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

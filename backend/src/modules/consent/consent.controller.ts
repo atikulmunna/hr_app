@@ -36,4 +36,9 @@ export class ConsentController {
   grant(@CurrentUser() user: AuthUser, @Body() body: GrantBody) {
     return this.consent.grant(user, body?.platform, body?.version);
   }
+
+  @Post('me/consent/withdraw')
+  withdraw(@CurrentUser() user: AuthUser, @Body() body: GrantBody) {
+    return this.consent.withdraw(user, body?.platform);
+  }
 }

@@ -162,6 +162,36 @@ export class ConsentService {
     });
   }
 
+  // Employee: withdraw the active consent for a platform (FR-M13-03). The mark
+  // gate then blocks live marks; attendance for withdrawn employees must go
+  // through an alternative approved method (regularization, T-1C.11), which
+  // collects no live signals.
+  async withdraw(user: AuthUser, platform?: string) {
+    const p = platformOf(platform);
+    const employee = await this.employees.myProfile(user.sub, user.email);
+    return this.db.withTenant(async (m) => {
+      const record = await m.findOne(ConsentRecord, {
+        where: { employeeId: employee.id, platform: p, withdrawnAt: IsNull() },
+        order: { grantedAt: 'DESC' },
+      });
+      if (!record) {
+        throw new NotFoundException('You have no active consent to withdraw.');
+      }
+      record.withdrawnAt = new Date();
+      await m.save(record);
+      await this.audit.record(
+        {
+          action: 'consent.withdraw',
+          resourceType: 'consent_record',
+          resourceId: record.id,
+          after: { platform: p, version: record.version },
+        },
+        m,
+      );
+      return record;
+    });
+  }
+
   // Mark gate (FR-M13-01): once a tenant has published a statement for the
   // platform, a mark requires an active consent to its current version.
   // Enforced only when a statement exists, so tenants without one are

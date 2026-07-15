@@ -31,12 +31,18 @@ const EMPLOYMENT_TYPES = [
 ];
 const STATUSES = ['active', 'on_leave', 'terminated'];
 
-type DetailTab = 'devices' | 'geofences' | 'leave' | 'attendance';
+type DetailTab =
+  | 'devices'
+  | 'geofences'
+  | 'leave'
+  | 'attendance'
+  | 'privacy';
 const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   { key: 'devices', label: 'Devices' },
   { key: 'geofences', label: 'Geofences' },
   { key: 'leave', label: 'Leave' },
   { key: 'attendance', label: 'Attendance' },
+  { key: 'privacy', label: 'Privacy' },
 ];
 
 export function Employees({ token }: { token: string }) {
@@ -683,6 +689,107 @@ function EmployeeDetail({
         onChanged={load}
       />
         </>
+      )}
+
+      {detailTab === 'privacy' && (
+        <PrivacyCard
+          token={token}
+          employee={employee}
+          onError={setError}
+          onErased={onUpdated}
+        />
+      )}
+    </div>
+  );
+}
+
+function PrivacyCard({
+  token,
+  employee,
+  onError,
+  onErased,
+}: {
+  token: string;
+  employee: Employee;
+  onError: (message: string) => void;
+  onErased: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string[] | null>(null);
+
+  const download = async () => {
+    setBusy(true);
+    try {
+      const bundle = await api.dataExport(token, employee.id);
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `data-export-${employee.employeeCode}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const erase = async () => {
+    if (
+      !window.confirm(
+        `Erase personal data for ${employee.firstName} ${employee.lastName}? This anonymizes their identity. Transactional records are retained under statutory hold.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await api.eraseEmployee(token, employee.id);
+      setResult(r.retained);
+      await onErased();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const erased = employee.erasedAt != null;
+
+  return (
+    <div className="card">
+      <h3>Data subject</h3>
+      <p className="muted small">
+        Export the employee's personal data, or erase their identity on a
+        data-subject request. Transactional and audit records are retained under
+        the statutory retention hold.
+      </p>
+      <div className="line">
+        <span className="grow">Data export (JSON)</span>
+        <button className="btn small-btn" disabled={busy} onClick={() => void download()}>
+          Download
+        </button>
+      </div>
+      <div className="line">
+        <span className="grow">
+          Erase personal data
+          {erased && <span className="muted small"> (already erased)</span>}
+        </span>
+        <button
+          className="btn small-btn danger"
+          disabled={busy || erased}
+          onClick={() => void erase()}
+        >
+          Erase
+        </button>
+      </div>
+      {result && (
+        <p className="muted small">
+          Erased. Retained under hold: {result.join(', ')}.
+        </p>
       )}
     </div>
   );
