@@ -231,6 +231,36 @@ export interface AdminRegularizationBody {
   reason: string;
 }
 
+export interface TeamMember {
+  id: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  jobTitle: string | null;
+  shiftName: string | null;
+  todayStatus: string;
+}
+
+export interface TeamAttendanceRow {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  shiftName: string | null;
+  totals: AttendanceSummary['totals'];
+}
+
+export interface TeamLeaveRow {
+  id: string;
+  employeeId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  workingDays: number;
+  typeCode: string;
+  typeName: string;
+  status: string;
+}
+
 export interface AttendanceConfig {
   weights: Record<string, number>;
   yellowThreshold: number;
@@ -342,6 +372,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ decision, note }),
     }),
+  team: (token: string) => request<TeamMember[]>(token, '/me/team'),
+  teamAttendance: (token: string, from: string, to: string) =>
+    request<TeamAttendanceRow[]>(
+      token,
+      `/me/team/attendance?from=${from}&to=${to}`,
+    ),
+  teamLeave: (token: string, from: string, to: string) =>
+    request<TeamLeaveRow[]>(token, `/me/team/leave?from=${from}&to=${to}`),
   attendanceConfig: (token: string) =>
     request<AttendanceConfig>(token, '/attendance/config'),
   updateAttendanceConfig: (

@@ -8,11 +8,13 @@ import { Inbox } from './pages/Inbox';
 import { Leave } from './pages/Leave';
 import { Review } from './pages/Review';
 import { Shifts } from './pages/Shifts';
+import { Team } from './pages/Team';
 
 type Tab =
   | 'approvals'
   | 'review'
   | 'inbox'
+  | 'team'
   | 'employees'
   | 'geofences'
   | 'leave'
@@ -23,6 +25,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'approvals', label: 'Approvals' },
   { key: 'review', label: 'Review' },
   { key: 'inbox', label: 'Inbox' },
+  { key: 'team', label: 'Team' },
   { key: 'employees', label: 'Employees' },
   { key: 'geofences', label: 'Geofences' },
   { key: 'leave', label: 'Leave' },
@@ -98,6 +101,7 @@ export default function App() {
           {tab === 'approvals' && <Approvals token={token} />}
           {tab === 'review' && <Review token={token} />}
           {tab === 'inbox' && <Inbox token={token} />}
+          {tab === 'team' && <Team token={token} />}
           {tab === 'employees' && <Employees token={token} />}
           {tab === 'geofences' && <Geofences token={token} />}
           {tab === 'leave' && <Leave token={token} />}
