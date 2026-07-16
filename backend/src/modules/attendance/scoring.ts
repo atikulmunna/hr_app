@@ -17,6 +17,10 @@ export const SIGNAL_KEYS = [
   // in the synchronous payload.
   'impossible_travel',
   'ip_geo_mismatch',
+  // Offline capture (T-1C.7): added when a queued mark is synced later than the
+  // tenant's offline trust window (FR-AT-21). Derived from sync timing, not the
+  // payload.
+  'offline_late',
 ] as const;
 export type SignalKey = (typeof SIGNAL_KEYS)[number];
 
@@ -33,6 +37,7 @@ export const DEFAULT_WEIGHTS: Record<SignalKey, number> = {
   recently_rebound: 20,
   impossible_travel: 40,
   ip_geo_mismatch: 25,
+  offline_late: 15,
 };
 
 // Independent high-confidence signals whose co-occurrence opens a review case

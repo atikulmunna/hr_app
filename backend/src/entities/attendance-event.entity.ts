@@ -106,6 +106,14 @@ export class AttendanceEvent {
   @Column({ name: 'app_version', nullable: true })
   appVersion?: string;
 
+  // Offline capture (T-1C.7): the device-generated idempotency key and the time
+  // the server received the synced event. server_ts keeps the capture time.
+  @Column({ name: 'client_id', nullable: true })
+  clientId?: string;
+
+  @Column({ name: 'synced_at', type: 'timestamptz', nullable: true })
+  syncedAt?: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
