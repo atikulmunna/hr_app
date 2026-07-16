@@ -321,6 +321,7 @@ class _SwapSheetState extends State<_SwapSheet> {
   String? _peerEntryId;
   final TextEditingController _reason = TextEditingController();
   bool _submitting = false;
+  String? _submitError;
 
   @override
   void initState() {
@@ -360,10 +361,15 @@ class _SwapSheetState extends State<_SwapSheet> {
 
   Future<void> _submit() async {
     if (_myEntryId == null || _peerEntryId == null) {
-      _snack('Pick one of your days and a teammate day.');
+      setState(
+        () => _submitError = 'Pick one of your days and a teammate day.',
+      );
       return;
     }
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+    });
     final messenger = ScaffoldMessenger.of(context);
     try {
       await widget.api.requestShiftSwap({
@@ -378,19 +384,17 @@ class _SwapSheetState extends State<_SwapSheet> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
-      _snack(e.message);
+      setState(() {
+        _submitting = false;
+        _submitError = e.message;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
-      _snack(e.toString());
+      setState(() {
+        _submitting = false;
+        _submitError = e.toString();
+      });
     }
-  }
-
-  void _snack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -440,6 +444,13 @@ class _SwapSheetState extends State<_SwapSheet> {
               _peerList(),
               const SizedBox(height: 12),
               _reasonField(),
+              if (_submitError != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _submitError!,
+                  style: AppText.label.copyWith(color: AppColors.dangerText),
+                ),
+              ],
               const SizedBox(height: 20),
               LimeButton(
                 label: _submitting ? 'Submitting...' : 'Request swap',

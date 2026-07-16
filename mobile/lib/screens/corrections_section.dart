@@ -257,6 +257,7 @@ class _CorrectionSheetState extends State<_CorrectionSheet> {
   TimeOfDay? _checkOut;
   final TextEditingController _reason = TextEditingController();
   bool _submitting = false;
+  String? _submitError;
 
   @override
   void dispose() {
@@ -316,23 +317,24 @@ class _CorrectionSheetState extends State<_CorrectionSheet> {
       '${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _submit() async {
+    String? invalid;
     if (_date == null) {
-      _snack('Select the day to correct.');
+      invalid = 'Select the day to correct.';
+    } else if (_needsIn && _checkIn == null) {
+      invalid = 'Enter the check-in time.';
+    } else if (_needsOut && _checkOut == null) {
+      invalid = 'Enter the check-out time.';
+    } else if (_reason.text.trim().isEmpty) {
+      invalid = 'A reason is required.';
+    }
+    if (invalid != null) {
+      setState(() => _submitError = invalid);
       return;
     }
-    if (_needsIn && _checkIn == null) {
-      _snack('Enter the check-in time.');
-      return;
-    }
-    if (_needsOut && _checkOut == null) {
-      _snack('Enter the check-out time.');
-      return;
-    }
-    if (_reason.text.trim().isEmpty) {
-      _snack('A reason is required.');
-      return;
-    }
-    setState(() => _submitting = true);
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+    });
     final messenger = ScaffoldMessenger.of(context);
     try {
       await widget.api.submitRegularization({
@@ -351,19 +353,17 @@ class _CorrectionSheetState extends State<_CorrectionSheet> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
-      _snack(e.message);
+      setState(() {
+        _submitting = false;
+        _submitError = e.message;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _submitting = false);
-      _snack(e.toString());
+      setState(() {
+        _submitting = false;
+        _submitError = e.toString();
+      });
     }
-  }
-
-  void _snack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -459,6 +459,13 @@ class _CorrectionSheetState extends State<_CorrectionSheet> {
               ],
               const SizedBox(height: 12),
               _reasonField(),
+              if (_submitError != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _submitError!,
+                  style: AppText.label.copyWith(color: AppColors.dangerText),
+                ),
+              ],
               const SizedBox(height: 20),
               LimeButton(
                 label: _submitting ? 'Submitting...' : 'Submit correction',
