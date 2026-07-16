@@ -117,6 +117,14 @@ export class EmployeeService {
       );
     }
     return this.db.withTenant(async (m) => {
+      const existing = await m.findOne(Employee, {
+        where: { employeeCode: input.employeeCode },
+      });
+      if (existing) {
+        throw new BadRequestException(
+          `Employee code ${input.employeeCode} is already in use.`,
+        );
+      }
       const customFields = await this.customFields.resolveForEmployee(
         m,
         input.customFields,
