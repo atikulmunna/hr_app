@@ -11,6 +11,7 @@ import {
   LeaveRequestRow,
   LegalEntity,
   RegularizationRow,
+  RosterEntry,
   Shift,
   api,
 } from '../api';
@@ -19,6 +20,13 @@ import {
 function daysAgo(n: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+// Inclusive date string N days after today, as YYYY-MM-DD.
+function daysAhead(n: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
 
@@ -694,6 +702,13 @@ function EmployeeDetail({
         )}
       </div>
 
+      <RosterCard
+        token={token}
+        employeeId={employee.id}
+        shifts={activeShifts}
+        onError={setError}
+      />
+
       {summary && summary.shift && (
         <div className="card">
           <h3>Attendance (last 14 days)</h3>
@@ -914,6 +929,178 @@ const CORRECTION_LABELS: Record<string, string> = {
   missing_check_out: 'check-out',
   both: 'check-in and check-out',
 };
+
+// Per-date roster admin (T-1E.3): assign a shift to a day or a date range,
+// overriding the standing shift for those days. Loads the next 30 days.
+function RosterCard({
+  token,
+  employeeId,
+  shifts,
+  onError,
+}: {
+  token: string;
+  employeeId: string;
+  shifts: Shift[];
+  onError: (message: string) => void;
+}) {
+  const [entries, setEntries] = useState<RosterEntry[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<'single' | 'range'>('single');
+  const [form, setForm] = useState({
+    workDate: daysAhead(1),
+    from: daysAhead(1),
+    to: daysAhead(7),
+    shiftId: '',
+  });
+
+  const load = useCallback(async () => {
+    try {
+      setEntries(
+        await api.employeeRoster(token, employeeId, daysAgo(0), daysAhead(30)),
+      );
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    }
+  }, [token, employeeId, onError]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const set = (key: keyof typeof form, value: string) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const assign = async () => {
+    const shiftId = form.shiftId || shifts[0]?.id;
+    if (!shiftId) {
+      onError('Create a shift first.');
+      return;
+    }
+    setBusy(true);
+    try {
+      if (mode === 'single') {
+        await api.assignRoster(token, employeeId, {
+          workDate: form.workDate,
+          shiftId,
+        });
+      } else {
+        await api.assignRosterRange(token, employeeId, {
+          from: form.from,
+          to: form.to,
+          shiftId,
+        });
+      }
+      await load();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    setBusy(true);
+    try {
+      await api.removeRoster(token, id);
+      await load();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h3>Roster (next 30 days)</h3>
+      {shifts.length === 0 ? (
+        <p className="muted small">Create a shift to roster days.</p>
+      ) : (
+        <div className="form">
+          <div className="field-row">
+            <div className="field">
+              <label>Mode</label>
+              <select
+                value={mode}
+                onChange={(e) => setMode(e.target.value as 'single' | 'range')}
+              >
+                <option value="single">Single day</option>
+                <option value="range">Date range</option>
+              </select>
+            </div>
+            {mode === 'single' ? (
+              <div className="field">
+                <label>Day</label>
+                <input
+                  type="date"
+                  value={form.workDate}
+                  onChange={(e) => set('workDate', e.target.value)}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="field">
+                  <label>From</label>
+                  <input
+                    type="date"
+                    value={form.from}
+                    onChange={(e) => set('from', e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label>To</label>
+                  <input
+                    type="date"
+                    value={form.to}
+                    onChange={(e) => set('to', e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+            <div className="field">
+              <label>Shift</label>
+              <select
+                value={form.shiftId || shifts[0]?.id}
+                onChange={(e) => set('shiftId', e.target.value)}
+              >
+                {shifts.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button className="btn" disabled={busy} onClick={() => void assign()}>
+            Assign
+          </button>
+        </div>
+      )}
+      {entries.length === 0 ? (
+        <p className="muted small">No roster entries in the next 30 days.</p>
+      ) : (
+        entries.map((r) => (
+          <div className="line" key={r.id}>
+            <span className="grow">
+              {r.workDate}{' '}
+              <span className="muted small">
+                {r.shiftName} {r.startTime.slice(0, 5)} to {r.endTime.slice(0, 5)}
+              </span>
+            </span>
+            {r.source === 'swap' && <span className="tag">swap</span>}
+            <button
+              className="btn small-btn"
+              disabled={busy}
+              onClick={() => void remove(r.id)}
+            >
+              Remove
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
 
 function AdminRegularizationForm({
   token,

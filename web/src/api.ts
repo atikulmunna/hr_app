@@ -162,6 +162,17 @@ export interface CreateShiftBody {
   legalEntityId?: string;
 }
 
+export interface RosterEntry {
+  id: string;
+  workDate: string;
+  shiftId: string;
+  source: string;
+  note?: string | null;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+}
+
 export interface DaySummary {
   day: string;
   status: string;
@@ -526,6 +537,31 @@ export const api = {
       `/employees/${id}/attendance/regularizations`,
       { method: 'POST', body: JSON.stringify(body) },
     ),
+  employeeRoster: (token: string, id: string, from: string, to: string) =>
+    request<RosterEntry[]>(
+      token,
+      `/employees/${id}/roster?from=${from}&to=${to}`,
+    ),
+  assignRoster: (
+    token: string,
+    id: string,
+    body: { workDate: string; shiftId: string; note?: string },
+  ) =>
+    request<RosterEntry>(token, `/employees/${id}/roster`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  assignRosterRange: (
+    token: string,
+    id: string,
+    body: { from: string; to: string; shiftId: string; note?: string },
+  ) =>
+    request<{ assigned: number }>(token, `/employees/${id}/roster/range`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  removeRoster: (token: string, id: string) =>
+    request<unknown>(token, `/roster/${id}`, { method: 'DELETE' }),
   shifts: (token: string) => request<Shift[]>(token, '/shifts'),
   createShift: (token: string, body: CreateShiftBody) =>
     request<Shift>(token, '/shifts', {
