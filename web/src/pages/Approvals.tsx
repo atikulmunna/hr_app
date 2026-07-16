@@ -103,9 +103,23 @@ function PayloadSummary({ payload }: { payload?: Record<string, unknown> }) {
       {entries.map(([key, value]) => (
         <div key={key}>
           <dt>{key}</dt>
-          <dd>{String(value)}</dd>
+          <dd>{formatValue(value)}</dd>
         </div>
       ))}
     </dl>
   );
+}
+
+// Renders a payload value readably, including nested objects (e.g. a profile
+// change's { firstName, lastName }) and arrays, which String() would turn into
+// "[object Object]".
+function formatValue(value: unknown): string {
+  if (value == null) return '';
+  if (Array.isArray(value)) return value.map((v) => String(v)).join(', ');
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([k, v]) => `${k}: ${String(v)}`)
+      .join(', ');
+  }
+  return String(value);
 }
