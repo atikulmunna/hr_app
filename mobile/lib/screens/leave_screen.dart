@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../api/api_client.dart';
+import '../auth/auth_scope.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimens.dart';
 import '../theme/app_typography.dart';
@@ -7,14 +9,9 @@ import '../widgets/lime_button.dart';
 import '../widgets/section_header.dart';
 import '../widgets/status_pill.dart';
 
-class LeaveRequest {
-  const LeaveRequest(this.type, this.dates, this.days, this.status);
-  final String type;
-  final String dates;
-  final String days;
-  final PillStatus status;
-}
-
+/// Leave (ESS): balances and requests bound to the real leave API. Balances
+/// double as the type source for the request sheet, so the picker only offers
+/// leave types that apply to the employee's entity.
 class LeaveScreen extends StatefulWidget {
   const LeaveScreen({super.key});
 
@@ -23,51 +20,146 @@ class LeaveScreen extends StatefulWidget {
 }
 
 class _LeaveScreenState extends State<LeaveScreen> {
-  final List<LeaveRequest> _recent = [
-    const LeaveRequest('Annual', 'Jun 24 - Jun 25', '2 days', PillStatus.approved),
-    const LeaveRequest('Sick', 'Jun 10', '1 day', PillStatus.approved),
-    const LeaveRequest('Casual', 'May 30', '1 day', PillStatus.rejected),
-  ];
+  ApiClient? _api;
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _balances = const [];
+  List<Map<String, dynamic>> _requests = const [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_api == null) {
+      _api = AuthScope.of(context).api;
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final results = await Future.wait([
+        _api!.getLeaveBalances(),
+        _api!.getLeaveRequests(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _balances = results[0];
+        _requests = results[1];
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
 
   Future<void> _openSheet() async {
-    final created = await showModalBottomSheet<LeaveRequest>(
+    if (_balances.isEmpty) return;
+    final submitted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _LeaveRequestSheet(),
+      builder: (_) => _LeaveRequestSheet(api: _api!, types: _balances),
     );
-    if (created != null) {
-      setState(() => _recent.insert(0, created));
+    if (submitted == true) {
+      await _load();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenHPad,
-        AppSpacing.screenTopPad,
-        AppSpacing.screenHPad,
-        AppSpacing.screenBottomPad,
-      ),
-      children: [
-        Text('Leave', style: AppText.screenTitle),
-        const SizedBox(height: 20),
-        Row(
-          children: const [
-            Expanded(child: _BalanceCard('12.5', 'Annual', highlight: true)),
-            SizedBox(width: AppSpacing.cardGap),
-            Expanded(child: _BalanceCard('8', 'Sick')),
-            SizedBox(width: AppSpacing.cardGap),
-            Expanded(child: _BalanceCard('3', 'Casual')),
-          ],
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenHPad,
+          AppSpacing.screenTopPad,
+          AppSpacing.screenHPad,
+          AppSpacing.screenBottomPad,
         ),
-        const SizedBox(height: 20),
-        _requestButton(),
-        const SectionHeader('Recent requests'),
-        ..._recent.map(_requestRow),
-      ],
+        children: [
+          Text('Leave', style: AppText.screenTitle),
+          const SizedBox(height: 20),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_error != null)
+            _errorCard()
+          else ...[
+            _balanceRow(),
+            const SizedBox(height: 20),
+            _requestButton(),
+            const SectionHeader('Recent requests'),
+            if (_requests.isEmpty)
+              _emptyRequests()
+            else
+              ..._requests.map(_requestRow),
+          ],
+        ],
+      ),
     );
+  }
+
+  Widget _errorCard() {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Could not load leave', style: AppText.rowTitle),
+          const SizedBox(height: 6),
+          Text(
+            _error!,
+            style: AppText.label.copyWith(color: AppColors.mutedLight),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton(onPressed: _load, child: const Text('Retry')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _balanceRow() {
+    if (_balances.isEmpty) {
+      return AppCard(
+        child: Text(
+          'No leave types are configured for your entity.',
+          style: AppText.label.copyWith(color: AppColors.mutedLight),
+        ),
+      );
+    }
+    final cards = <Widget>[];
+    for (var i = 0; i < _balances.length; i++) {
+      if (i > 0) cards.add(const SizedBox(width: AppSpacing.cardGap));
+      final b = _balances[i];
+      cards.add(
+        Expanded(
+          child: _BalanceCard(
+            _num(b['remaining']),
+            (b['name'] as String?) ?? '',
+            highlight: i == 0,
+          ),
+        ),
+      );
+    }
+    return Row(children: cards);
   }
 
   Widget _requestButton() {
@@ -103,7 +195,17 @@ class _LeaveScreenState extends State<LeaveScreen> {
     );
   }
 
-  Widget _requestRow(LeaveRequest r) {
+  Widget _emptyRequests() {
+    return AppCard(
+      child: Text(
+        'No leave requests yet.',
+        style: AppText.label.copyWith(color: AppColors.mutedLight),
+      ),
+    );
+  }
+
+  Widget _requestRow(Map<String, dynamic> r) {
+    final status = _pillStatus(r['status'] as String?);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.cardGap),
       child: AppCard(
@@ -123,17 +225,31 @@ class _LeaveScreenState extends State<LeaveScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${r.type} leave', style: AppText.rowTitle),
+                  Text(
+                    '${r['typeName'] ?? 'Leave'} leave',
+                    style: AppText.rowTitle,
+                  ),
                   const SizedBox(height: 2),
-                  Text('${r.dates} - ${r.days}', style: AppText.label),
+                  Text('${_range(r)} - ${_days(r)}', style: AppText.label),
                 ],
               ),
             ),
-            StatusPill(_statusLabel(r.status), status: r.status),
+            StatusPill(_statusLabel(status), status: status),
           ],
         ),
       ),
     );
+  }
+
+  String _range(Map<String, dynamic> r) {
+    final from = _fmtIso(r['startDate'] as String?);
+    final to = _fmtIso(r['endDate'] as String?);
+    return from == to ? from : '$from - $to';
+  }
+
+  String _days(Map<String, dynamic> r) {
+    final d = _num(r['workingDays']);
+    return '$d ${d == '1' ? 'day' : 'days'}';
   }
 
   String _statusLabel(PillStatus s) {
@@ -145,9 +261,54 @@ class _LeaveScreenState extends State<LeaveScreen> {
       case PillStatus.rejected:
         return 'Rejected';
       default:
-        return '';
+        return 'Pending';
     }
   }
+}
+
+PillStatus _pillStatus(String? raw) {
+  switch (raw) {
+    case 'approved':
+      return PillStatus.approved;
+    case 'rejected':
+      return PillStatus.rejected;
+    default:
+      return PillStatus.pending;
+  }
+}
+
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// Formats a YYYY-MM-DD string as "Jun 24". Falls back to the raw value.
+String _fmtIso(String? iso) {
+  if (iso == null || iso.length < 10) return iso ?? '';
+  final month = int.tryParse(iso.substring(5, 7));
+  final day = int.tryParse(iso.substring(8, 10));
+  if (month == null || day == null || month < 1 || month > 12) return iso;
+  return '${_months[month - 1]} $day';
+}
+
+/// Renders a numeric field (int or double from the API) without a trailing .0.
+String _num(dynamic value) {
+  if (value is num) {
+    return value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toString();
+  }
+  return value?.toString() ?? '0';
 }
 
 class _BalanceCard extends StatelessWidget {
@@ -181,16 +342,26 @@ class _BalanceCard extends StatelessWidget {
 }
 
 class _LeaveRequestSheet extends StatefulWidget {
-  const _LeaveRequestSheet();
+  const _LeaveRequestSheet({required this.api, required this.types});
+  final ApiClient api;
+  final List<Map<String, dynamic>> types;
 
   @override
   State<_LeaveRequestSheet> createState() => _LeaveRequestSheetState();
 }
 
 class _LeaveRequestSheetState extends State<_LeaveRequestSheet> {
-  String _type = 'Annual';
+  late String _typeId = widget.types.first['leaveTypeId'] as String;
+  final TextEditingController _reason = TextEditingController();
   DateTime? _from;
   DateTime? _to;
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
 
   int get _days {
     if (_from == null || _to == null) return 1;
@@ -201,7 +372,7 @@ class _LeaveRequestSheetState extends State<_LeaveRequestSheet> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: now,
+      initialDate: isFrom ? (_from ?? now) : (_to ?? _from ?? now),
       firstDate: now.subtract(const Duration(days: 30)),
       lastDate: now.add(const Duration(days: 365)),
     );
@@ -209,6 +380,7 @@ class _LeaveRequestSheetState extends State<_LeaveRequestSheet> {
       setState(() {
         if (isFrom) {
           _from = picked;
+          if (_to != null && _to!.isBefore(picked)) _to = picked;
         } else {
           _to = picked;
         }
@@ -218,6 +390,51 @@ class _LeaveRequestSheetState extends State<_LeaveRequestSheet> {
 
   String _fmt(DateTime? d) =>
       d == null ? 'Select' : '${d.day}/${d.month}/${d.year}';
+
+  String _iso(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> _submit() async {
+    if (_from == null || _to == null) {
+      _snack('Select both start and end dates.');
+      return;
+    }
+    setState(() => _submitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await widget.api.applyLeave({
+        'leaveTypeId': _typeId,
+        'startDate': _iso(_from!),
+        'endDate': _iso(_to!),
+        if (_reason.text.trim().isNotEmpty) 'reason': _reason.text.trim(),
+      });
+      if (!mounted) return;
+      final conflicts = result['teamConflicts'];
+      final warning = conflicts is List && conflicts.isNotEmpty
+          ? ' Note: ${conflicts.length} teammate(s) are also off then.'
+          : '';
+      Navigator.of(context).pop(true);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Leave request sent for approval.$warning')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _snack(e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _snack(e.toString());
+    }
+  }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -231,42 +448,45 @@ class _LeaveRequestSheetState extends State<_LeaveRequestSheet> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: AppColors.mutedLight,
-                  borderRadius: BorderRadius.circular(3),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.mutedLight,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text('Request leave', style: AppText.screenTitle),
-            const SizedBox(height: 16),
-            Row(
-              children: ['Annual', 'Sick', 'Casual'].map((t) {
-                final selected = t == _type;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _type = t),
+              const SizedBox(height: 16),
+              Text('Request leave', style: AppText.screenTitle),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: widget.types.map((t) {
+                  final id = t['leaveTypeId'] as String;
+                  final selected = id == _typeId;
+                  return GestureDetector(
+                    onTap: () => setState(() => _typeId = id),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            selected ? AppColors.accent : AppColors.subtleFill,
+                        color: selected
+                            ? AppColors.accent
+                            : AppColors.subtleFill,
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
                       child: Text(
-                        t,
+                        (t['name'] as String?) ?? '',
                         style: AppText.pill.copyWith(
                           color: selected
                               ? AppColors.accentTextOnLime
@@ -274,36 +494,29 @@ class _LeaveRequestSheetState extends State<_LeaveRequestSheet> {
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: _dateField('From', _from, () => _pick(true))),
-                const SizedBox(width: 12),
-                Expanded(child: _dateField('To', _to, () => _pick(false))),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _reasonField(),
-            const SizedBox(height: 20),
-            LimeButton(
-              label: 'Submit - $_days ${_days == 1 ? 'day' : 'days'}',
-              expand: true,
-              onPressed: () {
-                Navigator.of(context).pop(
-                  LeaveRequest(
-                    _type,
-                    '${_fmt(_from)} - ${_fmt(_to)}',
-                    '$_days ${_days == 1 ? 'day' : 'days'}',
-                    PillStatus.pending,
-                  ),
-                );
-              },
-            ),
-          ],
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(child: _dateField('From', _from, () => _pick(true))),
+                  const SizedBox(width: 12),
+                  Expanded(child: _dateField('To', _to, () => _pick(false))),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _reasonField(),
+              const SizedBox(height: 20),
+              LimeButton(
+                label: _submitting
+                    ? 'Submitting...'
+                    : 'Submit - $_days ${_days == 1 ? 'day' : 'days'}',
+                expand: true,
+                onPressed: _submitting ? null : _submit,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -344,6 +557,7 @@ class _LeaveRequestSheetState extends State<_LeaveRequestSheet> {
         borderRadius: BorderRadius.circular(AppRadii.compact),
       ),
       child: TextField(
+        controller: _reason,
         maxLines: 2,
         style: AppText.body.copyWith(color: AppColors.ink),
         decoration: InputDecoration(

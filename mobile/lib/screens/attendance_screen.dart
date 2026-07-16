@@ -6,11 +6,33 @@ import '../theme/app_dimens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_card.dart';
 import '../widgets/section_header.dart';
+import 'corrections_section.dart';
+import 'schedule_section.dart';
 
 /// Attendance (ESS): the manual check-in and check-out surface, driven by the
 /// server-authoritative state from GET /me/attendance/today.
-class AttendanceScreen extends StatelessWidget {
+class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
+
+  @override
+  State<AttendanceScreen> createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends State<AttendanceScreen> {
+  // Bumped on pull-to-refresh so the self-contained sections (schedule,
+  // corrections) reload alongside today's attendance.
+  final ValueNotifier<int> _refresh = ValueNotifier<int>(0);
+
+  @override
+  void dispose() {
+    _refresh.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refreshAll(AttendanceController controller) async {
+    await controller.load();
+    _refresh.value++;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +41,7 @@ class AttendanceScreen extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         return RefreshIndicator(
-          onRefresh: controller.load,
+          onRefresh: () => _refreshAll(controller),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenHPad,
@@ -34,10 +56,15 @@ class AttendanceScreen extends StatelessWidget {
               const SizedBox(height: 12),
               if (controller.state == AttendanceState.checkedIn)
                 Center(child: _breakButton(context, controller)),
+              if (controller.pendingSync > 0) _pendingSyncBanner(controller),
               if (controller.needsRebind) _rebindCard(context, controller),
               const SizedBox(height: 8),
               const SectionHeader("Today's timeline"),
               _timeline(controller),
+              const SizedBox(height: 8),
+              ScheduleSection(refreshSignal: _refresh),
+              const SizedBox(height: 8),
+              CorrectionsSection(refreshSignal: _refresh),
             ],
           ),
         );
@@ -52,6 +79,35 @@ class AttendanceScreen extends StatelessWidget {
           : () => _mark(context, controller, 'break_start'),
       icon: const Icon(Icons.free_breakfast_outlined, size: 18),
       label: const Text('Start break'),
+    );
+  }
+
+  Widget _pendingSyncBanner(AttendanceController controller) {
+    final n = controller.pendingSync;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: AppCard(
+        child: Row(
+          children: [
+            const Icon(
+              Icons.cloud_off_outlined,
+              size: 20,
+              color: AppColors.mutedLight,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$n mark${n == 1 ? '' : 's'} saved offline, waiting to sync.',
+                style: AppText.label.copyWith(color: AppColors.inkSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: controller.loading ? null : controller.load,
+              child: const Text('Sync now'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -236,9 +292,7 @@ Future<void> _startRebind(
   final error = await controller.requestRebind(reason);
   messenger.showSnackBar(
     SnackBar(
-      content: Text(
-        error ?? 'Device-change request sent. HR will review it.',
-      ),
+      content: Text(error ?? 'Device-change request sent. HR will review it.'),
     ),
   );
 }

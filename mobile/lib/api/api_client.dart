@@ -17,10 +17,53 @@ class ApiClient {
 
   final Future<String?> Function() _token;
 
+  // A request that does not answer within this window fails, rather than leaving
+  // a screen stuck on a spinner when connectivity drops mid-request.
+  static const _timeout = Duration(seconds: 20);
+
   Future<Map<String, dynamic>> getProfile() => _getJson('/me/profile');
 
   Future<Map<String, dynamic>> getAttendanceToday() =>
       _getJson('/me/attendance/today');
+
+  /// The employee's leave balances per applicable leave type.
+  Future<List<Map<String, dynamic>>> getLeaveBalances() =>
+      _getList('/me/leave/balances');
+
+  /// The employee's own leave requests, newest first.
+  Future<List<Map<String, dynamic>>> getLeaveRequests() =>
+      _getList('/me/leave/requests');
+
+  /// Applies for leave. Body: leaveTypeId, startDate, endDate (YYYY-MM-DD),
+  /// optional reason.
+  Future<Map<String, dynamic>> applyLeave(Map<String, dynamic> body) =>
+      _postJson('/me/leave/requests', body);
+
+  /// The employee's own attendance correction (regularization) requests.
+  Future<List<Map<String, dynamic>>> getRegularizations() =>
+      _getList('/me/attendance/regularizations');
+
+  /// Submits an attendance correction. Body: targetDate, correctionType,
+  /// requestedCheckIn/requestedCheckOut (ISO), reason.
+  Future<Map<String, dynamic>> submitRegularization(
+    Map<String, dynamic> body,
+  ) => _postJson('/me/attendance/regularizations', body);
+
+  /// The employee's own roster (per-date shifts) in a date range.
+  Future<List<Map<String, dynamic>>> getRoster(String from, String to) =>
+      _getList('/me/roster?from=$from&to=$to');
+
+  /// Upcoming roster days of the employee's peers, to pick a swap counterparty.
+  Future<List<Map<String, dynamic>>> getSwappable(String from, String to) =>
+      _getList('/me/roster/swappable?from=$from&to=$to');
+
+  /// The employee's shift-swap requests (as requester or counterparty).
+  Future<List<Map<String, dynamic>>> getShiftSwaps() =>
+      _getList('/me/attendance/shift-swaps');
+
+  /// Requests a shift swap. Body: requesterEntryId, counterpartyEntryId, reason.
+  Future<Map<String, dynamic>> requestShiftSwap(Map<String, dynamic> body) =>
+      _postJson('/me/attendance/shift-swaps', body);
 
   /// Posts one attendance event (check_in/check_out/break_start/break_end)
   /// with the captured location and device signals.
@@ -31,13 +74,45 @@ class ApiClient {
   Future<Map<String, dynamic>> requestDeviceRebind(Map<String, dynamic> body) =>
       _postJson('/me/devices/rebind-requests', body);
 
+  /// Syncs a batch of offline-captured marks. Returns a per-event result
+  /// ({ clientId, status: accepted|duplicate|rejected, ... }).
+  Future<List<Map<String, dynamic>>> syncOfflineMarks(
+    List<Map<String, dynamic>> events,
+  ) async {
+    final token = await _token();
+    final res = await http
+        .post(
+          Uri.parse('${AppConfig.apiBase}/me/attendance/events/sync'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+          body: json.encode({'events': events}),
+        )
+        .timeout(_timeout);
+    return _decodeList(res);
+  }
+
   Future<Map<String, dynamic>> _getJson(String path) async {
     final token = await _token();
-    final res = await http.get(
-      Uri.parse('${AppConfig.apiBase}$path'),
-      headers: {if (token != null) 'Authorization': 'Bearer $token'},
-    );
+    final res = await http
+        .get(
+          Uri.parse('${AppConfig.apiBase}$path'),
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        )
+        .timeout(_timeout);
     return _decode(res);
+  }
+
+  Future<List<Map<String, dynamic>>> _getList(String path) async {
+    final token = await _token();
+    final res = await http
+        .get(
+          Uri.parse('${AppConfig.apiBase}$path'),
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        )
+        .timeout(_timeout);
+    return _decodeList(res);
   }
 
   Future<Map<String, dynamic>> _postJson(
@@ -45,14 +120,16 @@ class ApiClient {
     Map<String, dynamic> body,
   ) async {
     final token = await _token();
-    final res = await http.post(
-      Uri.parse('${AppConfig.apiBase}$path'),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: json.encode(body),
-    );
+    final res = await http
+        .post(
+          Uri.parse('${AppConfig.apiBase}$path'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+          body: json.encode(body),
+        )
+        .timeout(_timeout);
     return _decode(res);
   }
 
@@ -60,8 +137,20 @@ class ApiClient {
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return json.decode(res.body) as Map<String, dynamic>;
     }
-    // The backend returns Nest error envelopes: { message, ... }. Surface the
-    // human-readable message when present, else the raw body.
+    throw _error(res);
+  }
+
+  List<Map<String, dynamic>> _decodeList(http.Response res) {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final decoded = json.decode(res.body);
+      return decoded is List ? decoded.cast<Map<String, dynamic>>() : const [];
+    }
+    throw _error(res);
+  }
+
+  // The backend returns Nest error envelopes: { message, ... }. Surface the
+  // human-readable message when present, else the raw body.
+  ApiException _error(http.Response res) {
     String message = res.body;
     try {
       final decoded = json.decode(res.body);
@@ -72,6 +161,6 @@ class ApiClient {
     } catch (_) {
       // Non-JSON body; keep the raw text.
     }
-    throw ApiException(res.statusCode, message);
+    return ApiException(res.statusCode, message);
   }
 }
