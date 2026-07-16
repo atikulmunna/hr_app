@@ -20,6 +20,7 @@ import { Holiday } from '../entities/holiday.entity';
 import { LeaveRequest } from '../entities/leave-request.entity';
 import { LeaveType } from '../entities/leave-type.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
+import { ProfileChangeRequest } from '../entities/profile-change-request.entity';
 import { RegularizationRequest } from '../entities/regularization-request.entity';
 import { RosterEntry } from '../entities/roster-entry.entity';
 import { Shift } from '../entities/shift.entity';
@@ -72,6 +73,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       ShiftSwapRequest,
       AbsenceRecord,
       RegularizationRequest,
+      ProfileChangeRequest,
       AttendanceConfig,
       ConsentStatement,
       ConsentRecord,

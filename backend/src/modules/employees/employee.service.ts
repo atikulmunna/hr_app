@@ -198,6 +198,30 @@ export class EmployeeService {
     });
   }
 
+  // Self-service direct edit of the caller's own non-sensitive contact fields
+  // (FR-M9-01). Name and job data are not editable here; a name change goes
+  // through the approval flow (ProfileChangeService).
+  async selfUpdateContact(
+    sub: string | undefined,
+    email: string | undefined,
+    input: {
+      phone?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
+    },
+  ): Promise<Employee> {
+    const me = await this.myProfile(sub, email);
+    const patch: UpdateEmployeeInput = {};
+    if (input.phone !== undefined) patch.phone = input.phone;
+    if (input.emergencyContactName !== undefined) {
+      patch.emergencyContactName = input.emergencyContactName;
+    }
+    if (input.emergencyContactPhone !== undefined) {
+      patch.emergencyContactPhone = input.emergencyContactPhone;
+    }
+    return this.update(me.id, patch);
+  }
+
   history(employeeId: string): Promise<EmploymentHistory[]> {
     return this.db.withTenant((m) =>
       m.find(EmploymentHistory, {
