@@ -88,7 +88,8 @@ class AuthController extends ChangeNotifier {
 
   /// A currently valid access token, refreshed if it is near expiry.
   Future<String?> validAccessToken() async {
-    final stillValid = _accessToken != null &&
+    final stillValid =
+        _accessToken != null &&
         _expiry != null &&
         _expiry!.isAfter(DateTime.now().add(const Duration(seconds: 30)));
     if (stillValid) {
@@ -122,6 +123,17 @@ class AuthController extends ChangeNotifier {
 
   Future<void> _loadProfile() async {
     profile = await api.getProfile();
+  }
+
+  /// Re-fetches the profile (e.g. after a self-service edit) and notifies
+  /// listeners so the greeting updates. Best effort; ignores transient errors.
+  Future<void> refreshProfile() async {
+    try {
+      await _loadProfile();
+      notifyListeners();
+    } catch (_) {
+      // Keep the existing profile if the refresh fails.
+    }
   }
 
   Future<void> _saveTokens(

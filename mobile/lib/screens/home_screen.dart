@@ -10,6 +10,7 @@ import '../widgets/check_in_hero.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stat_tile.dart';
 import '../widgets/status_pill.dart';
+import 'profile_screen.dart';
 
 /// Employee home (ESS). Renders entirely from the design system to prove it.
 class HomeScreen extends StatefulWidget {
@@ -133,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _circleIcon(Icons.notifications_none_rounded, dot: true),
         const SizedBox(width: 10),
         GestureDetector(
-          onTap: _confirmSignOut,
+          onTap: _openProfile,
           child: Container(
             width: 44,
             height: 44,
@@ -152,26 +153,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _confirmSignOut() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Sign out'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      await AuthScope.of(context).signOut();
-    }
+  Future<void> _openProfile() async {
+    final auth = AuthScope.of(context);
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    // Reflect any profile edit (e.g. an approved name change) in the greeting.
+    if (mounted) await auth.refreshProfile();
   }
 
   Widget _circleIcon(IconData icon, {bool dot = false}) {

@@ -23,6 +23,22 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getProfile() => _getJson('/me/profile');
 
+  /// Directly edits the caller's non-sensitive contact fields (phone, emergency
+  /// contact). Body: phone, emergencyContactName, emergencyContactPhone.
+  Future<Map<String, dynamic>> updateProfileContact(
+    Map<String, dynamic> body,
+  ) => _patchJson('/me/profile', body);
+
+  /// Submits a sensitive profile change (name) for HR approval. Body:
+  /// firstName, lastName.
+  Future<Map<String, dynamic>> requestProfileChange(
+    Map<String, dynamic> body,
+  ) => _postJson('/me/profile/change-requests', body);
+
+  /// The caller's own profile change requests, newest first.
+  Future<List<Map<String, dynamic>>> getProfileChangeRequests() =>
+      _getList('/me/profile/change-requests');
+
   Future<Map<String, dynamic>> getAttendanceToday() =>
       _getJson('/me/attendance/today');
 
@@ -99,6 +115,24 @@ class ApiClient {
         .get(
           Uri.parse('${AppConfig.apiBase}$path'),
           headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        )
+        .timeout(_timeout);
+    return _decode(res);
+  }
+
+  Future<Map<String, dynamic>> _patchJson(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final token = await _token();
+    final res = await http
+        .patch(
+          Uri.parse('${AppConfig.apiBase}$path'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+          body: json.encode(body),
         )
         .timeout(_timeout);
     return _decode(res);
