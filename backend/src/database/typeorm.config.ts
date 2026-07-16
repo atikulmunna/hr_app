@@ -21,7 +21,9 @@ import { LeaveRequest } from '../entities/leave-request.entity';
 import { LeaveType } from '../entities/leave-type.entity';
 import { LegalEntity } from '../entities/legal-entity.entity';
 import { RegularizationRequest } from '../entities/regularization-request.entity';
+import { RosterEntry } from '../entities/roster-entry.entity';
 import { Shift } from '../entities/shift.entity';
+import { ShiftSwapRequest } from '../entities/shift-swap-request.entity';
 import { Notification } from '../entities/notification.entity';
 import { ReviewCase } from '../entities/review-case.entity';
 import { Tenant } from '../entities/tenant.entity';
@@ -66,6 +68,8 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       LeaveRequest,
       Shift,
       EmployeeShift,
+      RosterEntry,
+      ShiftSwapRequest,
       AbsenceRecord,
       RegularizationRequest,
       AttendanceConfig,

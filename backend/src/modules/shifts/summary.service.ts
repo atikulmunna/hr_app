@@ -4,6 +4,7 @@ import { TenantDbService } from '../../database/tenant-db.service';
 import { Employee } from '../../entities/employee.entity';
 import { Shift } from '../../entities/shift.entity';
 import { RegularizationService } from '../attendance/regularization.service';
+import { RosterService } from './roster.service';
 import { ShiftService } from './shift.service';
 
 export type DayStatus =
@@ -61,6 +62,7 @@ export class SummaryService {
   constructor(
     private readonly db: TenantDbService,
     private readonly shifts: ShiftService,
+    private readonly roster: RosterService,
     private readonly regularization: RegularizationService,
   ) {}
 
@@ -86,8 +88,12 @@ export class SummaryService {
       // reads as present rather than absent (T-1C.11, FR-AT-38).
       await this.regularization.syncApproved(m, employeeId);
 
-      const shift = await this.shifts.assignedShift(m, employeeId);
-      if (!shift) {
+      // The standing shift is the default schedule; a per-day roster entry
+      // overrides it for that day (T-1E.3). If the employee has neither, there
+      // is nothing to classify.
+      const standingShift = await this.shifts.assignedShift(m, employeeId);
+      const rosterMap = await this.roster.shiftMap(m, employeeId, from, to);
+      if (!standingShift && rosterMap.size === 0) {
         return emptySummary();
       }
       const employee = await m.findOne(Employee, {
@@ -96,17 +102,12 @@ export class SummaryService {
       const holidays = await this.holidaySet(m, employee?.legalEntityId);
       const leaveRanges = await this.leaveRanges(m, employeeId, from, to);
       const events = await this.dayEvents(m, employeeId, from, to);
-
-      const expectedHours = shiftExpectedHours(shift);
-      const startMinutes = timeToMinutes(shift.startTime);
-      const graceLimit = startMinutes + shift.graceMinutes;
       const todayIso = new Date().toISOString().slice(0, 10);
 
       const rows = days.map((day) =>
         this.classify(day, {
-          shift,
-          expectedHours,
-          graceLimit,
+          shift: rosterMap.get(day) ?? standingShift,
+          rostered: rosterMap.has(day),
           todayIso,
           holidays,
           leaveRanges,
@@ -115,13 +116,15 @@ export class SummaryService {
       );
 
       return {
-        shift: {
-          id: shift.id,
-          name: shift.name,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
-          expectedHours,
-        },
+        shift: standingShift
+          ? {
+              id: standingShift.id,
+              name: standingShift.name,
+              startTime: standingShift.startTime,
+              endTime: standingShift.endTime,
+              expectedHours: shiftExpectedHours(standingShift),
+            }
+          : null,
         days: rows,
         totals: totalize(rows),
       };
@@ -131,9 +134,8 @@ export class SummaryService {
   private classify(
     day: string,
     ctx: {
-      shift: Shift;
-      expectedHours: number;
-      graceLimit: number;
+      shift: Shift | null;
+      rostered: boolean;
       todayIso: string;
       holidays: Set<string>;
       leaveRanges: Array<{ start: string; end: string }>;
@@ -149,7 +151,12 @@ export class SummaryService {
       overtimeHours: 0,
     };
 
-    if (isWeekend(day)) {
+    // No effective shift, or a weekend the employee is not rostered on, is a
+    // rest day. A roster entry lets weekend work be scheduled and tracked.
+    if (!ctx.shift) {
+      return base;
+    }
+    if (isWeekend(day) && !ctx.rostered) {
       return base;
     }
     if (ctx.holidays.has(day)) {
@@ -164,8 +171,9 @@ export class SummaryService {
       return { ...base, status: day < ctx.todayIso ? 'absent' : 'scheduled' };
     }
 
-    const late =
-      utcMinutesOfDay(ev.firstIn) > ctx.graceLimit ? 'late' : 'present';
+    const expectedHours = shiftExpectedHours(ctx.shift);
+    const graceLimit = timeToMinutes(ctx.shift.startTime) + ctx.shift.graceMinutes;
+    const late = utcMinutesOfDay(ev.firstIn) > graceLimit ? 'late' : 'present';
     let workedHours: number | null = null;
     let overtimeHours = 0;
     if (ev.lastOut) {
@@ -175,7 +183,7 @@ export class SummaryService {
         Math.round(Math.max(gross - ctx.shift.breakMinutes / 60, 0) * 100) /
         100;
       overtimeHours =
-        Math.round(Math.max(workedHours - ctx.expectedHours, 0) * 100) / 100;
+        Math.round(Math.max(workedHours - expectedHours, 0) * 100) / 100;
     }
     return {
       day,

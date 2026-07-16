@@ -39,23 +39,32 @@ export class AbsenceService {
       throw new BadRequestException('Cannot run the absence job for a future date.');
     }
     return this.db.withTenant(async (m) => {
-      if (isWeekend(date)) {
-        return { date, evaluated: 0, created: 0, restDay: true };
-      }
+      const weekend = isWeekend(date);
+      // Effective shift per employee for the day: a roster entry overrides the
+      // standing assignment (T-1E.3). Weekends are a rest day unless the
+      // employee is explicitly rostered that day.
       const employees: Array<{
         employeeId: string;
         shiftId: string;
         legalEntityId: string | null;
+        rostered: boolean;
       }> = await m.query(
-        `SELECT es.employee_id AS "employeeId", es.shift_id AS "shiftId",
-                e.legal_entity_id AS "legalEntityId"
-         FROM employee_shifts es
-         JOIN shifts s ON s.id = es.shift_id AND s.active = true
-         JOIN employees e ON e.id = es.employee_id
-         WHERE e.status = 'active'`,
+        `SELECT e.id AS "employeeId",
+                COALESCE(re.shift_id, es.shift_id) AS "shiftId",
+                e.legal_entity_id AS "legalEntityId",
+                (re.shift_id IS NOT NULL) AS "rostered"
+         FROM employees e
+         LEFT JOIN roster_entries re ON re.employee_id = e.id AND re.work_date = $1
+         LEFT JOIN employee_shifts es ON es.employee_id = e.id
+         LEFT JOIN shifts sr ON sr.id = re.shift_id
+         LEFT JOIN shifts ss ON ss.id = es.shift_id
+         WHERE e.status = 'active'
+           AND COALESCE(re.shift_id, es.shift_id) IS NOT NULL
+           AND CASE WHEN re.shift_id IS NOT NULL THEN sr.active ELSE ss.active END = true`,
+        [date],
       );
       if (employees.length === 0) {
-        return { date, evaluated: 0, created: 0, restDay: false };
+        return { date, evaluated: 0, created: 0, restDay: weekend };
       }
 
       const holidayRows: Array<{ legal_entity_id: string | null }> =
@@ -93,6 +102,7 @@ export class AbsenceService {
 
       let created = 0;
       for (const e of employees) {
+        if (weekend && !e.rostered) continue;
         if (tenantWideHoliday || holidayEntities.has(e.legalEntityId)) continue;
         if (onLeave.has(e.employeeId)) continue;
         if (checkedIn.has(e.employeeId)) continue;
@@ -112,7 +122,7 @@ export class AbsenceService {
         },
         m,
       );
-      return { date, evaluated: employees.length, created, restDay: false };
+      return { date, evaluated: employees.length, created, restDay: weekend };
     });
   }
 
