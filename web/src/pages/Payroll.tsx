@@ -70,6 +70,28 @@ export function Payroll({ token }: { token: string }) {
       {error && <div className="banner error">{error}</div>}
 
       <div>
+        <h2>Entity pay rules</h2>
+        <p className="muted small">
+          Pay is denominated in each entity's currency. The proration basis
+          applies to an incomplete month of work, such as a mid-month joiner or
+          leaver.
+        </p>
+        <div className="list">
+          {entities.map((e) => (
+            <div className="line" key={e.id}>
+              <span className="tag">{e.currencyCode}</span>
+              <span className="grow">{e.name}</span>
+              <span className="muted small">
+                {e.prorationBasis === 'working_days'
+                  ? 'prorates by working days'
+                  : 'prorates by calendar days'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <div className="section-head">
           <h2>Pay components</h2>
           <button

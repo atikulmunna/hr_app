@@ -3,6 +3,7 @@ import {
   AbsenceRecord,
   ApiError,
   AttendanceSummary,
+  CompensationRevision,
   CompensationSummary,
   Department,
   Device,
@@ -956,22 +957,30 @@ function CompensationCard({
   onError: (message: string) => void;
 }) {
   const [summary, setSummary] = useState<CompensationSummary | null>(null);
+  const [revisions, setRevisions] = useState<CompensationRevision[]>([]);
   const [catalog, setCatalog] = useState<PayComponent[]>([]);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({ payComponentId: '', amount: '' });
+  const [asOf, setAsOf] = useState(daysAgo(0));
+  const [form, setForm] = useState({
+    payComponentId: '',
+    amount: '',
+    effectiveFrom: daysAgo(0),
+  });
 
   const load = useCallback(async () => {
     try {
-      const [s, c] = await Promise.all([
-        api.employeeCompensation(token, employeeId),
+      const [s, r, c] = await Promise.all([
+        api.employeeCompensation(token, employeeId, asOf),
+        api.compensationRevisions(token, employeeId),
         api.payComponents(token),
       ]);
       setSummary(s);
+      setRevisions(r);
       setCatalog(c.filter((x) => x.active));
     } catch (e) {
       onError(e instanceof ApiError ? e.message : String(e));
     }
-  }, [token, employeeId, onError]);
+  }, [token, employeeId, asOf, onError]);
 
   useEffect(() => {
     void load();
@@ -990,11 +999,20 @@ function CompensationCard({
     }
     setBusy(true);
     try {
-      setSummary(await api.setCompensation(token, employeeId, {
+      const saved = await api.setCompensation(token, employeeId, {
         payComponentId,
         amount,
-      }));
-      setForm({ payComponentId: '', amount: '' });
+        effectiveFrom: form.effectiveFrom || undefined,
+      });
+      setForm({ payComponentId: '', amount: '', effectiveFrom: daysAgo(0) });
+      // Move the view to the date the change takes effect, otherwise a
+      // future-dated change saves but stays invisible in the current view.
+      // Same date means no state change, so reload directly.
+      if (saved.asOf === asOf) {
+        await load();
+      } else {
+        setAsOf(saved.asOf);
+      }
     } catch (e) {
       onError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -1005,7 +1023,8 @@ function CompensationCard({
   const remove = async (payComponentId: string) => {
     setBusy(true);
     try {
-      setSummary(await api.removeCompensation(token, employeeId, payComponentId));
+      await api.removeCompensation(token, employeeId, payComponentId);
+      await load();
     } catch (e) {
       onError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -1022,7 +1041,17 @@ function CompensationCard({
 
   return (
     <div className="card">
-      <h3>Compensation</h3>
+      <div className="section-head">
+        <h3>Compensation</h3>
+        <div className="field">
+          <label>In force on</label>
+          <input
+            type="date"
+            value={asOf}
+            onChange={(e) => setAsOf(e.target.value)}
+          />
+        </div>
+      </div>
       <div className="muted small case-meta">
         gross {money(summary.gross)} · deductions {money(summary.deductions)} ·
         net {money(summary.net)}
@@ -1032,6 +1061,7 @@ function CompensationCard({
         <div className="line" key={l.id}>
           <span className="tag">{l.componentType}</span>
           <span className="grow">{l.name}</span>
+          <span className="muted small">from {l.effectiveFrom}</span>
           <span className="muted small">
             {l.componentType === 'deduction' ? '-' : ''}
             {money(l.amount)}
@@ -1046,7 +1076,9 @@ function CompensationCard({
         </div>
       ))}
       {summary.lines.length === 0 && (
-        <p className="muted small">No pay components set for this employee.</p>
+        <p className="muted small">
+          Nothing in force on {summary.asOf}.
+        </p>
       )}
 
       <div className="field-row">
@@ -1074,6 +1106,16 @@ function CompensationCard({
           />
         </div>
         <div className="field">
+          <label>Effective from</label>
+          <input
+            type="date"
+            value={form.effectiveFrom}
+            onChange={(e) =>
+              setForm({ ...form, effectiveFrom: e.target.value })
+            }
+          />
+        </div>
+        <div className="field">
           <label>&nbsp;</label>
           <button
             className="btn primary"
@@ -1084,6 +1126,31 @@ function CompensationCard({
           </button>
         </div>
       </div>
+      <p className="muted small">
+        A new effective date adds a revision and leaves earlier ones in place, so
+        a raise never changes what a past period was paid. Setting the same date
+        again corrects that revision.
+      </p>
+
+      {revisions.length > 0 && (
+        <>
+          <h4>All revisions</h4>
+          {revisions.map((r) => {
+            const scheduled = r.effectiveFrom > summary.asOf;
+            const inForce = summary.lines.some((l) => l.id === r.id);
+            return (
+              <div className="line" key={r.id}>
+                <span className={`pill ${inForce ? 'active' : 'retired'}`}>
+                  {inForce ? 'in force' : scheduled ? 'scheduled' : 'superseded'}
+                </span>
+                <span className="grow">{r.name}</span>
+                <span className="muted small">from {r.effectiveFrom}</span>
+                <span className="muted small">{money(r.amount)}</span>
+              </div>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }

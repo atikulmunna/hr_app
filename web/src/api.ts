@@ -68,6 +68,8 @@ export interface LegalEntity {
   name: string;
   countryCode: string;
   currencyCode: string;
+  // How payroll prorates an incomplete month of work in this jurisdiction.
+  prorationBasis: 'calendar_days' | 'working_days';
 }
 
 export interface Department {
@@ -202,12 +204,26 @@ export interface CompensationLine {
   componentType: PayComponentType;
   taxable: boolean;
   amount: number;
+  effectiveFrom: string;
 }
 
-// An employee's pay structure, denominated in their legal entity currency.
+// One dated revision, including ones not yet in force.
+export interface CompensationRevision {
+  id: string;
+  payComponentId: string;
+  code: string;
+  name: string;
+  componentType: PayComponentType;
+  amount: number;
+  effectiveFrom: string;
+}
+
+// An employee's pay structure, denominated in their legal entity currency and
+// resolved as of a date (the amounts in force on it).
 export interface CompensationSummary {
   employeeId: string;
   currencyCode: string;
+  asOf: string;
   lines: CompensationLine[];
   gross: number;
   deductions: number;
@@ -654,12 +670,20 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
-  employeeCompensation: (token: string, id: string) =>
-    request<CompensationSummary>(token, `/employees/${id}/compensation`),
+  employeeCompensation: (token: string, id: string, asOf?: string) =>
+    request<CompensationSummary>(
+      token,
+      `/employees/${id}/compensation${asOf ? `?asOf=${asOf}` : ''}`,
+    ),
+  compensationRevisions: (token: string, id: string) =>
+    request<CompensationRevision[]>(
+      token,
+      `/employees/${id}/compensation/revisions`,
+    ),
   setCompensation: (
     token: string,
     id: string,
-    body: { payComponentId: string; amount: number },
+    body: { payComponentId: string; amount: number; effectiveFrom?: string },
   ) =>
     request<CompensationSummary>(token, `/employees/${id}/compensation`, {
       method: 'POST',
