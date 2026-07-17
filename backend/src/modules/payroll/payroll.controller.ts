@@ -45,10 +45,18 @@ export class PayrollController {
     return this.components.update(id, body);
   }
 
+  // asOf resolves the structure in force on that date; defaults to today.
   @RequirePermissions('payroll:read')
   @Get('employees/:id/compensation')
-  forEmployee(@Param('id') id: string) {
-    return this.compensation.forEmployee(id);
+  forEmployee(@Param('id') id: string, @Query('asOf') asOf?: string) {
+    return this.compensation.forEmployee(id, asOf);
+  }
+
+  // Declared before the :payComponentId route so "revisions" is not read as an id.
+  @RequirePermissions('payroll:read')
+  @Get('employees/:id/compensation/revisions')
+  revisions(@Param('id') id: string) {
+    return this.compensation.revisions(id);
   }
 
   @RequirePermissions('payroll:manage')
