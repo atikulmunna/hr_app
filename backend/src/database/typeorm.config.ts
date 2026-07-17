@@ -6,6 +6,10 @@ import { ConsentRecord } from '../entities/consent-record.entity';
 import { ConsentStatement } from '../entities/consent-statement.entity';
 import { EmployeePayComponent } from '../entities/employee-pay-component.entity';
 import { PayComponent } from '../entities/pay-component.entity';
+import { OvertimeRequest } from '../entities/overtime-request.entity';
+import { PayrollRun } from '../entities/payroll-run.entity';
+import { PayrollRunEmployee } from '../entities/payroll-run-employee.entity';
+import { PayrollRunLine } from '../entities/payroll-run-line.entity';
 import { ApprovalStep } from '../entities/approval-step.entity';
 import { AttendanceEvent } from '../entities/attendance-event.entity';
 import { AuditLog } from '../entities/audit-log.entity';
@@ -81,6 +85,10 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       ConsentRecord,
       PayComponent,
       EmployeePayComponent,
+      PayrollRun,
+      PayrollRunEmployee,
+      PayrollRunLine,
+      OvertimeRequest,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
