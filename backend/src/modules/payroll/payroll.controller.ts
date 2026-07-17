@@ -21,6 +21,10 @@ import {
 } from './pay-component.service';
 import { PayRulesInput, PayRulesService } from './pay-rules.service';
 import { CreateRunInput, PayrollRunService } from './payroll-run.service';
+import {
+  CreateStatutoryRuleInput,
+  StatutoryService,
+} from './statutory.service';
 
 // The pay component catalog and per-employee pay structure (T-2.1), and payroll
 // runs (T-2.2).
@@ -31,7 +35,48 @@ export class PayrollController {
     private readonly compensation: CompensationService,
     private readonly runs: PayrollRunService,
     private readonly payRules: PayRulesService,
+    private readonly statutory: StatutoryService,
   ) {}
+
+  // Statutory deduction rules per jurisdiction (T-2.3, FR-M4-06). Rates are law
+  // and change most years, so rules are effective-dated: create a new one with a
+  // later date to supersede rather than editing in place.
+  @RequirePermissions('payroll:read')
+  @Get('statutory-rules')
+  listStatutory(@Query('legalEntityId') legalEntityId?: string) {
+    return this.statutory.list(legalEntityId);
+  }
+
+  // The rules in force on a date, which is what a run resolves at its cut-off.
+  @RequirePermissions('payroll:read')
+  @Get('statutory-rules/in-force')
+  statutoryInForce(
+    @Query('legalEntityId') legalEntityId: string,
+    @Query('asOf') asOf?: string,
+  ) {
+    return this.statutory.inForce(
+      legalEntityId,
+      asOf ?? new Date().toISOString().slice(0, 10),
+    );
+  }
+
+  @RequirePermissions('payroll:manage')
+  @Post('statutory-rules')
+  createStatutory(@Body() body: CreateStatutoryRuleInput) {
+    return this.statutory.create(body);
+  }
+
+  @RequirePermissions('payroll:manage')
+  @Patch('statutory-rules/:id')
+  updateStatutory(@Param('id') id: string, @Body() body: { active?: boolean }) {
+    return this.statutory.setActive(id, body?.active !== false);
+  }
+
+  @RequirePermissions('payroll:manage')
+  @Delete('statutory-rules/:id')
+  removeStatutory(@Param('id') id: string) {
+    return this.statutory.remove(id);
+  }
 
   // The entity's pay policy: proration basis and the overtime rate rule. These
   // are company and jurisdiction decisions, so HR can change them (O-06, O-08).

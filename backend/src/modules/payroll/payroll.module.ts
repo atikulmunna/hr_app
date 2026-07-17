@@ -6,6 +6,7 @@ import { PayComponentService } from './pay-component.service';
 import { PayRulesService } from './pay-rules.service';
 import { PayrollRunService } from './payroll-run.service';
 import { PayrollController } from './payroll.controller';
+import { StatutoryService } from './statutory.service';
 
 @Module({
   // ShiftModule provides SummaryService: a run pulls its attendance, leave, and
@@ -18,7 +19,13 @@ import { PayrollController } from './payroll.controller';
     CompensationService,
     PayrollRunService,
     PayRulesService,
+    StatutoryService,
   ],
-  exports: [PayComponentService, CompensationService, PayrollRunService],
+  exports: [
+    PayComponentService,
+    CompensationService,
+    PayrollRunService,
+    StatutoryService,
+  ],
 })
 export class PayrollModule {}

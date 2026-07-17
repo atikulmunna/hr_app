@@ -66,6 +66,16 @@ export class PayrollRunEmployee {
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   net: string;
 
+  // Employer-side statutory cost for the period. Not a deduction: it never
+  // touches net, it is what the employer owes on top (FR-M10-01).
+  @Column({
+    name: 'employer_contributions',
+    type: 'numeric',
+    precision: 14,
+    scale: 2,
+  })
+  employerContributions: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

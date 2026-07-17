@@ -39,6 +39,11 @@ export class PayrollRunLine {
   @Column({ name: 'component_type' })
   componentType: PayComponentType;
 
+  // 'component' comes from the catalog; 'statutory' is computed from the
+  // entity's rules and has no catalog entry behind it (T-2.3).
+  @Column()
+  source: 'component' | 'statutory';
+
   // The amount in force at the cut-off, before proration.
   @Column({ name: 'base_amount', type: 'numeric', precision: 14, scale: 2 })
   baseAmount: string;

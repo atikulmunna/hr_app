@@ -14,6 +14,7 @@ import { AuthUser } from '../auth/current-user.decorator';
 import { OvertimeService } from '../attendance/overtime.service';
 import { SummaryService } from '../shifts/summary.service';
 import { CompensationService } from './compensation.service';
+import { StatutoryCharge, StatutoryService, chargesFor } from './statutory.service';
 
 export interface CreateRunInput {
   legalEntityId?: string;
@@ -40,6 +41,7 @@ interface ComputedRow {
   factor: number;
   overtimeHours: number;
   overtimeAmount: number;
+  charges: StatutoryCharge[];
 }
 
 export interface RunEmployeeView {
@@ -59,10 +61,12 @@ export interface RunEmployeeView {
   gross: number;
   deductions: number;
   net: number;
+  employerContributions: number;
   lines: {
     code: string;
     name: string;
     componentType: string;
+    source: string;
     baseAmount: number;
     prorationFactor: number;
     amount: number;
@@ -71,7 +75,13 @@ export interface RunEmployeeView {
 
 export interface RunView extends PayrollRun {
   employees: RunEmployeeView[];
-  totals: { employees: number; gross: number; deductions: number; net: number };
+  totals: {
+    employees: number;
+    gross: number;
+    deductions: number;
+    net: number;
+    employerContributions: number;
+  };
 }
 
 @Injectable()
@@ -82,6 +92,7 @@ export class PayrollRunService {
     private readonly summaries: SummaryService,
     private readonly compensation: CompensationService,
     private readonly overtime: OvertimeService,
+    private readonly statutory: StatutoryService,
   ) {}
 
   list(legalEntityId?: string): Promise<PayrollRun[]> {
@@ -208,6 +219,13 @@ export class PayrollRunService {
       holidays,
     );
 
+    // The rules in force at the cut-off, so a rate change after the period does
+    // not reach back into it (FR-M4-06).
+    const statutoryRules = await this.statutory.inForce(
+      run.legalEntityId,
+      run.cutoffDate,
+    );
+
     // Read outside the write transaction: these services open their own, and
     // nesting would take a second connection per employee.
     const computed: ComputedRow[] = [];
@@ -233,6 +251,23 @@ export class PayrollRunService {
         run.periodStart,
         run.periodEnd,
       );
+      const overtimeAmount = overtimePay(overtimeHours, compensation.lines, entity, {
+        expectedHoursPerDay: summary.shift?.expectedHours ?? 0,
+        workingDays,
+      });
+
+      // Statutory rates apply to what is actually earned this period, so the
+      // base is the prorated pay plus approved overtime, not the full salary.
+      const proratedBasic = round2(
+        (compensation.lines.find((l) => l.componentType === 'basic')?.amount ??
+          0) * factor,
+      );
+      const proratedGross = round2(
+        compensation.lines
+          .filter((l) => l.componentType !== 'deduction')
+          .reduce((total, l) => total + l.amount * factor, 0) + overtimeAmount,
+      );
+
       computed.push({
         candidate,
         compensation,
@@ -241,10 +276,8 @@ export class PayrollRunService {
         periodDays,
         factor,
         overtimeHours,
-        overtimeAmount: overtimePay(overtimeHours, compensation.lines, entity, {
-          expectedHoursPerDay: summary.shift?.expectedHours ?? 0,
-          workingDays,
-        }),
+        overtimeAmount,
+        charges: chargesFor(statutoryRules, proratedBasic, proratedGross),
       });
     }
 
@@ -264,23 +297,54 @@ export class PayrollRunService {
             code: line.code,
             name: line.name,
             componentType: line.componentType as PayrollRunLine['componentType'],
+            source: 'component' as const,
             baseAmount: line.amount.toFixed(2),
             prorationFactor: row.factor.toFixed(4),
             amount: amount.toFixed(2),
             currencyCode: row.compensation.currencyCode,
           });
         });
-        if (lines.length > 0) {
-          await m.save(lines);
+
+        // Statutory deductions are computed, not drawn from the catalog, so they
+        // carry no component id and are already period amounts (the proration is
+        // in their base). Marked 'statutory' so a payslip can tell them apart.
+        const statutoryLines = row.charges
+          .filter((c) => c.employee > 0)
+          .map((charge) =>
+            m.create(PayrollRunLine, {
+              tenantId: this.db.tenantId,
+              runId,
+              employeeId: row.candidate.id,
+              payComponentId: null,
+              code: charge.code,
+              name: charge.name,
+              componentType: 'deduction' as const,
+              source: 'statutory' as const,
+              baseAmount: charge.base.toFixed(2),
+              prorationFactor: '1.0000',
+              amount: charge.employee.toFixed(2),
+              currencyCode: row.compensation.currencyCode,
+            }),
+          );
+
+        const allLines = [...lines, ...statutoryLines];
+        if (allLines.length > 0) {
+          await m.save(allLines);
         }
 
         // Approved overtime adds to gross alongside the component lines.
         const gross = round2(
-          sum(lines.filter((l) => l.componentType !== 'deduction')) +
+          sum(allLines.filter((l) => l.componentType !== 'deduction')) +
             row.overtimeAmount,
         );
+        // Both catalog and statutory deductions reduce net.
         const deductions = round2(
-          sum(lines.filter((l) => l.componentType === 'deduction')),
+          sum(allLines.filter((l) => l.componentType === 'deduction')),
+        );
+        // Employer contributions are a cost of employment, not a deduction:
+        // they never touch net (FR-M10-01).
+        const employerContributions = round2(
+          row.charges.reduce((total, c) => total + c.employer, 0),
         );
         await m.save(
           m.create(PayrollRunEmployee, {
@@ -301,6 +365,7 @@ export class PayrollRunService {
             gross: gross.toFixed(2),
             deductions: deductions.toFixed(2),
             net: round2(gross - deductions).toFixed(2),
+            employerContributions: employerContributions.toFixed(2),
           }),
         );
       }
@@ -332,7 +397,8 @@ export class PayrollRunService {
                 pre.overtime_amount::float AS "overtimeAmount",
                 pre.gross::float AS gross,
                 pre.deductions::float AS deductions,
-                pre.net::float AS net
+                pre.net::float AS net,
+                pre.employer_contributions::float AS "employerContributions"
            FROM payroll_run_employees pre
            JOIN employees e ON e.id = pre.employee_id
           WHERE pre.run_id = $1
@@ -344,6 +410,7 @@ export class PayrollRunService {
         `SELECT employee_id AS "employeeId",
                 code, name,
                 component_type AS "componentType",
+                source,
                 base_amount::float AS "baseAmount",
                 proration_factor::float AS "prorationFactor",
                 amount::float AS amount
@@ -354,7 +421,7 @@ export class PayrollRunService {
                      WHEN 'allowance' THEN 1
                      WHEN 'bonus' THEN 2
                      ELSE 3
-                   END, name`,
+                   END, source, name`,
         [runId],
       )) as (RunEmployeeView['lines'][number] & { employeeId: string })[];
 
@@ -369,6 +436,9 @@ export class PayrollRunService {
           gross: round2(employees.reduce((t, e) => t + e.gross, 0)),
           deductions: round2(employees.reduce((t, e) => t + e.deductions, 0)),
           net: round2(employees.reduce((t, e) => t + e.net, 0)),
+          employerContributions: round2(
+            employees.reduce((t, e) => t + e.employerContributions, 0),
+          ),
         },
       };
     });
