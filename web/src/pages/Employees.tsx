@@ -12,6 +12,8 @@ import {
   Geofence,
   LeaveRequestRow,
   LegalEntity,
+  OvertimeRow,
+  OvertimeSource,
   PayComponent,
   RegularizationRow,
   RosterEntry,
@@ -771,6 +773,8 @@ function EmployeeDetail({
         onError={setError}
         onChanged={load}
       />
+
+      <OvertimeCard token={token} employeeId={employee.id} onError={setError} />
         </>
       )}
 
@@ -945,6 +949,139 @@ const CORRECTION_LABELS: Record<string, string> = {
 
 // Per-date roster admin (T-1E.3): assign a shift to a day or a date range,
 // overriding the standing shift for those days. Loads the next 30 days.
+// Overtime claims and their approval state (FR-M2-06). Hours are only payable
+// once approved, so the card shows the status rather than just the hours.
+function OvertimeCard({
+  token,
+  employeeId,
+  onError,
+}: {
+  token: string;
+  employeeId: string;
+  onError: (message: string) => void;
+}) {
+  const [rows, setRows] = useState<OvertimeRow[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    workDate: daysAgo(1),
+    hours: '',
+    source: 'derived' as OvertimeSource,
+    reason: '',
+  });
+
+  const load = useCallback(async () => {
+    try {
+      setRows(await api.employeeOvertime(token, employeeId));
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    }
+  }, [token, employeeId, onError]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const submit = async () => {
+    const hours = Number(form.hours);
+    if (!form.hours.trim() || Number.isNaN(hours) || hours <= 0) {
+      onError('Enter overtime hours greater than 0.');
+      return;
+    }
+    if (!form.reason.trim()) {
+      onError('A reason is required for overtime.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.createOvertime(token, employeeId, {
+        workDate: form.workDate,
+        hours,
+        source: form.source,
+        reason: form.reason.trim(),
+      });
+      setForm({ ...form, hours: '', reason: '' });
+      await load();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <h3>Overtime</h3>
+      <p className="muted small">
+        Overtime is payable only once approved. A derived claim must match the
+        hours the marks support; declare hours the marks did not capture.
+      </p>
+      {rows.map((r) => (
+        <div className="line" key={r.id}>
+          <span
+            className={`pill ${
+              r.status === 'approved'
+                ? 'active'
+                : r.status === 'rejected'
+                  ? 'retired'
+                  : ''
+            }`}
+          >
+            {r.status}
+          </span>
+          <span className="tag">{r.source}</span>
+          <span className="grow muted small">{r.workDate}</span>
+          <span className="muted small">{r.reason}</span>
+          <span className="muted small">{r.hours} h</span>
+        </div>
+      ))}
+      {rows.length === 0 && <p className="muted small">No overtime claimed.</p>}
+
+      <div className="field-row">
+        <div className="field">
+          <label>Date</label>
+          <input
+            type="date"
+            value={form.workDate}
+            onChange={(e) => setForm({ ...form, workDate: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>Hours</label>
+          <input
+            value={form.hours}
+            onChange={(e) => setForm({ ...form, hours: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>Source</label>
+          <select
+            value={form.source}
+            onChange={(e) =>
+              setForm({ ...form, source: e.target.value as OvertimeSource })
+            }
+          >
+            <option value="derived">Derived from marks</option>
+            <option value="declared">Declared (exception)</option>
+          </select>
+        </div>
+        <div className="field grow">
+          <label>Reason</label>
+          <input
+            value={form.reason}
+            onChange={(e) => setForm({ ...form, reason: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>&nbsp;</label>
+          <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+            Submit for approval
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // The employee's pay structure (T-2.1). Amounts are in the employee's legal
 // entity currency, which the server derives; the form never picks a currency.
 function CompensationCard({

@@ -7,6 +7,7 @@ import {
   PayComponentType,
   api,
 } from '../api';
+import { PayrollRuns } from './PayrollRuns';
 
 const TYPE_LABELS: Record<PayComponentType, string> = {
   basic: 'Basic',
@@ -69,24 +70,24 @@ export function Payroll({ token }: { token: string }) {
     <section className="stack">
       {error && <div className="banner error">{error}</div>}
 
+      <PayrollRuns token={token} entities={entities} onError={setError} />
+
       <div>
         <h2>Entity pay rules</h2>
         <p className="muted small">
           Pay is denominated in each entity's currency. The proration basis
           applies to an incomplete month of work, such as a mid-month joiner or
-          leaver.
+          leaver. The overtime rate is base / divisor x multiplier.
         </p>
         <div className="list">
           {entities.map((e) => (
-            <div className="line" key={e.id}>
-              <span className="tag">{e.currencyCode}</span>
-              <span className="grow">{e.name}</span>
-              <span className="muted small">
-                {e.prorationBasis === 'working_days'
-                  ? 'prorates by working days'
-                  : 'prorates by calendar days'}
-              </span>
-            </div>
+            <PayRulesCard
+              key={e.id}
+              entity={e}
+              token={token}
+              onError={setError}
+              onSaved={load}
+            />
           ))}
         </div>
       </div>
@@ -150,6 +151,180 @@ export function Payroll({ token }: { token: string }) {
         </div>
       </div>
     </section>
+  );
+}
+
+// A legal entity's pay policy (O-06, O-08). These are company and jurisdiction
+// decisions, so HR owns them here rather than needing a migration.
+function PayRulesCard({
+  entity,
+  token,
+  onError,
+  onSaved,
+}: {
+  entity: LegalEntity;
+  token: string;
+  onError: (message: string) => void;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    prorationBasis: entity.prorationBasis,
+    overtimeBase: entity.overtimeBase,
+    overtimeDivisor: entity.overtimeDivisor,
+    overtimeFixedHours: entity.overtimeFixedHours ?? '',
+    overtimeMultiplier: String(Number(entity.overtimeMultiplier)),
+  });
+
+  const save = async () => {
+    const multiplier = Number(form.overtimeMultiplier);
+    if (Number.isNaN(multiplier) || multiplier < 1) {
+      onError('The overtime multiplier must be 1 or more.');
+      return;
+    }
+    const fixedHours = Number(form.overtimeFixedHours);
+    if (
+      form.overtimeDivisor === 'fixed_hours' &&
+      (!String(form.overtimeFixedHours).trim() ||
+        Number.isNaN(fixedHours) ||
+        fixedHours <= 0)
+    ) {
+      onError(
+        'Fixed hours are required for a fixed divisor. Singapore uses 190.67 and Bangladesh 208.',
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.updatePayRules(token, entity.id, {
+        prorationBasis: form.prorationBasis,
+        overtimeBase: form.overtimeBase,
+        overtimeDivisor: form.overtimeDivisor,
+        overtimeFixedHours:
+          form.overtimeDivisor === 'fixed_hours' ? fixedHours : null,
+        overtimeMultiplier: multiplier,
+      });
+      setOpen(false);
+      onSaved();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const rate =
+    entity.overtimeDivisor === 'fixed_hours'
+      ? `${entity.overtimeBase} / ${Number(entity.overtimeFixedHours)} h`
+      : `${entity.overtimeBase} / (shift hours x working days)`;
+
+  return (
+    <article className="card">
+      <div className="row">
+        <div className="grow">
+          <div className="row-title">
+            <span className="tag">{entity.currencyCode}</span>
+            <span className="notif-title">{entity.name}</span>
+          </div>
+          <div className="muted small">
+            {entity.prorationBasis === 'working_days'
+              ? 'prorates by working days'
+              : 'prorates by calendar days'}{' '}
+            · overtime {rate} x {Number(entity.overtimeMultiplier)}
+          </div>
+        </div>
+        <div className="actions">
+          <button className="btn" onClick={() => setOpen((v) => !v)}>
+            {open ? 'Cancel' : 'Edit'}
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="form">
+          <div className="field-row">
+            <div className="field">
+              <label>Proration basis</label>
+              <select
+                value={form.prorationBasis}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    prorationBasis: e.target
+                      .value as LegalEntity['prorationBasis'],
+                  })
+                }
+              >
+                <option value="calendar_days">Calendar days</option>
+                <option value="working_days">Working days</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Overtime base</label>
+              <select
+                value={form.overtimeBase}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    overtimeBase: e.target.value as LegalEntity['overtimeBase'],
+                  })
+                }
+              >
+                <option value="basic">Basic only</option>
+                <option value="gross">Gross (all earnings)</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Overtime divisor</label>
+              <select
+                value={form.overtimeDivisor}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    overtimeDivisor: e.target
+                      .value as LegalEntity['overtimeDivisor'],
+                  })
+                }
+              >
+                <option value="fixed_hours">Fixed hours per month</option>
+                <option value="expected_hours">Shift hours x working days</option>
+              </select>
+            </div>
+            {form.overtimeDivisor === 'fixed_hours' && (
+              <div className="field">
+                <label>Hours per month</label>
+                <input
+                  value={form.overtimeFixedHours}
+                  onChange={(e) =>
+                    setForm({ ...form, overtimeFixedHours: e.target.value })
+                  }
+                />
+              </div>
+            )}
+            <div className="field">
+              <label>Multiplier</label>
+              <input
+                value={form.overtimeMultiplier}
+                onChange={(e) =>
+                  setForm({ ...form, overtimeMultiplier: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <p className="muted small">
+            Singapore's statutory formula is basic / 190.67 h x 1.5. Bangladesh
+            pays basic / 208 h x 2. Changing a rule affects future runs and any
+            run you recompute, not runs already computed.
+          </p>
+          <div className="actions">
+            <button className="btn primary" disabled={busy} onClick={() => void save()}>
+              Save pay rules
+            </button>
+          </div>
+        </div>
+      )}
+    </article>
   );
 }
 

@@ -70,6 +70,31 @@ export interface LegalEntity {
   currencyCode: string;
   // How payroll prorates an incomplete month of work in this jurisdiction.
   prorationBasis: 'calendar_days' | 'working_days';
+  // The overtime rate is base / divisor x multiplier.
+  overtimeMultiplier: string;
+  overtimeBase: 'basic' | 'gross';
+  overtimeDivisor: 'expected_hours' | 'fixed_hours';
+  overtimeFixedHours?: string | null;
+}
+
+export interface PayRulesBody {
+  prorationBasis?: 'calendar_days' | 'working_days';
+  overtimeMultiplier?: number;
+  overtimeBase?: 'basic' | 'gross';
+  overtimeDivisor?: 'expected_hours' | 'fixed_hours';
+  overtimeFixedHours?: number | null;
+}
+
+export type OvertimeSource = 'derived' | 'declared';
+
+export interface OvertimeRow {
+  id: string;
+  workDate: string;
+  hours: number;
+  source: OvertimeSource;
+  reason: string;
+  status: string;
+  createdAt: string;
 }
 
 export interface Department {
@@ -228,6 +253,62 @@ export interface CompensationSummary {
   gross: number;
   deductions: number;
   net: number;
+}
+
+export type PayrollRunType = 'monthly' | 'off_cycle';
+
+export interface PayrollRun {
+  id: string;
+  legalEntityId: string;
+  periodStart: string;
+  periodEnd: string;
+  cutoffDate: string;
+  runType: PayrollRunType;
+  currencyCode: string;
+  prorationBasis: 'calendar_days' | 'working_days';
+  createdAt: string;
+}
+
+export interface PayrollRunLineView {
+  code: string;
+  name: string;
+  componentType: PayComponentType;
+  baseAmount: number;
+  prorationFactor: number;
+  amount: number;
+}
+
+export interface PayrollRunEmployeeView {
+  employeeId: string;
+  employeeCode: string;
+  name: string;
+  currencyCode: string;
+  payableDays: number;
+  periodDays: number;
+  prorationFactor: number;
+  presentDays: number;
+  absentDays: number;
+  leaveDays: number;
+  workedHours: number;
+  overtimeHours: number;
+  overtimeAmount: number;
+  gross: number;
+  deductions: number;
+  net: number;
+  lines: PayrollRunLineView[];
+}
+
+export interface PayrollRunDetail extends PayrollRun {
+  employees: PayrollRunEmployeeView[];
+  totals: { employees: number; gross: number; deductions: number; net: number };
+}
+
+export interface CreatePayrollRunBody {
+  legalEntityId: string;
+  periodStart: string;
+  periodEnd: string;
+  cutoffDate?: string;
+  runType?: PayrollRunType;
 }
 
 export interface DaySummary {
@@ -680,6 +761,37 @@ export const api = {
       token,
       `/employees/${id}/compensation/revisions`,
     ),
+  updatePayRules: (token: string, id: string, body: PayRulesBody) =>
+    request<LegalEntity>(token, `/entities/${id}/pay-rules`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  employeeOvertime: (token: string, id: string) =>
+    request<OvertimeRow[]>(token, `/employees/${id}/attendance/overtime`),
+  createOvertime: (
+    token: string,
+    id: string,
+    body: { workDate: string; hours: number; source: OvertimeSource; reason: string },
+  ) =>
+    request<unknown>(token, `/employees/${id}/attendance/overtime`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  payrollRuns: (token: string) => request<PayrollRun[]>(token, '/payroll/runs'),
+  payrollRun: (token: string, id: string) =>
+    request<PayrollRunDetail>(token, `/payroll/runs/${id}`),
+  createPayrollRun: (token: string, body: CreatePayrollRunBody) =>
+    request<PayrollRunDetail>(token, '/payroll/runs', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  recomputePayrollRun: (token: string, id: string) =>
+    request<PayrollRunDetail>(token, `/payroll/runs/${id}/recompute`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+  deletePayrollRun: (token: string, id: string) =>
+    request<unknown>(token, `/payroll/runs/${id}`, { method: 'DELETE' }),
   setCompensation: (
     token: string,
     id: string,
