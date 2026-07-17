@@ -8,6 +8,7 @@ import {
   api,
 } from '../api';
 import { PayrollRuns } from './PayrollRuns';
+import { StatutoryRules } from './StatutoryRules';
 
 const TYPE_LABELS: Record<PayComponentType, string> = {
   basic: 'Basic',
@@ -71,6 +72,8 @@ export function Payroll({ token }: { token: string }) {
       {error && <div className="banner error">{error}</div>}
 
       <PayrollRuns token={token} entities={entities} onError={setError} />
+
+      <StatutoryRules token={token} entities={entities} onError={setError} />
 
       <div>
         <h2>Entity pay rules</h2>

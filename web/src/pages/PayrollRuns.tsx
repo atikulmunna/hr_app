@@ -191,7 +191,8 @@ function RunDetail({ detail }: { detail: PayrollRunDetail }) {
       <div className="muted small case-meta">
         {detail.totals.employees} employees · gross {money(detail.totals.gross)} ·
         deductions {money(detail.totals.deductions)} · net{' '}
-        {money(detail.totals.net)}
+        {money(detail.totals.net)} · employer contributions{' '}
+        {money(detail.totals.employerContributions)}
       </div>
 
       {unpaid.length > 0 && (
@@ -215,10 +216,14 @@ function RunDetail({ detail }: { detail: PayrollRunDetail }) {
           <div className="muted small case-meta">
             gross {money(e.gross)} · deductions {money(e.deductions)} · net{' '}
             {money(e.net)}
+            {e.employerContributions > 0 &&
+              ` · employer ${money(e.employerContributions)}`}
           </div>
           {e.lines.map((l) => (
-            <div className="line" key={l.code}>
-              <span className="tag">{l.componentType}</span>
+            <div className="line" key={`${l.source}-${l.code}`}>
+              <span className="tag">
+                {l.source === 'statutory' ? 'statutory' : l.componentType}
+              </span>
               <span className="grow">{l.name}</span>
               {l.prorationFactor < 1 && (
                 <span className="muted small">

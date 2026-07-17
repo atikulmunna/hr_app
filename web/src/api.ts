@@ -273,9 +273,47 @@ export interface PayrollRunLineView {
   code: string;
   name: string;
   componentType: PayComponentType;
+  // 'statutory' lines are computed from the entity's rules, not the catalog.
+  source: 'component' | 'statutory';
   baseAmount: number;
   prorationFactor: number;
   amount: number;
+}
+
+export type StatutoryCalculation = 'percentage' | 'bracket';
+
+export interface StatutoryBracketView {
+  lowerBound: number;
+  upperBound: number | null;
+  rate: number;
+}
+
+export interface StatutoryRule {
+  id: string;
+  legalEntityId: string;
+  code: string;
+  name: string;
+  calculation: StatutoryCalculation;
+  base: 'basic' | 'gross';
+  employeeRate: string;
+  employerRate: string;
+  wageCeiling?: string | null;
+  effectiveFrom: string;
+  active: boolean;
+  brackets: StatutoryBracketView[];
+}
+
+export interface CreateStatutoryRuleBody {
+  legalEntityId: string;
+  code: string;
+  name: string;
+  calculation: StatutoryCalculation;
+  base: 'basic' | 'gross';
+  employeeRate?: number;
+  employerRate?: number;
+  wageCeiling?: number | null;
+  effectiveFrom: string;
+  brackets?: { lowerBound: number; upperBound: number | null; rate: number }[];
 }
 
 export interface PayrollRunEmployeeView {
@@ -295,12 +333,20 @@ export interface PayrollRunEmployeeView {
   gross: number;
   deductions: number;
   net: number;
+  // Employer-side statutory cost. Never reduces net.
+  employerContributions: number;
   lines: PayrollRunLineView[];
 }
 
 export interface PayrollRunDetail extends PayrollRun {
   employees: PayrollRunEmployeeView[];
-  totals: { employees: number; gross: number; deductions: number; net: number };
+  totals: {
+    employees: number;
+    gross: number;
+    deductions: number;
+    net: number;
+    employerContributions: number;
+  };
 }
 
 export interface CreatePayrollRunBody {
@@ -777,6 +823,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  statutoryRules: (token: string) =>
+    request<StatutoryRule[]>(token, '/statutory-rules'),
+  createStatutoryRule: (token: string, body: CreateStatutoryRuleBody) =>
+    request<StatutoryRule>(token, '/statutory-rules', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  setStatutoryRuleActive: (token: string, id: string, active: boolean) =>
+    request<StatutoryRule>(token, `/statutory-rules/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active }),
+    }),
+  deleteStatutoryRule: (token: string, id: string) =>
+    request<unknown>(token, `/statutory-rules/${id}`, { method: 'DELETE' }),
   payrollRuns: (token: string) => request<PayrollRun[]>(token, '/payroll/runs'),
   payrollRun: (token: string, id: string) =>
     request<PayrollRunDetail>(token, `/payroll/runs/${id}`),
