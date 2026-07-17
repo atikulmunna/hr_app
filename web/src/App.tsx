@@ -6,6 +6,7 @@ import { Employees } from './pages/Employees';
 import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
 import { Leave } from './pages/Leave';
+import { Payroll } from './pages/Payroll';
 import { Review } from './pages/Review';
 import { Shifts } from './pages/Shifts';
 import { Team } from './pages/Team';
@@ -19,6 +20,7 @@ type Tab =
   | 'geofences'
   | 'leave'
   | 'shifts'
+  | 'payroll'
   | 'config';
 
 const TABS: { key: Tab; label: string }[] = [
@@ -30,6 +32,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'geofences', label: 'Geofences' },
   { key: 'leave', label: 'Leave' },
   { key: 'shifts', label: 'Shifts' },
+  { key: 'payroll', label: 'Payroll' },
   { key: 'config', label: 'Config' },
 ];
 
@@ -106,6 +109,7 @@ export default function App() {
           {tab === 'geofences' && <Geofences token={token} />}
           {tab === 'leave' && <Leave token={token} />}
           {tab === 'shifts' && <Shifts token={token} />}
+          {tab === 'payroll' && <Payroll token={token} />}
           {tab === 'config' && <Config token={token} />}
         </div>
       </main>

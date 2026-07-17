@@ -3,6 +3,7 @@ import {
   AbsenceRecord,
   ApiError,
   AttendanceSummary,
+  CompensationSummary,
   Department,
   Device,
   DeviceHistoryEntry,
@@ -10,6 +11,7 @@ import {
   Geofence,
   LeaveRequestRow,
   LegalEntity,
+  PayComponent,
   RegularizationRow,
   RosterEntry,
   Shift,
@@ -44,12 +46,14 @@ type DetailTab =
   | 'geofences'
   | 'leave'
   | 'attendance'
+  | 'pay'
   | 'privacy';
 const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   { key: 'devices', label: 'Devices' },
   { key: 'geofences', label: 'Geofences' },
   { key: 'leave', label: 'Leave' },
   { key: 'attendance', label: 'Attendance' },
+  { key: 'pay', label: 'Pay' },
   { key: 'privacy', label: 'Privacy' },
 ];
 
@@ -769,6 +773,14 @@ function EmployeeDetail({
         </>
       )}
 
+      {detailTab === 'pay' && (
+        <CompensationCard
+          token={token}
+          employeeId={employee.id}
+          onError={setError}
+        />
+      )}
+
       {detailTab === 'privacy' && (
         <PrivacyCard
           token={token}
@@ -932,6 +944,150 @@ const CORRECTION_LABELS: Record<string, string> = {
 
 // Per-date roster admin (T-1E.3): assign a shift to a day or a date range,
 // overriding the standing shift for those days. Loads the next 30 days.
+// The employee's pay structure (T-2.1). Amounts are in the employee's legal
+// entity currency, which the server derives; the form never picks a currency.
+function CompensationCard({
+  token,
+  employeeId,
+  onError,
+}: {
+  token: string;
+  employeeId: string;
+  onError: (message: string) => void;
+}) {
+  const [summary, setSummary] = useState<CompensationSummary | null>(null);
+  const [catalog, setCatalog] = useState<PayComponent[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ payComponentId: '', amount: '' });
+
+  const load = useCallback(async () => {
+    try {
+      const [s, c] = await Promise.all([
+        api.employeeCompensation(token, employeeId),
+        api.payComponents(token),
+      ]);
+      setSummary(s);
+      setCatalog(c.filter((x) => x.active));
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    }
+  }, [token, employeeId, onError]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const save = async () => {
+    const payComponentId = form.payComponentId || catalog[0]?.id;
+    if (!payComponentId) {
+      onError('Create a pay component first.');
+      return;
+    }
+    const amount = Number(form.amount);
+    if (!form.amount.trim() || Number.isNaN(amount) || amount < 0) {
+      onError('Enter an amount of 0 or more.');
+      return;
+    }
+    setBusy(true);
+    try {
+      setSummary(await api.setCompensation(token, employeeId, {
+        payComponentId,
+        amount,
+      }));
+      setForm({ payComponentId: '', amount: '' });
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (payComponentId: string) => {
+    setBusy(true);
+    try {
+      setSummary(await api.removeCompensation(token, employeeId, payComponentId));
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!summary) {
+    return <p className="muted">Loading...</p>;
+  }
+
+  const money = (value: number) =>
+    `${value.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${summary.currencyCode}`;
+
+  return (
+    <div className="card">
+      <h3>Compensation</h3>
+      <div className="muted small case-meta">
+        gross {money(summary.gross)} · deductions {money(summary.deductions)} ·
+        net {money(summary.net)}
+      </div>
+
+      {summary.lines.map((l) => (
+        <div className="line" key={l.id}>
+          <span className="tag">{l.componentType}</span>
+          <span className="grow">{l.name}</span>
+          <span className="muted small">
+            {l.componentType === 'deduction' ? '-' : ''}
+            {money(l.amount)}
+          </span>
+          <button
+            className="btn small-btn"
+            disabled={busy}
+            onClick={() => void remove(l.payComponentId)}
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+      {summary.lines.length === 0 && (
+        <p className="muted small">No pay components set for this employee.</p>
+      )}
+
+      <div className="field-row">
+        <div className="field">
+          <label>Component</label>
+          <select
+            value={form.payComponentId}
+            onChange={(e) =>
+              setForm({ ...form, payComponentId: e.target.value })
+            }
+          >
+            <option value="">Select a component</option>
+            {catalog.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.componentType})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>Amount ({summary.currencyCode})</label>
+          <input
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>&nbsp;</label>
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => void save()}
+          >
+            Set amount
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RosterCard({
   token,
   employeeId,

@@ -67,6 +67,7 @@ export interface LegalEntity {
   id: string;
   name: string;
   countryCode: string;
+  currencyCode: string;
 }
 
 export interface Department {
@@ -171,6 +172,46 @@ export interface RosterEntry {
   shiftName: string;
   startTime: string;
   endTime: string;
+}
+
+export type PayComponentType = 'basic' | 'allowance' | 'bonus' | 'deduction';
+
+export interface PayComponent {
+  id: string;
+  legalEntityId?: string | null;
+  code: string;
+  name: string;
+  componentType: PayComponentType;
+  taxable: boolean;
+  active: boolean;
+}
+
+export interface CreatePayComponentBody {
+  code: string;
+  name: string;
+  componentType: PayComponentType;
+  legalEntityId?: string;
+  taxable?: boolean;
+}
+
+export interface CompensationLine {
+  id: string;
+  payComponentId: string;
+  code: string;
+  name: string;
+  componentType: PayComponentType;
+  taxable: boolean;
+  amount: number;
+}
+
+// An employee's pay structure, denominated in their legal entity currency.
+export interface CompensationSummary {
+  employeeId: string;
+  currencyCode: string;
+  lines: CompensationLine[];
+  gross: number;
+  deductions: number;
+  net: number;
 }
 
 export interface DaySummary {
@@ -597,4 +638,37 @@ export const api = {
     request<unknown>(token, `/employees/${id}/geofences/${geofenceId}`, {
       method: 'DELETE',
     }),
+  payComponents: (token: string) =>
+    request<PayComponent[]>(token, '/pay-components'),
+  createPayComponent: (token: string, body: CreatePayComponentBody) =>
+    request<PayComponent>(token, '/pay-components', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updatePayComponent: (
+    token: string,
+    id: string,
+    patch: { name?: string; taxable?: boolean; active?: boolean },
+  ) =>
+    request<PayComponent>(token, `/pay-components/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  employeeCompensation: (token: string, id: string) =>
+    request<CompensationSummary>(token, `/employees/${id}/compensation`),
+  setCompensation: (
+    token: string,
+    id: string,
+    body: { payComponentId: string; amount: number },
+  ) =>
+    request<CompensationSummary>(token, `/employees/${id}/compensation`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  removeCompensation: (token: string, id: string, payComponentId: string) =>
+    request<CompensationSummary>(
+      token,
+      `/employees/${id}/compensation/${payComponentId}`,
+      { method: 'DELETE' },
+    ),
 };
