@@ -4,6 +4,8 @@ import { ApprovalRequest } from '../entities/approval-request.entity';
 import { AttendanceConfig } from '../entities/attendance-config.entity';
 import { ConsentRecord } from '../entities/consent-record.entity';
 import { ConsentStatement } from '../entities/consent-statement.entity';
+import { EmployeePayComponent } from '../entities/employee-pay-component.entity';
+import { PayComponent } from '../entities/pay-component.entity';
 import { ApprovalStep } from '../entities/approval-step.entity';
 import { AttendanceEvent } from '../entities/attendance-event.entity';
 import { AuditLog } from '../entities/audit-log.entity';
@@ -77,6 +79,8 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       AttendanceConfig,
       ConsentStatement,
       ConsentRecord,
+      PayComponent,
+      EmployeePayComponent,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
