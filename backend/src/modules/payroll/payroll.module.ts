@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { OvertimeModule } from '../attendance/overtime.module';
 import { EmployeeModule } from '../employees/employee.module';
 import { ShiftModule } from '../shifts/shift.module';
+import { AdjustmentService } from './adjustment.service';
 import { CompensationService } from './compensation.service';
 import { PayComponentService } from './pay-component.service';
 import { PayRulesService } from './pay-rules.service';
@@ -23,6 +24,7 @@ import { StatutoryService } from './statutory.service';
     PayRulesService,
     StatutoryService,
     PayslipService,
+    AdjustmentService,
   ],
   exports: [
     PayComponentService,

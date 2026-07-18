@@ -174,6 +174,20 @@ function render(
   doc.text(`-${money(row.deductions)}`, { align: 'right' });
   doc.moveDown();
 
+  // Off-cycle adjustments correcting a previous period (T-2.5), signed.
+  if (row.adjustmentLines.length > 0) {
+    doc.fontSize(11).text('Adjustments');
+    doc.fontSize(10).fillColor('#333');
+    for (const adj of row.adjustmentLines) {
+      doc.text(adj.reason, { continued: true });
+      doc.text(
+        `${adj.amount < 0 ? '-' : '+'}${money(Math.abs(adj.amount))}`,
+        { align: 'right' },
+      );
+    }
+    doc.fillColor('#000').moveDown();
+  }
+
   doc.fontSize(13).text('Net pay', { continued: true });
   doc.text(money(row.net), { align: 'right' });
 

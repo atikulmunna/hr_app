@@ -22,6 +22,7 @@ import {
   PayComponentService,
   UpdatePayComponentInput,
 } from './pay-component.service';
+import { AdjustmentService, CreateAdjustmentInput } from './adjustment.service';
 import { PayRulesInput, PayRulesService } from './pay-rules.service';
 import { PayslipService } from './payslip.service';
 import { CreateRunInput, PayrollRunService } from './payroll-run.service';
@@ -41,7 +42,31 @@ export class PayrollController {
     private readonly payRules: PayRulesService,
     private readonly statutory: StatutoryService,
     private readonly payslips: PayslipService,
+    private readonly adjustments: AdjustmentService,
   ) {}
+
+  // Off-cycle payroll adjustments (T-2.5, FR-M4-11). A signed correction that a
+  // locked run cannot absorb, settled into a later run.
+  @RequirePermissions('payroll:read')
+  @Get('payroll/adjustments')
+  listAdjustments(@Query('legalEntityId') legalEntityId?: string) {
+    return this.adjustments.list(legalEntityId);
+  }
+
+  @RequirePermissions('payroll:manage')
+  @Post('payroll/adjustments')
+  createAdjustment(
+    @Body() body: CreateAdjustmentInput,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.adjustments.create(body, user);
+  }
+
+  @RequirePermissions('payroll:manage')
+  @Delete('payroll/adjustments/:id')
+  cancelAdjustment(@Param('id') id: string) {
+    return this.adjustments.cancel(id);
+  }
 
   // Freezes the run and routes it for approval (FR-M4-07). Blocking preview
   // issues refuse the lock.

@@ -63,6 +63,10 @@ export class PayrollRunEmployee {
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   deductions: string;
 
+  // Signed total of off-cycle adjustments settled into this run (T-2.5).
+  @Column({ type: 'numeric', precision: 14, scale: 2 })
+  adjustments: string;
+
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   net: string;
 

@@ -13,6 +13,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { OvertimeService } from '../attendance/overtime.service';
 import { SummaryService } from '../shifts/summary.service';
+import { AdjustmentService } from './adjustment.service';
 import { CompensationService } from './compensation.service';
 import { StatutoryCharge, StatutoryService, chargesFor } from './statutory.service';
 import { WorkflowService } from '../workflow/workflow.service';
@@ -67,6 +68,8 @@ export interface RunEmployeeView {
   overtimeAmount: number;
   gross: number;
   deductions: number;
+  // Signed total of off-cycle adjustments settled into this run (T-2.5).
+  adjustments: number;
   net: number;
   employerContributions: number;
   lines: {
@@ -77,6 +80,12 @@ export interface RunEmployeeView {
     baseAmount: number;
     prorationFactor: number;
     amount: number;
+  }[];
+  // Each settled adjustment with its reason, for the run detail and payslip.
+  adjustmentLines: {
+    reason: string;
+    amount: number;
+    sourceRunId: string | null;
   }[];
 }
 
@@ -100,6 +109,7 @@ export interface RunView extends PayrollRun {
     employees: number;
     gross: number;
     deductions: number;
+    adjustments: number;
     net: number;
     employerContributions: number;
   };
@@ -115,6 +125,7 @@ export class PayrollRunService {
     private readonly overtime: OvertimeService,
     private readonly statutory: StatutoryService,
     private readonly workflow: WorkflowService,
+    private readonly adjustments: AdjustmentService,
   ) {}
 
   // Lists runs with their preview issues attached, because the lock action sits
@@ -369,6 +380,21 @@ export class PayrollRunService {
       await m.delete(PayrollRunLine, { runId });
       await m.delete(PayrollRunEmployee, { runId });
 
+      // Materialize adjustment approvals first, so a run picks up an adjustment
+      // approved since the last read without depending on the adjustment list
+      // having been viewed.
+      await this.adjustments.syncApprovals(m);
+
+      // Release any adjustments this (draft) run had settled, so a recompute
+      // re-picks them up cleanly. A locked run never reaches here (compute is
+      // draft-only), so a settled-and-frozen adjustment is safe.
+      await m.query(
+        `UPDATE payroll_adjustments
+            SET settled_run_id = NULL, status = 'approved', updated_at = now()
+          WHERE settled_run_id = $1`,
+        [runId],
+      );
+
       for (const row of computed) {
         const lines = row.compensation.lines.map((line) => {
           const amount = round2(line.amount * row.factor);
@@ -429,6 +455,31 @@ export class PayrollRunService {
         const employerContributions = round2(
           row.charges.reduce((total, c) => total + c.employer, 0),
         );
+
+        // Settle this employee's approved, unsettled off-cycle adjustments into
+        // this run (T-2.5). Signed: they add to or claw back from net.
+        const pending = (await m.query(
+          `SELECT COALESCE(SUM(amount), 0)::float AS total
+             FROM payroll_adjustments
+            WHERE employee_id = $1
+              AND legal_entity_id = $2
+              AND status = 'approved'
+              AND settled_run_id IS NULL`,
+          [row.candidate.id, run.legalEntityId],
+        )) as { total: number }[];
+        const adjustments = round2(pending[0]?.total ?? 0);
+        if (adjustments !== 0) {
+          await m.query(
+            `UPDATE payroll_adjustments
+                SET status = 'settled', settled_run_id = $1, updated_at = now()
+              WHERE employee_id = $2
+                AND legal_entity_id = $3
+                AND status = 'approved'
+                AND settled_run_id IS NULL`,
+            [runId, row.candidate.id, run.legalEntityId],
+          );
+        }
+
         await m.save(
           m.create(PayrollRunEmployee, {
             tenantId: this.db.tenantId,
@@ -447,7 +498,9 @@ export class PayrollRunService {
             overtimeAmount: row.overtimeAmount.toFixed(2),
             gross: gross.toFixed(2),
             deductions: deductions.toFixed(2),
-            net: round2(gross - deductions).toFixed(2),
+            adjustments: adjustments.toFixed(2),
+            // Off-cycle adjustments correct net directly, after deductions.
+            net: round2(gross - deductions + adjustments).toFixed(2),
             employerContributions: employerContributions.toFixed(2),
           }),
         );
@@ -481,6 +534,7 @@ export class PayrollRunService {
                 pre.overtime_amount::float AS "overtimeAmount",
                 pre.gross::float AS gross,
                 pre.deductions::float AS deductions,
+                pre.adjustments::float AS adjustments,
                 pre.net::float AS net,
                 pre.employer_contributions::float AS "employerContributions"
            FROM payroll_run_employees pre
@@ -489,6 +543,22 @@ export class PayrollRunService {
           ORDER BY e.employee_code`,
         [runId],
       )) as RunEmployeeView[];
+
+      // The individual off-cycle adjustments settled into this run, so the run
+      // and payslip can show each with its reason rather than just a total.
+      const settled = (await m.query(
+        `SELECT employee_id AS "employeeId", reason, amount::float AS amount,
+                source_run_id AS "sourceRunId"
+           FROM payroll_adjustments
+          WHERE settled_run_id = $1
+          ORDER BY created_at`,
+        [runId],
+      )) as {
+        employeeId: string;
+        reason: string;
+        amount: number;
+        sourceRunId: string | null;
+      }[];
 
       const lines = (await m.query(
         `SELECT employee_id AS "employeeId",
@@ -511,6 +581,9 @@ export class PayrollRunService {
 
       for (const employee of employees) {
         employee.lines = lines.filter((l) => l.employeeId === employee.employeeId);
+        employee.adjustmentLines = settled.filter(
+          (a) => a.employeeId === employee.employeeId,
+        );
       }
       return {
         ...run,
@@ -520,6 +593,7 @@ export class PayrollRunService {
           employees: employees.length,
           gross: round2(employees.reduce((t, e) => t + e.gross, 0)),
           deductions: round2(employees.reduce((t, e) => t + e.deductions, 0)),
+          adjustments: round2(employees.reduce((t, e) => t + e.adjustments, 0)),
           net: round2(employees.reduce((t, e) => t + e.net, 0)),
           employerContributions: round2(
             employees.reduce((t, e) => t + e.employerContributions, 0),
@@ -619,6 +693,15 @@ export class PayrollRunService {
         throw new NotFoundException('Payroll run not found.');
       }
       assertDraft(found, 'deleted');
+      // Release its settled adjustments so they return to the pool for the next
+      // run. ON DELETE SET NULL would clear settled_run_id but leave the status
+      // 'settled', stranding them; reset both.
+      await m.query(
+        `UPDATE payroll_adjustments
+            SET settled_run_id = NULL, status = 'approved', updated_at = now()
+          WHERE settled_run_id = $1`,
+        [runId],
+      );
       const result = await m.delete(PayrollRun, { id: runId });
       if (!result.affected) {
         throw new NotFoundException('Payroll run not found.');

@@ -7,6 +7,7 @@ import { ConsentStatement } from '../entities/consent-statement.entity';
 import { EmployeePayComponent } from '../entities/employee-pay-component.entity';
 import { PayComponent } from '../entities/pay-component.entity';
 import { OvertimeRequest } from '../entities/overtime-request.entity';
+import { PayrollAdjustment } from '../entities/payroll-adjustment.entity';
 import { StatutoryBracket } from '../entities/statutory-bracket.entity';
 import { StatutoryRule } from '../entities/statutory-rule.entity';
 import { PayrollRun } from '../entities/payroll-run.entity';
@@ -93,6 +94,7 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       OvertimeRequest,
       StatutoryRule,
       StatutoryBracket,
+      PayrollAdjustment,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
