@@ -5,8 +5,22 @@ import {
   LegalEntity,
   PayrollRun,
   PayrollRunDetail,
+  PayrollRunListItem,
+  RunIssue,
   api,
 } from '../api';
+
+// Saves a fetched blob or text under a filename, since both downloads need the
+// bearer token and cannot be a plain link.
+function save(data: Blob | string, filename: string, type: string) {
+  const blob = typeof data === 'string' ? new Blob([data], { type }) : data;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 // First and last day of the month N months back, as YYYY-MM-DD.
 function monthRange(monthsAgo: number): { start: string; end: string } {
@@ -34,7 +48,7 @@ export function PayrollRuns({
   entities: LegalEntity[];
   onError: (message: string) => void;
 }) {
-  const [runs, setRuns] = useState<PayrollRun[]>([]);
+  const [runs, setRuns] = useState<PayrollRunListItem[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<PayrollRunDetail | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,6 +88,34 @@ export function PayrollRuns({
     try {
       setDetail(await api.recomputePayrollRun(token, id));
       setOpenId(id);
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const lock = async (id: string) => {
+    setBusy(true);
+    try {
+      setDetail(await api.lockPayrollRun(token, id));
+      setOpenId(id);
+      await load();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const bankFile = async (r: PayrollRun) => {
+    setBusy(true);
+    try {
+      save(
+        await api.bankFileCsv(token, r.id),
+        `disbursement-${r.periodStart.slice(0, 7)}.csv`,
+        'text/csv',
+      );
     } catch (e) {
       onError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -140,6 +182,11 @@ export function PayrollRuns({
                   <span className="muted small">
                     {r.periodStart} to {r.periodEnd}
                   </span>
+                  <span
+                    className={`pill ${r.status === 'approved' ? 'active' : r.status === 'locked' ? '' : 'retired'}`}
+                  >
+                    {r.status}
+                  </span>
                   {r.runType === 'off_cycle' && (
                     <span className="pill retired">off-cycle</span>
                   )}
@@ -150,29 +197,68 @@ export function PayrollRuns({
                     ? 'working days'
                     : 'calendar days'}
                 </div>
+                {r.status === 'locked' && (
+                  <div className="muted small">
+                    Awaiting HR approval. It appears in the Approvals tab; once
+                    decided, this run updates on its own.
+                  </div>
+                )}
+                {r.status === 'approved' && r.approvedAt && (
+                  <div className="muted small">
+                    Approved {new Date(r.approvedAt).toLocaleString()}
+                  </div>
+                )}
+                <IssueSummary issues={r.issues} />
               </div>
               <div className="actions">
                 <button className="btn" disabled={busy} onClick={() => void open(r.id)}>
                   {openId === r.id ? 'Hide' : 'View'}
                 </button>
-                <button
-                  className="btn"
-                  disabled={busy}
-                  onClick={() => void recompute(r.id)}
-                >
-                  Recompute
-                </button>
-                <button
-                  className="btn danger"
-                  disabled={busy}
-                  onClick={() => void remove(r.id)}
-                >
-                  Delete
-                </button>
+                {r.status === 'draft' && (
+                  <>
+                    <button
+                      className="btn"
+                      disabled={busy}
+                      onClick={() => void recompute(r.id)}
+                    >
+                      Recompute
+                    </button>
+                    <button
+                      className="btn primary"
+                      disabled={busy}
+                      onClick={() => void lock(r.id)}
+                    >
+                      Lock and send for approval
+                    </button>
+                    <button
+                      className="btn danger"
+                      disabled={busy}
+                      onClick={() => void remove(r.id)}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+                {r.status === 'locked' && (
+                  <button className="btn" disabled={busy} onClick={() => void load()}>
+                    Refresh
+                  </button>
+                )}
+                {r.status === 'approved' && (
+                  <button
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => void bankFile(r)}
+                  >
+                    Bank file
+                  </button>
+                )}
               </div>
             </div>
 
-            {openId === r.id && detail && <RunDetail detail={detail} />}
+            {openId === r.id && detail && (
+              <RunDetail detail={detail} token={token} onError={onError} />
+            )}
           </article>
         ))}
         {runs.length === 0 && <p className="muted">No payroll runs yet.</p>}
@@ -181,10 +267,59 @@ export function PayrollRuns({
   );
 }
 
-function RunDetail({ detail }: { detail: PayrollRunDetail }) {
+// Issues shown where the lock button is, not hidden behind an expand.
+function IssueSummary({ issues }: { issues: RunIssue[] }) {
+  const blocking = issues.filter((i) => i.severity === 'blocking');
+  const warnings = issues.filter((i) => i.severity === 'warning');
+  if (issues.length === 0) {
+    return null;
+  }
+  return (
+    <div className="row-title">
+      {blocking.length > 0 && (
+        <span className="pill retired">
+          {blocking.length} blocking {blocking.length === 1 ? 'issue' : 'issues'}
+        </span>
+      )}
+      {warnings.length > 0 && (
+        <span className="tag">
+          {warnings.length} {warnings.length === 1 ? 'warning' : 'warnings'}
+        </span>
+      )}
+      <span className="muted small">
+        {(blocking[0] ?? warnings[0]).employeeCode
+          ? `${(blocking[0] ?? warnings[0]).employeeCode}: `
+          : ''}
+        {(blocking[0] ?? warnings[0]).message}
+        {issues.length > 1 ? ` (+${issues.length - 1} more)` : ''}
+      </span>
+    </div>
+  );
+}
+
+function RunDetail({
+  detail,
+  token,
+  onError,
+}: {
+  detail: PayrollRunDetail;
+  token: string;
+  onError: (message: string) => void;
+}) {
   const money = (v: number) =>
     `${v.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${detail.currencyCode}`;
-  const unpaid = detail.employees.filter((e) => e.net === 0);
+  const blocking = detail.issues.filter((i) => i.severity === 'blocking');
+  const warnings = detail.issues.filter((i) => i.severity === 'warning');
+
+  const payslip = async (employeeId: string, employeeCode: string) => {
+    try {
+      const blob = await api.payslipPdf(token, detail.id, employeeId);
+      save(blob, `payslip-${detail.periodStart.slice(0, 7)}-${employeeCode}.pdf`,
+        'application/pdf');
+    } catch (e) {
+      onError(e instanceof ApiError ? e.message : String(e));
+    }
+  };
 
   return (
     <div className="stack">
@@ -195,10 +330,25 @@ function RunDetail({ detail }: { detail: PayrollRunDetail }) {
         {money(detail.totals.employerContributions)}
       </div>
 
-      {unpaid.length > 0 && (
+      {blocking.length > 0 && (
+        <div className="banner error">
+          <strong>This run cannot be locked yet.</strong>
+          {blocking.map((i, n) => (
+            <div key={n}>
+              {i.employeeCode ? `${i.employeeCode}: ` : ''}
+              {i.message}
+            </div>
+          ))}
+        </div>
+      )}
+      {warnings.length > 0 && (
         <div className="banner">
-          {unpaid.length} employee{unpaid.length > 1 ? 's' : ''} in this run have
-          nothing to pay: no pay components are in force on {detail.cutoffDate}.
+          {warnings.map((i, n) => (
+            <div key={n}>
+              {i.employeeCode ? `${i.employeeCode}: ` : ''}
+              {i.message}
+            </div>
+          ))}
         </div>
       )}
 
@@ -211,6 +361,14 @@ function RunDetail({ detail }: { detail: PayrollRunDetail }) {
               <span className="pill retired">
                 prorated {e.payableDays}/{e.periodDays} d
               </span>
+            )}
+            {detail.status !== 'draft' && (
+              <button
+                className="btn small-btn"
+                onClick={() => void payslip(e.employeeId, e.employeeCode)}
+              >
+                Payslip
+              </button>
             )}
           </div>
           <div className="muted small case-meta">

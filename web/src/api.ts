@@ -257,6 +257,8 @@ export interface CompensationSummary {
 
 export type PayrollRunType = 'monthly' | 'off_cycle';
 
+export type PayrollRunStatus = 'draft' | 'locked' | 'approved';
+
 export interface PayrollRun {
   id: string;
   legalEntityId: string;
@@ -266,7 +268,23 @@ export interface PayrollRun {
   runType: PayrollRunType;
   currencyCode: string;
   prorationBasis: 'calendar_days' | 'working_days';
+  status: PayrollRunStatus;
+  lockedAt?: string | null;
+  approvedAt?: string | null;
+  approvalRequestId?: string | null;
   createdAt: string;
+}
+
+// A preview finding. 'blocking' refuses the lock; 'warning' is worth a look.
+export interface RunIssue {
+  severity: 'blocking' | 'warning';
+  employeeCode?: string;
+  message: string;
+}
+
+// A run in the list, carrying the issues that decide whether it can lock.
+export interface PayrollRunListItem extends PayrollRun {
+  issues: RunIssue[];
 }
 
 export interface PayrollRunLineView {
@@ -340,6 +358,7 @@ export interface PayrollRunEmployeeView {
 
 export interface PayrollRunDetail extends PayrollRun {
   employees: PayrollRunEmployeeView[];
+  issues: RunIssue[];
   totals: {
     employees: number;
     gross: number;
@@ -837,7 +856,8 @@ export const api = {
     }),
   deleteStatutoryRule: (token: string, id: string) =>
     request<unknown>(token, `/statutory-rules/${id}`, { method: 'DELETE' }),
-  payrollRuns: (token: string) => request<PayrollRun[]>(token, '/payroll/runs'),
+  payrollRuns: (token: string) =>
+    request<PayrollRunListItem[]>(token, '/payroll/runs'),
   payrollRun: (token: string, id: string) =>
     request<PayrollRunDetail>(token, `/payroll/runs/${id}`),
   createPayrollRun: (token: string, body: CreatePayrollRunBody) =>
@@ -852,6 +872,32 @@ export const api = {
     }),
   deletePayrollRun: (token: string, id: string) =>
     request<unknown>(token, `/payroll/runs/${id}`, { method: 'DELETE' }),
+  lockPayrollRun: (token: string, id: string) =>
+    request<PayrollRunDetail>(token, `/payroll/runs/${id}/lock`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+  // Both downloads need the bearer token, so they fetch and hand back a blob
+  // rather than pointing an anchor at the URL.
+  payslipPdf: async (token: string, runId: string, employeeId: string) => {
+    const res = await fetch(
+      `${config.apiBase}/payroll/runs/${runId}/payslips/${employeeId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) {
+      throw new ApiError(res.status, await errorMessage(res));
+    }
+    return res.blob();
+  },
+  bankFileCsv: async (token: string, runId: string): Promise<string> => {
+    const res = await fetch(`${config.apiBase}/payroll/runs/${runId}/bank-file`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new ApiError(res.status, await errorMessage(res));
+    }
+    return res.text();
+  },
   setCompensation: (
     token: string,
     id: string,
@@ -868,3 +914,14 @@ export const api = {
       { method: 'DELETE' },
     ),
 };
+
+// Pulls the server's message out of a failed non-JSON response where possible,
+// so a download failure reads as a reason rather than a status code.
+async function errorMessage(res: globalThis.Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { message?: string };
+    return body.message ?? res.statusText;
+  } catch {
+    return res.statusText;
+  }
+}
