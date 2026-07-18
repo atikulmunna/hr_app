@@ -7,6 +7,7 @@ import {
   PayComponentType,
   api,
 } from '../api';
+import { PayrollAdjustments } from './PayrollAdjustments';
 import { PayrollRuns } from './PayrollRuns';
 import { StatutoryRules } from './StatutoryRules';
 
@@ -72,6 +73,8 @@ export function Payroll({ token }: { token: string }) {
       {error && <div className="banner error">{error}</div>}
 
       <PayrollRuns token={token} entities={entities} onError={setError} />
+
+      <PayrollAdjustments token={token} onError={setError} />
 
       <StatutoryRules token={token} entities={entities} onError={setError} />
 

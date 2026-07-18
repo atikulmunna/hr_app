@@ -298,6 +298,34 @@ export interface PayrollRunLineView {
   amount: number;
 }
 
+// One off-cycle adjustment settled into a run (T-2.5), signed.
+export interface RunAdjustmentLine {
+  reason: string;
+  amount: number;
+  sourceRunId: string | null;
+}
+
+export interface PayrollAdjustment {
+  id: string;
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  reason: string;
+  amount: number;
+  currencyCode: string;
+  status: string;
+  sourceRunId: string | null;
+  settledRunId: string | null;
+  createdAt: string;
+}
+
+export interface CreateAdjustmentBody {
+  employeeId: string;
+  amount: number;
+  reason: string;
+  sourceRunId?: string;
+}
+
 export type StatutoryCalculation = 'percentage' | 'bracket';
 
 export interface StatutoryBracketView {
@@ -350,10 +378,13 @@ export interface PayrollRunEmployeeView {
   overtimeAmount: number;
   gross: number;
   deductions: number;
+  // Signed total of off-cycle adjustments settled into this run (T-2.5).
+  adjustments: number;
   net: number;
   // Employer-side statutory cost. Never reduces net.
   employerContributions: number;
   lines: PayrollRunLineView[];
+  adjustmentLines: RunAdjustmentLine[];
 }
 
 export interface PayrollRunDetail extends PayrollRun {
@@ -363,6 +394,7 @@ export interface PayrollRunDetail extends PayrollRun {
     employees: number;
     gross: number;
     deductions: number;
+    adjustments: number;
     net: number;
     employerContributions: number;
   };
@@ -858,6 +890,15 @@ export const api = {
     request<unknown>(token, `/statutory-rules/${id}`, { method: 'DELETE' }),
   payrollRuns: (token: string) =>
     request<PayrollRunListItem[]>(token, '/payroll/runs'),
+  payrollAdjustments: (token: string) =>
+    request<PayrollAdjustment[]>(token, '/payroll/adjustments'),
+  createPayrollAdjustment: (token: string, body: CreateAdjustmentBody) =>
+    request<PayrollAdjustment>(token, '/payroll/adjustments', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  cancelPayrollAdjustment: (token: string, id: string) =>
+    request<unknown>(token, `/payroll/adjustments/${id}`, { method: 'DELETE' }),
   payrollRun: (token: string, id: string) =>
     request<PayrollRunDetail>(token, `/payroll/runs/${id}`),
   createPayrollRun: (token: string, body: CreatePayrollRunBody) =>

@@ -405,6 +405,16 @@ function RunDetail({
               <span className="muted small">{money(e.overtimeAmount)}</span>
             </div>
           )}
+          {e.adjustmentLines.map((a, n) => (
+            <div className="line" key={`adj-${n}`}>
+              <span className="tag">adjustment</span>
+              <span className="grow">{a.reason}</span>
+              <span className="muted small">
+                {a.amount < 0 ? '-' : '+'}
+                {money(Math.abs(a.amount))}
+              </span>
+            </div>
+          ))}
           <div className="muted small">
             intake: present {e.presentDays} d · absent {e.absentDays} d · leave{' '}
             {e.leaveDays} d · worked {e.workedHours} h · approved overtime{' '}
