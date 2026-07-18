@@ -341,6 +341,8 @@ export interface StatutoryRule {
   name: string;
   calculation: StatutoryCalculation;
   base: 'basic' | 'gross';
+  // 'annual' rules (income tax) are annualized before the calculation.
+  basis: 'monthly' | 'annual';
   employeeRate: string;
   employerRate: string;
   wageCeiling?: string | null;
@@ -355,6 +357,7 @@ export interface CreateStatutoryRuleBody {
   name: string;
   calculation: StatutoryCalculation;
   base: 'basic' | 'gross';
+  basis: 'monthly' | 'annual';
   employeeRate?: number;
   employerRate?: number;
   wageCeiling?: number | null;

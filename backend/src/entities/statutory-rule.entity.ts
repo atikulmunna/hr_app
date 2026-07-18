@@ -13,6 +13,11 @@ export type StatutoryCalculation = 'percentage' | 'bracket';
 
 export type StatutoryBase = 'basic' | 'gross';
 
+// The period a rule's thresholds and ceiling are expressed in. 'annual' rules
+// (income tax) are annualized against the monthly base before the calculation
+// and the result divided back; 'monthly' rules (provident fund, CPF) apply as-is.
+export type StatutoryPeriodBasis = 'monthly' | 'annual';
+
 // A statutory deduction rule for a legal entity (T-2.3, FR-M4-06). Rates are law
 // and change most years, so rules are effective-dated and a run resolves the
 // ones in force at its cut-off.
@@ -38,6 +43,9 @@ export class StatutoryRule {
 
   @Column()
   base: StatutoryBase;
+
+  @Column({ default: 'monthly' })
+  basis: StatutoryPeriodBasis;
 
   // Percentages. The pg driver returns numeric as a string.
   @Column({ name: 'employee_rate', type: 'numeric', precision: 6, scale: 3 })

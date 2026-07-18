@@ -10,6 +10,7 @@ import { StatutoryBracket } from '../../entities/statutory-bracket.entity';
 import {
   StatutoryBase,
   StatutoryCalculation,
+  StatutoryPeriodBasis,
   StatutoryRule,
 } from '../../entities/statutory-rule.entity';
 import { AuditService } from '../audit/audit.service';
@@ -26,6 +27,7 @@ export interface CreateStatutoryRuleInput {
   name?: string;
   calculation?: StatutoryCalculation;
   base?: StatutoryBase;
+  basis?: StatutoryPeriodBasis;
   employeeRate?: number;
   employerRate?: number;
   wageCeiling?: number | null;
@@ -48,6 +50,8 @@ export interface StatutoryCharge {
 
 const CALCULATIONS: StatutoryCalculation[] = ['percentage', 'bracket'];
 const BASES: StatutoryBase[] = ['basic', 'gross'];
+const PERIOD_BASES: StatutoryPeriodBasis[] = ['monthly', 'annual'];
+const MONTHS_PER_YEAR = 12;
 
 // Statutory deductions per jurisdiction (T-2.3, FR-M4-06). Rules are law, so
 // they are configurable data per legal entity and effective-dated: a run
@@ -116,6 +120,12 @@ export class StatutoryService {
     if (!BASES.includes(base)) {
       throw new BadRequestException(`base must be one of: ${BASES.join(', ')}.`);
     }
+    const basis = input.basis ?? 'monthly';
+    if (!PERIOD_BASES.includes(basis)) {
+      throw new BadRequestException(
+        `basis must be one of: ${PERIOD_BASES.join(', ')}.`,
+      );
+    }
     const effectiveFrom = requireDate(input.effectiveFrom, 'effectiveFrom');
     const employeeRate = rate(input.employeeRate ?? 0, 'employeeRate');
     const employerRate = rate(input.employerRate ?? 0, 'employerRate');
@@ -150,6 +160,7 @@ export class StatutoryService {
           name,
           calculation: input.calculation!,
           base,
+          basis,
           employeeRate: employeeRate.toFixed(3),
           employerRate: employerRate.toFixed(3),
           wageCeiling: input.wageCeiling?.toFixed(2) ?? null,
@@ -270,28 +281,34 @@ export function chargesFor(
 ): StatutoryCharge[] {
   return rules
     .map((rule) => {
-      const full = rule.base === 'basic' ? basic : gross;
+      const monthly = rule.base === 'basic' ? basic : gross;
+      // An annual rule's thresholds are yearly, so compute against the
+      // annualized base and divide the charge back to the month (monthly TDS).
+      // A percentage without a ceiling is unaffected: x12 then /12 cancels.
+      const scale = rule.basis === 'annual' ? MONTHS_PER_YEAR : 1;
+      const full = monthly * scale;
       // A ceiling caps the wage the rate applies to, as CPF's ordinary wage
-      // ceiling does; it does not cap the resulting amount.
+      // ceiling does; it does not cap the resulting amount. It is in the rule's
+      // own period, so an annual rule carries an annual ceiling.
       const ceiling = Number(rule.wageCeiling ?? 0);
-      const base = ceiling > 0 ? Math.min(full, ceiling) : full;
+      const cappedBase = ceiling > 0 ? Math.min(full, ceiling) : full;
 
-      if (rule.calculation === 'bracket') {
-        const employee = bracketAmount(base, rule.brackets);
-        return {
-          code: rule.code,
-          name: rule.name,
-          base,
-          employee: round2(employee),
-          employer: 0,
-        };
-      }
+      const gross_ =
+        rule.calculation === 'bracket'
+          ? bracketAmount(cappedBase, rule.brackets)
+          : (cappedBase * Number(rule.employeeRate)) / 100;
+      const employerGross =
+        rule.calculation === 'bracket'
+          ? 0
+          : (cappedBase * Number(rule.employerRate)) / 100;
+
       return {
         code: rule.code,
         name: rule.name,
-        base,
-        employee: round2((base * Number(rule.employeeRate)) / 100),
-        employer: round2((base * Number(rule.employerRate)) / 100),
+        // Report the period (monthly) base the charge lands on.
+        base: round2(cappedBase / scale),
+        employee: round2(gross_ / scale),
+        employer: round2(employerGross / scale),
       };
     })
     .filter((c) => c.employee > 0 || c.employer > 0);

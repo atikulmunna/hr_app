@@ -65,8 +65,9 @@ export function StatutoryRules({
   };
 
   const describe = (r: StatutoryRule) => {
+    const per = r.basis === 'annual' ? ', annual figures' : '';
     if (r.calculation === 'bracket') {
-      return `progressive on ${r.base}: ${r.brackets
+      return `progressive on ${r.base}${per}: ${r.brackets
         .map(
           (b) =>
             `${b.lowerBound}${b.upperBound == null ? '+' : ` to ${b.upperBound}`} @ ${b.rate}%`,
@@ -76,7 +77,7 @@ export function StatutoryRules({
     const ceiling = r.wageCeiling
       ? ` (capped at ${Number(r.wageCeiling)})`
       : '';
-    return `${Number(r.employeeRate)}% employee, ${Number(r.employerRate)}% employer on ${r.base}${ceiling}`;
+    return `${Number(r.employeeRate)}% employee, ${Number(r.employerRate)}% employer on ${r.base}${ceiling}${per}`;
   };
 
   return (
@@ -95,7 +96,9 @@ export function StatutoryRules({
         add a rule with a later date to supersede an old one. A run applies what
         was in force at its cut-off, so changing a rate never rewrites a past
         period. Employee amounts reduce net pay; employer amounts are a cost and
-        do not.
+        do not. Set "annual figures" for income tax so its yearly brackets are
+        annualized against monthly pay; keep "monthly" for provident fund and
+        CPF-style contributions.
       </p>
 
       {showForm && (
@@ -170,6 +173,7 @@ function NewStatutoryRuleForm({
     name: '',
     calculation: 'percentage' as StatutoryCalculation,
     base: 'gross' as 'basic' | 'gross',
+    basis: 'monthly' as 'monthly' | 'annual',
     employeeRate: '',
     employerRate: '',
     wageCeiling: '',
@@ -192,6 +196,7 @@ function NewStatutoryRuleForm({
       name: form.name.trim(),
       calculation: form.calculation,
       base: form.base,
+      basis: form.basis,
       effectiveFrom: form.effectiveFrom,
     };
     if (form.calculation === 'percentage') {
@@ -282,6 +287,18 @@ function NewStatutoryRuleForm({
           >
             <option value="gross">Gross pay</option>
             <option value="basic">Basic only</option>
+          </select>
+        </div>
+        <div className="field">
+          <label>Thresholds are</label>
+          <select
+            value={form.basis}
+            onChange={(e) =>
+              setForm({ ...form, basis: e.target.value as 'monthly' | 'annual' })
+            }
+          >
+            <option value="monthly">Monthly figures</option>
+            <option value="annual">Annual figures</option>
           </select>
         </div>
         <div className="field">
