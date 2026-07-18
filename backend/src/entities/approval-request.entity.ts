@@ -36,6 +36,13 @@ export class ApprovalRequest {
   @Column({ name: 'current_step', default: 1 })
   currentStep: number;
 
+  // True when the requester holds an approver role for this request, so
+  // self-approval would be structurally possible. Such requests may also be
+  // decided by the escalation role (the COO), which is how a lone manager's own
+  // leave still gets an independent decision.
+  @Column({ default: false })
+  escalatable: boolean;
+
   @Column({ type: 'jsonb', nullable: true })
   payload?: unknown;
 

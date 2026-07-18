@@ -45,9 +45,13 @@ export class JwtAuthGuard implements CanActivate {
     const { realm, claims } = await this.keycloak.verify(token);
     const tenantId = await this.tenants.idForSlug(realm);
     this.ctx.setTenantId(tenantId);
-    this.ctx.setActor({ sub: claims.sub, username: claims.preferred_username });
 
     const roles = claims.realm_access?.roles ?? [];
+    this.ctx.setActor({
+      sub: claims.sub,
+      username: claims.preferred_username,
+      roles,
+    });
     req.user = {
       sub: claims.sub,
       username: claims.preferred_username,

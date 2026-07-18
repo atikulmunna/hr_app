@@ -6,6 +6,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export interface AuditActor {
   sub?: string;
   username?: string;
+  // Realm roles, used to decide whether a request the actor raises is one they
+  // could structurally approve themselves (escalation, O-09).
+  roles?: string[];
 }
 
 interface TenantStore {

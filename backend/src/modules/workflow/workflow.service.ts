@@ -26,6 +26,12 @@ export interface ApprovalView {
   steps: ApprovalStep[];
 }
 
+// The senior backstop (COO). It can decide a request only when self-approval
+// would otherwise be structurally possible, i.e. the requester holds the
+// approver role, so ordinary requests keep their normal hierarchy and never
+// reach this role.
+const ESCALATION_ROLE = 'tenant_admin';
+
 // The shared multi-level approval engine. Feature modules (leave, expense,
 // requisition, regularization, device re-bind) call createRequest and let the
 // engine drive the step sequence; they do not reimplement approvals (FR-M11-01).
@@ -45,6 +51,14 @@ export class WorkflowService {
     if (!input.approverRoles || input.approverRoles.length === 0) {
       throw new BadRequestException('At least one approver role is required.');
     }
+    // A request is escalatable when its raiser holds one of the approver roles,
+    // so they could otherwise have approved their own request. Only these may be
+    // escalated to the COO.
+    const requesterRoles = this.ctx.actor?.roles ?? [];
+    const escalatable = input.approverRoles.some((role) =>
+      requesterRoles.includes(role),
+    );
+
     return this.db.withTenant(async (m) => {
       const request = await m.save(
         m.create(ApprovalRequest, {
@@ -56,6 +70,7 @@ export class WorkflowService {
           status: 'pending',
           currentStep: 1,
           payload: input.payload,
+          escalatable,
         }),
       );
       let order = 1;
@@ -100,12 +115,21 @@ export class WorkflowService {
   }
 
   // Requests whose current step is decidable by one of the caller's roles.
-  listPendingForRoles(roles: string[]): Promise<ApprovalRequest[]> {
+  // The queue excludes the caller's own requests: they cannot decide them
+  // (separation of duties), so showing them would only offer an action that is
+  // guaranteed to fail.
+  listPendingForRoles(
+    roles: string[],
+    actorSub?: string,
+  ): Promise<ApprovalRequest[]> {
     if (roles.length === 0) {
       return Promise.resolve([]);
     }
-    return this.db.withTenant((m) =>
-      m
+    return this.db.withTenant((m) => {
+      // A user sees a request when their role is its current approver, and the
+      // COO additionally sees escalatable requests (the only ones it may act on).
+      const canEscalate = roles.includes(ESCALATION_ROLE);
+      const query = m
         .createQueryBuilder(ApprovalRequest, 'r')
         .innerJoin(
           ApprovalStep,
@@ -113,10 +137,20 @@ export class WorkflowService {
           's.request_id = r.id AND s.step_order = r.current_step',
         )
         .where('r.status = :status', { status: 'pending' })
-        .andWhere('s.approver_role IN (:...roles)', { roles })
-        .orderBy('r.created_at', 'ASC')
-        .getMany(),
-    );
+        .andWhere(
+          canEscalate
+            ? '(s.approver_role IN (:...roles) OR r.escalatable = true)'
+            : 's.approver_role IN (:...roles)',
+          { roles },
+        );
+      if (actorSub) {
+        query.andWhere(
+          '(r.requester_sub IS NULL OR r.requester_sub <> :actorSub)',
+          { actorSub },
+        );
+      }
+      return query.orderBy('r.created_at', 'ASC').getMany();
+    });
   }
 
   async decide(
@@ -141,9 +175,25 @@ export class WorkflowService {
       if (!step) {
         throw new NotFoundException('Active approval step not found.');
       }
-      if (!actor.roles.includes(step.approverRole)) {
+      // Eligible either as the step's normal approver, or, only when the request
+      // is escalatable, as the COO backstop (O-09). The COO cannot reach an
+      // ordinary request, so the normal hierarchy is unchanged.
+      const isNormalApprover = actor.roles.includes(step.approverRole);
+      const isEscalationApprover =
+        request.escalatable && actor.roles.includes(ESCALATION_ROLE);
+      if (!isNormalApprover && !isEscalationApprover) {
         throw new ForbiddenException(
           `This step requires the "${step.approverRole}" role.`,
+        );
+      }
+      // Separation of duties (PR-05): holding the approver role is not enough,
+      // the approver must be someone other than whoever raised the request.
+      // This binds the COO too: a request the COO raised still needs someone
+      // else, so power is not concentrated to a self-approving point.
+      if (request.requesterSub && request.requesterSub === actor.sub) {
+        throw new ForbiddenException(
+          'You raised this request, so you cannot decide it. Someone else must ' +
+            'review it.',
         );
       }
 

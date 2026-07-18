@@ -29,7 +29,7 @@ export class WorkflowController {
 
   @Get('pending')
   pending(@CurrentUser() user: AuthUser) {
-    return this.workflow.listPendingForRoles(user.roles);
+    return this.workflow.listPendingForRoles(user.roles, user.sub);
   }
 
   @Get(':id')
