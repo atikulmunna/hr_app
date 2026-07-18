@@ -9,6 +9,11 @@ import { ProrationBasis } from './legal-entity.entity';
 
 export type PayrollRunType = 'monthly' | 'off_cycle';
 
+// A run is recomputable while 'draft'. 'locked' freezes it so the figures a
+// reviewer approves are the ones paid; 'approved' clears it for disbursement
+// (FR-M4-07). A rejection returns it to draft.
+export type PayrollRunStatus = 'draft' | 'locked' | 'approved';
+
 // One payroll run for a legal entity and period (T-2.2, FR-M4-04). Compensation
 // is valued as of cutoffDate; intake covers the period and refreshes on
 // recompute, because data landing before lock still belongs to this run
@@ -42,6 +47,21 @@ export class PayrollRun {
 
   @Column({ name: 'proration_basis' })
   prorationBasis: ProrationBasis;
+
+  @Column({ default: 'draft' })
+  status: PayrollRunStatus;
+
+  @Column({ name: 'locked_at', type: 'timestamptz', nullable: true })
+  lockedAt?: Date | null;
+
+  @Column({ name: 'locked_by', type: 'text', nullable: true })
+  lockedBy?: string | null;
+
+  @Column({ name: 'approval_request_id', type: 'uuid', nullable: true })
+  approvalRequestId?: string | null;
+
+  @Column({ name: 'approved_at', type: 'timestamptz', nullable: true })
+  approvedAt?: Date | null;
 
   @Column({ name: 'created_by', type: 'text', nullable: true })
   createdBy?: string;

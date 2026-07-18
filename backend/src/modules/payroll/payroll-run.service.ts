@@ -15,6 +15,13 @@ import { OvertimeService } from '../attendance/overtime.service';
 import { SummaryService } from '../shifts/summary.service';
 import { CompensationService } from './compensation.service';
 import { StatutoryCharge, StatutoryService, chargesFor } from './statutory.service';
+import { WorkflowService } from '../workflow/workflow.service';
+
+// Separation of duties (O-09, PR-05): HR prepares and locks the run, and a
+// tenant admin approves it. Routing this to hr_admin would make the preparer the
+// approver, which is exactly what an approval before disbursement exists to
+// prevent (FR-M4-07).
+const PAYROLL_APPROVER_ROLES = ['tenant_admin'];
 
 export interface CreateRunInput {
   legalEntityId?: string;
@@ -73,8 +80,22 @@ export interface RunEmployeeView {
   }[];
 }
 
+// A preview finding (FR-M4-07). 'blocking' stops the lock, because paying it
+// would be wrong; 'warning' is worth a look but is a legitimate state.
+export interface RunIssue {
+  severity: 'blocking' | 'warning';
+  employeeCode?: string;
+  message: string;
+}
+
+// A run in the list, with the preview issues that decide whether it can lock.
+export interface PayrollRunListItem extends PayrollRun {
+  issues: RunIssue[];
+}
+
 export interface RunView extends PayrollRun {
   employees: RunEmployeeView[];
+  issues: RunIssue[];
   totals: {
     employees: number;
     gross: number;
@@ -93,15 +114,74 @@ export class PayrollRunService {
     private readonly compensation: CompensationService,
     private readonly overtime: OvertimeService,
     private readonly statutory: StatutoryService,
+    private readonly workflow: WorkflowService,
   ) {}
 
-  list(legalEntityId?: string): Promise<PayrollRun[]> {
-    return this.db.withTenant((m) =>
-      m.find(PayrollRun, {
+  // Lists runs with their preview issues attached, because the lock action sits
+  // on the list: a warning only visible after expanding a run would be missed
+  // exactly when it matters.
+  //
+  // Issues are computed for drafts only. A locked or approved run cannot be
+  // acted on, so its preview is moot, and skipping it keeps this to a bounded
+  // amount of work however many runs have accumulated.
+  async list(legalEntityId?: string): Promise<PayrollRunListItem[]> {
+    return this.db.withTenant(async (m) => {
+      await this.syncApprovals(m);
+      const runs = await m.find(PayrollRun, {
         where: legalEntityId ? { legalEntityId } : {},
         order: { periodStart: 'DESC', createdAt: 'DESC' },
-      }),
-    );
+      });
+      const drafts = runs.filter((r) => r.status === 'draft').map((r) => r.id);
+      if (drafts.length === 0) {
+        return runs.map((run) => ({ ...run, issues: [] }));
+      }
+
+      // One query for every draft's employees, one for their lines, rather than
+      // a round trip per run.
+      const employees = (await m.query(
+        `SELECT pre.run_id AS "runId",
+                pre.employee_id AS "employeeId",
+                e.employee_code AS "employeeCode",
+                pre.net::float AS net,
+                pre.absent_days AS "absentDays",
+                pre.overtime_hours::float AS "overtimeHours",
+                pre.overtime_amount::float AS "overtimeAmount"
+           FROM payroll_run_employees pre
+           JOIN employees e ON e.id = pre.employee_id
+          WHERE pre.run_id = ANY($1)`,
+        [drafts],
+      )) as (Pick<
+        RunEmployeeView,
+        'employeeId' | 'employeeCode' | 'net' | 'absentDays' | 'overtimeHours' | 'overtimeAmount'
+      > & { runId: string })[];
+
+      const lineCounts = (await m.query(
+        `SELECT run_id AS "runId", employee_id AS "employeeId", count(*)::int AS lines
+           FROM payroll_run_lines
+          WHERE run_id = ANY($1)
+          GROUP BY run_id, employee_id`,
+        [drafts],
+      )) as { runId: string; employeeId: string; lines: number }[];
+
+      return runs.map((run) => {
+        if (run.status !== 'draft') {
+          return { ...run, issues: [] };
+        }
+        // previewIssues only reads the fields gathered above, but it is shared
+        // with the detail view so the two can never disagree.
+        const rows = employees
+          .filter((e) => e.runId === run.id)
+          .map((e) => ({
+            ...e,
+            lines: new Array(
+              lineCounts.find(
+                (l) => l.runId === run.id && l.employeeId === e.employeeId,
+              )?.lines ?? 0,
+            ).fill({}),
+          })) as unknown as RunEmployeeView[];
+        return { ...run, issues: previewIssues(rows) };
+      });
+    });
   }
 
   async create(input: CreateRunInput, user: AuthUser): Promise<RunView> {
@@ -189,6 +269,9 @@ export class PayrollRunService {
         if (!found) {
           throw new NotFoundException('Payroll run not found.');
         }
+        // A locked run is the record of what was approved and paid; correcting
+        // it means an off-cycle adjustment, never a rewrite (D-09, FR-AT-41).
+        assertDraft(found, 'recomputed');
         const legalEntity = await m.findOne(LegalEntity, {
           where: { id: found.legalEntityId },
         });
@@ -377,6 +460,7 @@ export class PayrollRunService {
 
   async get(runId: string): Promise<RunView> {
     return this.db.withTenant(async (m) => {
+      await this.syncApprovals(m);
       const run = await m.findOne(PayrollRun, { where: { id: runId } });
       if (!run) {
         throw new NotFoundException('Payroll run not found.');
@@ -431,6 +515,7 @@ export class PayrollRunService {
       return {
         ...run,
         employees,
+        issues: previewIssues(employees),
         totals: {
           employees: employees.length,
           gross: round2(employees.reduce((t, e) => t + e.gross, 0)),
@@ -444,8 +529,96 @@ export class PayrollRunService {
     });
   }
 
+  // Freezes the run and routes it for approval (FR-M4-07). Blocking preview
+  // issues stop this: a run that would pay someone nothing, or pay a negative
+  // amount, is a data gap rather than a decision to approve.
+  async lock(runId: string, user: AuthUser): Promise<RunView> {
+    const view = await this.get(runId);
+    assertDraft(view, 'locked');
+
+    const blocking = view.issues.filter((i) => i.severity === 'blocking');
+    if (blocking.length > 0) {
+      throw new BadRequestException(
+        `This run cannot be locked yet: ${blocking
+          .map((b) => (b.employeeCode ? `${b.employeeCode}, ${b.message}` : b.message))
+          .join('; ')}`,
+      );
+    }
+
+    const approval = await this.workflow.createRequest({
+      requestType: 'payroll_run',
+      resourceType: 'payroll',
+      resourceId: runId,
+      payload: {
+        periodStart: view.periodStart,
+        periodEnd: view.periodEnd,
+        employees: view.totals.employees,
+        net: view.totals.net,
+        currencyCode: view.currencyCode,
+      },
+      approverRoles: PAYROLL_APPROVER_ROLES,
+    });
+
+    await this.db.withTenant(async (m) => {
+      await m.update(
+        PayrollRun,
+        { id: runId },
+        {
+          status: 'locked',
+          lockedAt: new Date(),
+          lockedBy: user.sub,
+          approvalRequestId: approval.request.id,
+        },
+      );
+      await this.audit.record(
+        {
+          action: 'payroll_run.lock',
+          resourceType: 'payroll_run',
+          resourceId: runId,
+          after: { net: view.totals.net, employees: view.totals.employees },
+        },
+        m,
+      );
+    });
+    return this.get(runId);
+  }
+
+  // Reflects approval decisions onto locked runs. Called on every read, like the
+  // regularization, swap, and profile-change precedents: the workflow has no
+  // post-approval hook, so a decision materializes the next time anyone looks
+  // rather than needing someone to press a button to find out.
+  //
+  // Set-based and idempotent: approving clears a run for disbursement, and a
+  // rejection returns it to draft so it can be corrected and locked again.
+  private async syncApprovals(m: EntityManager): Promise<void> {
+    await m.query(`
+      UPDATE payroll_runs pr
+         SET status = 'approved', approved_at = now()
+        FROM approval_requests ar
+       WHERE ar.id = pr.approval_request_id
+         AND pr.status = 'locked'
+         AND ar.status = 'approved'
+    `);
+    await m.query(`
+      UPDATE payroll_runs pr
+         SET status = 'draft',
+             locked_at = NULL,
+             locked_by = NULL,
+             approval_request_id = NULL
+        FROM approval_requests ar
+       WHERE ar.id = pr.approval_request_id
+         AND pr.status = 'locked'
+         AND ar.status = 'rejected'
+    `);
+  }
+
   async remove(runId: string): Promise<void> {
     await this.db.withTenant(async (m) => {
+      const found = await m.findOne(PayrollRun, { where: { id: runId } });
+      if (!found) {
+        throw new NotFoundException('Payroll run not found.');
+      }
+      assertDraft(found, 'deleted');
       const result = await m.delete(PayrollRun, { id: runId });
       if (!result.affected) {
         throw new NotFoundException('Payroll run not found.');
@@ -464,6 +637,12 @@ export class PayrollRunService {
   // Employees of the entity whose employment overlaps the period. A leaver is
   // still paid for the part they worked, so selection is by employment dates
   // rather than current status.
+  //
+  // Erased employees are excluded outright: erasure anonymizes the record under
+  // a data-subject request, so there is no one left to pay. They also cannot be
+  // filtered by termination date, because erasure sets the status directly and
+  // records no employment_history row, which would otherwise read as "never
+  // terminated" and put them in every run forever.
   private async candidates(
     m: EntityManager,
     run: PayrollRun,
@@ -479,6 +658,7 @@ export class PayrollRunService {
               ) AS "terminatedOn"
          FROM employees e
         WHERE e.legal_entity_id = $1
+          AND e.erased_at IS NULL
           AND (e.hire_date IS NULL OR e.hire_date <= $2)
         ORDER BY e.employee_code`,
       [run.legalEntityId, run.periodEnd],
@@ -602,4 +782,68 @@ function sum(lines: { amount: string }[]): number {
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+
+// What a reviewer must see before locking (FR-M4-07). Anything blocking would
+// make the run wrong to pay, not merely unusual.
+function previewIssues(employees: RunEmployeeView[]): RunIssue[] {
+  const issues: RunIssue[] = [];
+  if (employees.length === 0) {
+    issues.push({
+      severity: 'blocking',
+      message: 'the run has no employees in scope',
+    });
+  }
+  for (const e of employees) {
+    // A real employee always has a structure, so nothing in force is a
+    // data-entry gap that reads identically to a legitimate zero.
+    if (e.lines.length === 0) {
+      issues.push({
+        severity: 'blocking',
+        employeeCode: e.employeeCode,
+        message: 'no pay components are in force at the cut-off',
+      });
+    } else if (e.net === 0) {
+      issues.push({
+        severity: 'blocking',
+        employeeCode: e.employeeCode,
+        message: 'nets zero for the period',
+      });
+    }
+    if (e.net < 0) {
+      issues.push({
+        severity: 'blocking',
+        employeeCode: e.employeeCode,
+        message: `deductions exceed gross, netting ${e.net}`,
+      });
+    }
+    // Hours were approved but could not be rated, so they would go unpaid.
+    if (e.overtimeHours > 0 && e.overtimeAmount === 0) {
+      issues.push({
+        severity: 'blocking',
+        employeeCode: e.employeeCode,
+        message: `${e.overtimeHours} h of approved overtime could not be rated`,
+      });
+    }
+    if (e.absentDays > 0) {
+      issues.push({
+        severity: 'warning',
+        employeeCode: e.employeeCode,
+        message: `${e.absentDays} unreversed absent day(s) in the period`,
+      });
+    }
+  }
+  return issues;
+}
+
+// Only a draft can change. Once locked, the run is the record of what was
+// approved, and a correction is an off-cycle adjustment (D-09, FR-AT-41).
+function assertDraft(run: { status: string }, action: string): void {
+  if (run.status !== 'draft') {
+    throw new BadRequestException(
+      `This run is ${run.status} and cannot be ${action}. ` +
+        'Correct a locked period with an off-cycle adjustment instead.',
+    );
+  }
 }

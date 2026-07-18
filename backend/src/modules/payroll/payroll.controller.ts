@@ -1,12 +1,15 @@
+import { Response } from 'express';
 import {
   Body,
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { AuthUser, CurrentUser } from '../auth/current-user.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -20,6 +23,7 @@ import {
   UpdatePayComponentInput,
 } from './pay-component.service';
 import { PayRulesInput, PayRulesService } from './pay-rules.service';
+import { PayslipService } from './payslip.service';
 import { CreateRunInput, PayrollRunService } from './payroll-run.service';
 import {
   CreateStatutoryRuleInput,
@@ -36,7 +40,62 @@ export class PayrollController {
     private readonly runs: PayrollRunService,
     private readonly payRules: PayRulesService,
     private readonly statutory: StatutoryService,
+    private readonly payslips: PayslipService,
   ) {}
+
+  // Freezes the run and routes it for approval (FR-M4-07). Blocking preview
+  // issues refuse the lock.
+  @RequirePermissions('payroll:manage')
+  @Post('payroll/runs/:id/lock')
+  lockRun(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.runs.lock(id, user);
+  }
+
+  @RequirePermissions('payroll:read')
+  @Get('payroll/runs/:id/payslips/:employeeId')
+  @Header('Content-Type', 'application/pdf')
+  async payslip(
+    @Param('id') id: string,
+    @Param('employeeId') employeeId: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.payslips.pdf(id, employeeId);
+    res.setHeader('Content-Disposition', 'attachment; filename="payslip.pdf"');
+    res.end(pdf);
+  }
+
+  // The disbursement file for an approved run (FR-M4-08).
+  @RequirePermissions('payroll:manage')
+  @Get('payroll/runs/:id/bank-file')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="disbursement.csv"')
+  bankFile(@Param('id') id: string) {
+    return this.payslips.bankFile(id);
+  }
+
+  @RequirePermissions('payroll:read')
+  @Get('employees/:id/payslips')
+  employeePayslips(@Param('id') id: string) {
+    return this.payslips.forEmployee(id);
+  }
+
+  // Self-service (FR-M9-02): an employee's own payslips.
+  @Get('me/payslips')
+  myPayslips(@CurrentUser() user: AuthUser) {
+    return this.payslips.mine(user);
+  }
+
+  @Get('me/payslips/:runId')
+  @Header('Content-Type', 'application/pdf')
+  async myPayslip(
+    @CurrentUser() user: AuthUser,
+    @Param('runId') runId: string,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.payslips.myPdf(user, runId);
+    res.setHeader('Content-Disposition', 'attachment; filename="payslip.pdf"');
+    res.end(pdf);
+  }
 
   // Statutory deduction rules per jurisdiction (T-2.3, FR-M4-06). Rates are law
   // and change most years, so rules are effective-dated: create a new one with a
