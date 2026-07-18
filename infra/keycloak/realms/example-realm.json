@@ -91,6 +91,18 @@
         { "type": "password", "value": "manager123", "temporary": false }
       ],
       "realmRoles": ["manager"]
+    },
+    {
+      "username": "demo.owner",
+      "enabled": true,
+      "email": "demo.owner@example.com",
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Owner",
+      "credentials": [
+        { "type": "password", "value": "owner123", "temporary": false }
+      ],
+      "realmRoles": ["tenant_admin"]
     }
   ]
 }
