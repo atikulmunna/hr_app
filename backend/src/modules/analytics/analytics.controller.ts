@@ -33,4 +33,44 @@ export class AnalyticsController {
   costToCompany(@Query('months') months?: string) {
     return this.analytics.costToCompany(months ? Number(months) : undefined);
   }
+
+  // Fraud-signal analytics (FR-M10-06, FR-AT-34): flag rate by team, repeat
+  // offenders, device re-binds, and regularization rate.
+  @Get('flag-rate-by-team')
+  flagRateByTeam(@Query('months') months?: string) {
+    return this.analytics.flagRateByTeam(months ? Number(months) : undefined);
+  }
+
+  @Get('repeat-signals')
+  repeatSignals(
+    @Query('months') months?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.analytics.repeatSignals(
+      months ? Number(months) : undefined,
+      limit ? Number(limit) : undefined,
+    );
+  }
+
+  @Get('device-rebinds')
+  deviceRebinds(
+    @Query('months') months?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.analytics.deviceRebinds(
+      months ? Number(months) : undefined,
+      limit ? Number(limit) : undefined,
+    );
+  }
+
+  @Get('regularizations')
+  regularizations(
+    @Query('months') months?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.analytics.regularizations(
+      months ? Number(months) : undefined,
+      limit ? Number(limit) : undefined,
+    );
+  }
 }

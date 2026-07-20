@@ -226,4 +226,150 @@ export class AnalyticsService {
       return { months: n, entities };
     });
   }
+
+  // A top-N list size, clamped so a hostile value cannot ask for everything.
+  private clampLimit(limit?: number): number {
+    const n = Math.trunc(Number(limit));
+    if (Number.isNaN(n)) {
+      return 10;
+    }
+    return Math.min(50, Math.max(1, n));
+  }
+
+  // FR-M10-06: flag rate by team. A mark is flagged when its risk band is not
+  // 'clean' (yellow or red); the rate is flagged marks over all marks per
+  // department, so a team that games the signals stands out.
+  flagRateByTeam(months?: number) {
+    const n = this.clamp(months);
+    return this.db.withTenant(async (m: EntityManager) => {
+      const teams = await m.query(
+        `SELECT COALESCE(d.name, 'Unassigned') AS team,
+                count(ev.id)::int AS marks,
+                count(ev.id) FILTER (WHERE ev.band <> 'clean')::int AS flagged,
+                count(ev.id) FILTER (WHERE ev.band = 'red')::int AS red
+           FROM attendance_events ev
+           JOIN employees e ON e.id = ev.employee_id
+           LEFT JOIN departments d ON d.id = e.department_id
+          WHERE ev.server_ts >= ${this.windowStart(n)}
+          GROUP BY COALESCE(d.name, 'Unassigned')
+          ORDER BY flagged DESC, marks DESC`,
+      );
+      const byTeam = teams.map(
+        (t: { marks: number; flagged: number }) => ({
+          ...t,
+          rate: t.marks > 0 ? Math.round((t.flagged / t.marks) * 1000) / 10 : 0,
+        }),
+      );
+      const marks = byTeam.reduce(
+        (s: number, t: { marks: number }) => s + t.marks,
+        0,
+      );
+      const flagged = byTeam.reduce(
+        (s: number, t: { flagged: number }) => s + t.flagged,
+        0,
+      );
+      const red = byTeam.reduce(
+        (s: number, t: { red: number }) => s + t.red,
+        0,
+      );
+      const rate = marks > 0 ? Math.round((flagged / marks) * 1000) / 10 : 0;
+      return { months: n, marks, flagged, red, rate, byTeam };
+    });
+  }
+
+  // FR-M10-06: repeat-signal employees. Those with the most flagged marks in the
+  // window, most exposed first, so a recurring offender is not lost in a rate.
+  repeatSignals(months?: number, limit?: number) {
+    const n = this.clamp(months);
+    const top = this.clampLimit(limit);
+    return this.db.withTenant(async (m: EntityManager) => {
+      const rows = await m.query(
+        `SELECT e.id AS "employeeId", e.employee_code AS "employeeCode",
+                e.first_name || ' ' || e.last_name AS "employeeName",
+                count(ev.id)::int AS marks,
+                count(ev.id) FILTER (WHERE ev.band <> 'clean')::int AS flagged,
+                count(ev.id) FILTER (WHERE ev.band = 'red')::int AS red,
+                to_char(max(ev.server_ts) FILTER (WHERE ev.band <> 'clean'),
+                        'YYYY-MM-DD') AS "lastFlagged"
+           FROM attendance_events ev
+           JOIN employees e ON e.id = ev.employee_id
+          WHERE ev.server_ts >= ${this.windowStart(n)}
+          GROUP BY e.id, e.employee_code, e.first_name, e.last_name
+         HAVING count(ev.id) FILTER (WHERE ev.band <> 'clean') > 0
+          ORDER BY flagged DESC, red DESC
+          LIMIT ${top}`,
+      );
+      return { months: n, employees: rows };
+    });
+  }
+
+  // FR-M10-06: device re-bind frequency. A re-bind moves the trusted device, so
+  // a high rate is a signal; shown per month and by employee.
+  deviceRebinds(months?: number, limit?: number) {
+    const n = this.clamp(months);
+    const top = this.clampLimit(limit);
+    return this.db.withTenant(async (m: EntityManager) => {
+      const series = await m.query(
+        `WITH ${this.monthsCte(n)}
+         SELECT to_char(mo.m_start, 'YYYY-MM') AS month,
+                (SELECT count(*) FROM device_binding_history h
+                  WHERE h.action = 'rebind'
+                    AND h.created_at::date BETWEEN mo.m_start AND mo.m_end)::int AS rebinds
+           FROM months mo
+          ORDER BY mo.m_start`,
+      );
+      const byEmployee = await m.query(
+        `SELECT e.id AS "employeeId", e.employee_code AS "employeeCode",
+                e.first_name || ' ' || e.last_name AS "employeeName",
+                count(h.id)::int AS rebinds,
+                to_char(max(h.created_at), 'YYYY-MM-DD') AS "lastRebind"
+           FROM device_binding_history h
+           JOIN employees e ON e.id = h.employee_id
+          WHERE h.action = 'rebind'
+            AND h.created_at >= ${this.windowStart(n)}
+          GROUP BY e.id, e.employee_code, e.first_name, e.last_name
+          ORDER BY rebinds DESC
+          LIMIT ${top}`,
+      );
+      const total = series.reduce(
+        (s: number, r: { rebinds: number }) => s + r.rebinds,
+        0,
+      );
+      return { months: n, total, series, byEmployee };
+    });
+  }
+
+  // FR-AT-34: regularization rate surfaced as a fraud signal, so correcting a
+  // mark cannot quietly become a routine bypass. Per month and by employee.
+  regularizations(months?: number, limit?: number) {
+    const n = this.clamp(months);
+    const top = this.clampLimit(limit);
+    return this.db.withTenant(async (m: EntityManager) => {
+      const series = await m.query(
+        `WITH ${this.monthsCte(n)}
+         SELECT to_char(mo.m_start, 'YYYY-MM') AS month,
+                (SELECT count(*) FROM regularization_requests r
+                  WHERE r.created_at::date BETWEEN mo.m_start AND mo.m_end)::int AS regularizations
+           FROM months mo
+          ORDER BY mo.m_start`,
+      );
+      const byEmployee = await m.query(
+        `SELECT e.id AS "employeeId", e.employee_code AS "employeeCode",
+                e.first_name || ' ' || e.last_name AS "employeeName",
+                count(r.id)::int AS regularizations,
+                to_char(max(r.created_at), 'YYYY-MM-DD') AS "lastRequest"
+           FROM regularization_requests r
+           JOIN employees e ON e.id = r.employee_id
+          WHERE r.created_at >= ${this.windowStart(n)}
+          GROUP BY e.id, e.employee_code, e.first_name, e.last_name
+          ORDER BY regularizations DESC
+          LIMIT ${top}`,
+      );
+      const total = series.reduce(
+        (s: number, r: { regularizations: number }) => s + r.regularizations,
+        0,
+      );
+      return { months: n, total, series, byEmployee };
+    });
+  }
 }
