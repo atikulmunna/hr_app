@@ -16,8 +16,12 @@ import {
   ApiError,
   AttritionAnalytics,
   CostToCompanyAnalytics,
+  DeviceRebinds,
+  FlagRateByTeam,
   HeadcountAnalytics,
   OvertimeAnalytics,
+  Regularizations,
+  RepeatSignals,
   api,
 } from '../api';
 
@@ -46,24 +50,36 @@ export function Analytics({ token }: { token: string }) {
   const [absence, setAbsence] = useState<AbsenceAnalytics | null>(null);
   const [overtime, setOvertime] = useState<OvertimeAnalytics | null>(null);
   const [ctc, setCtc] = useState<CostToCompanyAnalytics | null>(null);
+  const [flagRate, setFlagRate] = useState<FlagRateByTeam | null>(null);
+  const [repeat, setRepeat] = useState<RepeatSignals | null>(null);
+  const [rebinds, setRebinds] = useState<DeviceRebinds | null>(null);
+  const [regs, setRegs] = useState<Regularizations | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [h, at, ab, ot, cc] = await Promise.all([
+      const [h, at, ab, ot, cc, fr, rs, rb, rg] = await Promise.all([
         api.analyticsHeadcount(token),
         api.analyticsAttrition(token, months),
         api.analyticsAbsence(token, months),
         api.analyticsOvertime(token, months),
         api.analyticsCostToCompany(token, months),
+        api.analyticsFlagRateByTeam(token, months),
+        api.analyticsRepeatSignals(token, months),
+        api.analyticsDeviceRebinds(token, months),
+        api.analyticsRegularizations(token, months),
       ]);
       setHeadcount(h);
       setAttrition(at);
       setAbsence(ab);
       setOvertime(ot);
       setCtc(cc);
+      setFlagRate(fr);
+      setRepeat(rs);
+      setRebinds(rb);
+      setRegs(rg);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
@@ -296,7 +312,206 @@ export function Analytics({ token }: { token: string }) {
           ))}
         </div>
       </div>
+
+      <div className="stack">
+        <div>
+          <h3>Fraud signals</h3>
+          <p className="muted small">
+            Attendance integrity, so a team or person gaming the marks stands out.
+            A mark is "flagged" when its risk band is not clean. Regularizations
+            and re-binds are surfaced here so neither becomes a routine bypass.
+          </p>
+        </div>
+
+        <div className="kpi-row">
+          <Tile
+            label="Flag rate"
+            value={`${flagRate?.rate ?? 0}%`}
+            hint={`${flagRate?.flagged ?? 0} of ${flagRate?.marks ?? 0} marks`}
+          />
+          <Tile label="Red marks" value={flagRate?.red ?? 0} hint="highest risk band" />
+          <Tile label="Device re-binds" value={rebinds?.total ?? 0} />
+          <Tile label="Regularizations" value={regs?.total ?? 0} />
+        </div>
+
+        <div className="chart-grid">
+          <ChartCard
+            title="Flag rate by team"
+            subtitle="Share of marks flagged, per department"
+          >
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={flagRate?.byTeam ?? []}>
+                <CartesianGrid stroke={GRID} vertical={false} />
+                <XAxis dataKey="team" {...axisProps} />
+                <YAxis
+                  width={40}
+                  {...axisProps}
+                  tickFormatter={(v: number) => `${v}%`}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                  formatter={(v) => `${Number(v)}%`}
+                />
+                <Bar
+                  dataKey="rate"
+                  name="Flag rate"
+                  fill={SERIES_1}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={64}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          <ChartCard
+            title="Device re-binds"
+            subtitle={`Per month over the last ${months} months`}
+          >
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={rebinds?.series ?? []}>
+                <CartesianGrid stroke={GRID} vertical={false} />
+                <XAxis dataKey="month" {...axisProps} />
+                <YAxis allowDecimals={false} width={32} {...axisProps} />
+                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                <Bar
+                  dataKey="rebinds"
+                  name="Re-binds"
+                  fill={SERIES_1}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={28}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          <ChartCard
+            title="Regularizations"
+            subtitle={`Per month over the last ${months} months`}
+          >
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={regs?.series ?? []}>
+                <CartesianGrid stroke={GRID} vertical={false} />
+                <XAxis dataKey="month" {...axisProps} />
+                <YAxis allowDecimals={false} width={32} {...axisProps} />
+                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                <Bar
+                  dataKey="regularizations"
+                  name="Regularizations"
+                  fill={SERIES_1}
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={28}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </div>
+
+        <article className="card">
+          <div className="chart-title">Repeat-signal employees</div>
+          <div className="muted small">Most flagged marks first</div>
+          {(repeat?.employees.length ?? 0) === 0 ? (
+            <p className="muted">No flagged marks in this window.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th className="num">Flagged</th>
+                  <th className="num">Red</th>
+                  <th className="num">Marks</th>
+                  <th>Last flagged</th>
+                </tr>
+              </thead>
+              <tbody>
+                {repeat?.employees.map((e) => (
+                  <tr key={e.employeeId}>
+                    <td>
+                      {e.employeeName}{' '}
+                      <span className="muted small">{e.employeeCode}</span>
+                    </td>
+                    <td className="num">{e.flagged}</td>
+                    <td className="num">{e.red}</td>
+                    <td className="num">{e.marks}</td>
+                    <td className="muted small">{e.lastFlagged ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </article>
+
+        <div className="chart-grid">
+          <WatchlistTable
+            title="Frequent re-binders"
+            unit="re-binds"
+            rows={(rebinds?.byEmployee ?? []).map((e) => ({
+              id: e.employeeId,
+              name: e.employeeName,
+              code: e.employeeCode,
+              count: e.rebinds,
+              last: e.lastRebind,
+            }))}
+          />
+          <WatchlistTable
+            title="Frequent regularizers"
+            unit="regularizations"
+            rows={(regs?.byEmployee ?? []).map((e) => ({
+              id: e.employeeId,
+              name: e.employeeName,
+              code: e.employeeCode,
+              count: e.regularizations,
+              last: e.lastRequest,
+            }))}
+          />
+        </div>
+      </div>
     </section>
+  );
+}
+
+function WatchlistTable({
+  title,
+  unit,
+  rows,
+}: {
+  title: string;
+  unit: string;
+  rows: {
+    id: string;
+    name: string;
+    code: string;
+    count: number;
+    last: string | null;
+  }[];
+}) {
+  return (
+    <article className="card">
+      <div className="chart-title">{title}</div>
+      {rows.length === 0 ? (
+        <p className="muted">None in this window.</p>
+      ) : (
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th className="num">{unit}</th>
+              <th>Last</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  {r.name} <span className="muted small">{r.code}</span>
+                </td>
+                <td className="num">{r.count}</td>
+                <td className="muted small">{r.last ?? '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </article>
   );
 }
 

@@ -424,6 +424,62 @@ export interface CostToCompanyAnalytics {
   entities: CostToCompanyEntity[];
 }
 
+export interface FlagRateByTeam {
+  months: number;
+  marks: number;
+  flagged: number;
+  red: number;
+  rate: number;
+  byTeam: {
+    team: string;
+    marks: number;
+    flagged: number;
+    red: number;
+    rate: number;
+  }[];
+}
+
+export interface RepeatSignalEmployee {
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  marks: number;
+  flagged: number;
+  red: number;
+  lastFlagged: string | null;
+}
+
+export interface RepeatSignals {
+  months: number;
+  employees: RepeatSignalEmployee[];
+}
+
+export interface DeviceRebinds {
+  months: number;
+  total: number;
+  series: { month: string; rebinds: number }[];
+  byEmployee: {
+    employeeId: string;
+    employeeCode: string;
+    employeeName: string;
+    rebinds: number;
+    lastRebind: string | null;
+  }[];
+}
+
+export interface Regularizations {
+  months: number;
+  total: number;
+  series: { month: string; regularizations: number }[];
+  byEmployee: {
+    employeeId: string;
+    employeeCode: string;
+    employeeName: string;
+    regularizations: number;
+    lastRequest: string | null;
+  }[];
+}
+
 export type StatutoryCalculation = 'percentage' | 'bracket';
 
 export interface StatutoryBracketView {
@@ -1030,6 +1086,20 @@ export const api = {
     request<CostToCompanyAnalytics>(
       token,
       `/analytics/cost-to-company?months=${months}`,
+    ),
+  analyticsFlagRateByTeam: (token: string, months = 12) =>
+    request<FlagRateByTeam>(
+      token,
+      `/analytics/flag-rate-by-team?months=${months}`,
+    ),
+  analyticsRepeatSignals: (token: string, months = 12) =>
+    request<RepeatSignals>(token, `/analytics/repeat-signals?months=${months}`),
+  analyticsDeviceRebinds: (token: string, months = 12) =>
+    request<DeviceRebinds>(token, `/analytics/device-rebinds?months=${months}`),
+  analyticsRegularizations: (token: string, months = 12) =>
+    request<Regularizations>(
+      token,
+      `/analytics/regularizations?months=${months}`,
     ),
   expenseClaims: (token: string) =>
     request<ExpenseClaim[]>(token, '/expenses/claims'),
