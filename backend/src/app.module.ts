@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TenantModule } from './common/tenant/tenant.module';
 import { TenantMiddleware } from './common/tenant/tenant.middleware';
 import { buildDataSourceOptions } from './database/typeorm.config';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -54,6 +55,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     PrivacyModule,
     OvertimeModule,
     PayrollModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule implements NestModule {
