@@ -326,6 +326,51 @@ export interface CreateAdjustmentBody {
   sourceRunId?: string;
 }
 
+export interface ExpenseCategory {
+  id: string;
+  code: string;
+  name: string;
+  legalEntityId: string | null;
+  limitAmount: number | null;
+  active: boolean;
+}
+
+export interface CreateExpenseCategoryBody {
+  code: string;
+  name: string;
+  legalEntityId?: string | null;
+  limitAmount?: number | null;
+}
+
+export interface ExpenseClaimLine {
+  id: string;
+  categoryCode: string;
+  categoryName: string;
+  expenseDate: string;
+  description: string;
+  amount: number;
+  hasReceipt: boolean;
+  receiptFilename: string | null;
+}
+
+export type ExpenseSettlementMethod = 'payroll' | 'disbursement';
+
+export interface ExpenseClaim {
+  id: string;
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  title: string;
+  currencyCode: string;
+  status: string;
+  total: number;
+  settlementMethod: string | null;
+  settledAt: string | null;
+  submittedAt: string | null;
+  createdAt: string;
+  lines: ExpenseClaimLine[];
+}
+
 export type StatutoryCalculation = 'percentage' | 'bracket';
 
 export interface StatutoryBracketView {
@@ -902,6 +947,46 @@ export const api = {
     }),
   cancelPayrollAdjustment: (token: string, id: string) =>
     request<unknown>(token, `/payroll/adjustments/${id}`, { method: 'DELETE' }),
+  expenseCategories: (token: string) =>
+    request<ExpenseCategory[]>(token, '/expenses/categories'),
+  createExpenseCategory: (token: string, body: CreateExpenseCategoryBody) =>
+    request<ExpenseCategory>(token, '/expenses/categories', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateExpenseCategory: (
+    token: string,
+    id: string,
+    body: { name?: string; limitAmount?: number | null; active?: boolean },
+  ) =>
+    request<ExpenseCategory>(token, `/expenses/categories/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  deleteExpenseCategory: (token: string, id: string) =>
+    request<unknown>(token, `/expenses/categories/${id}`, { method: 'DELETE' }),
+  expenseClaims: (token: string) =>
+    request<ExpenseClaim[]>(token, '/expenses/claims'),
+  settleExpenseClaim: (
+    token: string,
+    id: string,
+    method: ExpenseSettlementMethod,
+  ) =>
+    request<ExpenseClaim>(token, `/expenses/claims/${id}/settle`, {
+      method: 'POST',
+      body: JSON.stringify({ method }),
+    }),
+  // The receipt bytes need the bearer token, so fetch and hand back a blob.
+  expenseReceipt: async (token: string, claimId: string, lineId: string) => {
+    const res = await fetch(
+      `${config.apiBase}/expenses/claims/${claimId}/lines/${lineId}/receipt`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) {
+      throw new ApiError(res.status, await errorMessage(res));
+    }
+    return res.blob();
+  },
   payrollRun: (token: string, id: string) =>
     request<PayrollRunDetail>(token, `/payroll/runs/${id}`),
   createPayrollRun: (token: string, body: CreatePayrollRunBody) =>
