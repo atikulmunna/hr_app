@@ -185,6 +185,51 @@ export class AdjustmentService {
     return created;
   }
 
+  // Raises an adjustment that is already approved, for a claim that carried its
+  // own approval (T-2.6 expense settlement via payroll). It skips the workflow
+  // because the claim was decided on its own, and lands on the next run through
+  // the same approved-and-unsettled pickup as any other adjustment. Runs inside
+  // the caller's transaction so the claim and its adjustment commit together.
+  async createApproved(
+    m: EntityManager,
+    input: {
+      employeeId: string;
+      legalEntityId: string;
+      amount: number;
+      currencyCode: string;
+      reason: string;
+      createdBySub?: string;
+    },
+  ): Promise<string> {
+    const adjustment = await m.save(
+      m.create(PayrollAdjustment, {
+        tenantId: this.db.tenantId,
+        legalEntityId: input.legalEntityId,
+        employeeId: input.employeeId,
+        reason: input.reason,
+        amount: input.amount.toFixed(2),
+        currencyCode: input.currencyCode,
+        status: 'approved',
+        createdBySub: input.createdBySub,
+      }),
+    );
+    await this.audit.record(
+      {
+        action: 'payroll_adjustment.create',
+        resourceType: 'payroll_adjustment',
+        resourceId: adjustment.id,
+        after: {
+          employeeId: input.employeeId,
+          amount: input.amount,
+          reason: input.reason,
+          source: 'expense_claim',
+        },
+      },
+      m,
+    );
+    return adjustment.id;
+  }
+
   async cancel(id: string): Promise<void> {
     await this.db.withTenant(async (m) => {
       const adjustment = await m.findOne(PayrollAdjustment, { where: { id } });

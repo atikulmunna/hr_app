@@ -8,6 +8,9 @@ import { EmployeePayComponent } from '../entities/employee-pay-component.entity'
 import { PayComponent } from '../entities/pay-component.entity';
 import { OvertimeRequest } from '../entities/overtime-request.entity';
 import { PayrollAdjustment } from '../entities/payroll-adjustment.entity';
+import { ExpenseCategory } from '../entities/expense-category.entity';
+import { ExpenseClaim } from '../entities/expense-claim.entity';
+import { ExpenseClaimLine } from '../entities/expense-claim-line.entity';
 import { StatutoryBracket } from '../entities/statutory-bracket.entity';
 import { StatutoryRule } from '../entities/statutory-rule.entity';
 import { PayrollRun } from '../entities/payroll-run.entity';
@@ -95,6 +98,9 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       StatutoryRule,
       StatutoryBracket,
       PayrollAdjustment,
+      ExpenseCategory,
+      ExpenseClaim,
+      ExpenseClaimLine,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
