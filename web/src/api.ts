@@ -371,6 +371,59 @@ export interface ExpenseClaim {
   lines: ExpenseClaimLine[];
 }
 
+export interface HeadcountAnalytics {
+  total: number;
+  byEntity: { legalEntityId: string; name: string; headcount: number }[];
+  byDepartment: { name: string; headcount: number }[];
+  trend: { month: string; headcount: number }[];
+}
+
+export interface AttritionAnalytics {
+  months: number;
+  rate: number;
+  leavers: number;
+  joiners: number;
+  headcount: number;
+  series: { month: string; joiners: number; leavers: number }[];
+}
+
+export interface AbsenceAnalytics {
+  months: number;
+  totalAbsence: number;
+  totalLeave: number;
+  series: { month: string; absenceDays: number; leaveDays: number }[];
+}
+
+export interface OvertimeAnalytics {
+  months: number;
+  totalHours: number;
+  byEntity: {
+    legalEntityId: string;
+    name: string;
+    currencyCode: string;
+    hours: number;
+    amount: number;
+  }[];
+  series: { month: string; hours: number }[];
+}
+
+export interface CostToCompanyEntity {
+  legalEntityId: string;
+  name: string;
+  currencyCode: string;
+  gross: number;
+  employer: number;
+  adjustments: number;
+  net: number;
+  ctc: number;
+  series: { month: string; ctc: number }[];
+}
+
+export interface CostToCompanyAnalytics {
+  months: number;
+  entities: CostToCompanyEntity[];
+}
+
 export type StatutoryCalculation = 'percentage' | 'bracket';
 
 export interface StatutoryBracketView {
@@ -965,6 +1018,19 @@ export const api = {
     }),
   deleteExpenseCategory: (token: string, id: string) =>
     request<unknown>(token, `/expenses/categories/${id}`, { method: 'DELETE' }),
+  analyticsHeadcount: (token: string) =>
+    request<HeadcountAnalytics>(token, '/analytics/headcount'),
+  analyticsAttrition: (token: string, months = 12) =>
+    request<AttritionAnalytics>(token, `/analytics/attrition?months=${months}`),
+  analyticsAbsence: (token: string, months = 12) =>
+    request<AbsenceAnalytics>(token, `/analytics/absence?months=${months}`),
+  analyticsOvertime: (token: string, months = 12) =>
+    request<OvertimeAnalytics>(token, `/analytics/overtime?months=${months}`),
+  analyticsCostToCompany: (token: string, months = 12) =>
+    request<CostToCompanyAnalytics>(
+      token,
+      `/analytics/cost-to-company?months=${months}`,
+    ),
   expenseClaims: (token: string) =>
     request<ExpenseClaim[]>(token, '/expenses/claims'),
   settleExpenseClaim: (
