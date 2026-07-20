@@ -480,6 +480,44 @@ export interface Regularizations {
   }[];
 }
 
+export type ReportFilterType =
+  | 'entity'
+  | 'department'
+  | 'select'
+  | 'dateFrom'
+  | 'dateTo';
+
+export interface ReportFilterDef {
+  key: string;
+  label: string;
+  type: ReportFilterType;
+  options: string[] | null;
+}
+
+export interface ReportDataset {
+  key: string;
+  label: string;
+  columns: { key: string; label: string }[];
+  dimensions: { key: string; label: string }[];
+  filters: ReportFilterDef[];
+}
+
+export interface ReportSpec {
+  dataset: string;
+  filters?: Record<string, string>;
+  groupBy?: string;
+}
+
+export interface ReportResult {
+  dataset: string;
+  label: string;
+  grouped: boolean;
+  columns: { key: string; label: string }[];
+  rows: Record<string, unknown>[];
+}
+
+export type ReportExportFormat = 'csv' | 'pdf' | 'xlsx';
+
 export type StatutoryCalculation = 'percentage' | 'bracket';
 
 export interface StatutoryBracketView {
@@ -1101,6 +1139,31 @@ export const api = {
       token,
       `/analytics/regularizations?months=${months}`,
     ),
+  reportDatasets: (token: string) =>
+    request<ReportDataset[]>(token, '/reports/datasets'),
+  runReport: (token: string, spec: ReportSpec) =>
+    request<ReportResult>(token, '/reports/run', {
+      method: 'POST',
+      body: JSON.stringify(spec),
+    }),
+  exportReport: async (
+    token: string,
+    spec: ReportSpec,
+    format: ReportExportFormat,
+  ) => {
+    const res = await fetch(`${config.apiBase}/reports/export?format=${format}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(spec),
+    });
+    if (!res.ok) {
+      throw new ApiError(res.status, await errorMessage(res));
+    }
+    return res.blob();
+  },
   expenseClaims: (token: string) =>
     request<ExpenseClaim[]>(token, '/expenses/claims'),
   settleExpenseClaim: (
