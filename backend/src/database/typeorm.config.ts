@@ -40,6 +40,12 @@ import { ShiftSwapRequest } from '../entities/shift-swap-request.entity';
 import { Notification } from '../entities/notification.entity';
 import { ReviewCase } from '../entities/review-case.entity';
 import { Tenant } from '../entities/tenant.entity';
+import { PipelineStage } from '../entities/pipeline-stage.entity';
+import { JobRequisition } from '../entities/job-requisition.entity';
+import { Application } from '../entities/application.entity';
+import { Interview } from '../entities/interview.entity';
+import { InterviewScorecard } from '../entities/interview-scorecard.entity';
+import { Offer } from '../entities/offer.entity';
 
 // Single source of TypeORM options.
 // runtime = true connects as the non-superuser app role (RLS enforced), used by
@@ -101,6 +107,12 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       ExpenseCategory,
       ExpenseClaim,
       ExpenseClaimLine,
+      PipelineStage,
+      JobRequisition,
+      Application,
+      Interview,
+      InterviewScorecard,
+      Offer,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
