@@ -899,6 +899,108 @@ export interface Offer {
   createdAt: string;
 }
 
+// --- Performance management (T-3.2).
+export interface RatingPoint {
+  value: number;
+  label: string;
+}
+export interface RatingScale {
+  id: string;
+  name: string;
+  points: RatingPoint[];
+}
+export type CycleType = 'annual' | 'quarterly' | 'probation';
+export type CycleStatus = 'draft' | 'active' | 'calibration' | 'closed';
+export interface ReviewCycle {
+  id: string;
+  name: string;
+  cycleType: CycleType;
+  periodStart: string;
+  periodEnd: string;
+  ratingScaleId: string;
+  status: CycleStatus;
+  appraisals: number;
+  createdAt: string;
+}
+export interface CreateCycleInput {
+  name: string;
+  cycleType: CycleType;
+  periodStart: string;
+  periodEnd: string;
+}
+
+export type GoalStatus = 'active' | 'achieved' | 'missed' | 'cancelled';
+export interface Goal {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  cycleId: string | null;
+  parentGoalId: string | null;
+  parentTitle: string | null;
+  title: string;
+  description: string | null;
+  weight: number | null;
+  progress: number;
+  status: GoalStatus;
+  createdAt: string;
+}
+
+export type OutcomeType = 'none' | 'promotion' | 'increment' | 'pip';
+export interface AppraisalOutcome {
+  outcomeType: OutcomeType;
+  incrementAmount: number | null;
+  incrementEffectiveDate: string | null;
+  newJobTitle: string | null;
+  developmentAreas: string | null;
+  compensationApplied: boolean;
+  appliedAt: string | null;
+}
+export type AppraisalStatus =
+  | 'pending'
+  | 'self_review'
+  | 'manager_review'
+  | 'calibrated'
+  | 'closed';
+export interface Appraisal {
+  id: string;
+  cycleId: string;
+  cycleName: string;
+  cycleStatus: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  selfRating: number | null;
+  selfComments: string | null;
+  managerRating: number | null;
+  managerComments: string | null;
+  finalRating: number | null;
+  status: AppraisalStatus;
+  outcome: AppraisalOutcome | null;
+}
+export interface CalibrationView {
+  cycle: ReviewCycle;
+  scale: RatingPoint[];
+  rows: {
+    appraisalId: string;
+    employeeId: string;
+    employeeName: string;
+    employeeCode: string;
+    status: string;
+    selfRating: number | null;
+    managerRating: number | null;
+    finalRating: number | null;
+    outcomeType: string | null;
+  }[];
+  distribution: { value: number; label: string; count: number }[];
+}
+export interface OutcomeInput {
+  outcomeType: OutcomeType;
+  incrementAmount?: number | null;
+  incrementEffectiveDate?: string | null;
+  newJobTitle?: string | null;
+  developmentAreas?: string | null;
+}
+
 async function request<T>(
   token: string,
   path: string,
@@ -1450,6 +1552,73 @@ export const api = {
       `/recruitment/offers/${id}/convert`,
       { method: 'POST' },
     ),
+
+  // --- Performance management (T-3.2).
+  reviewCycles: (token: string) =>
+    request<ReviewCycle[]>(token, '/performance/cycles'),
+  createCycle: (token: string, body: CreateCycleInput) =>
+    request<ReviewCycle>(token, '/performance/cycles', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  activateCycle: (token: string, id: string) =>
+    request<ReviewCycle>(token, `/performance/cycles/${id}/activate`, {
+      method: 'POST',
+    }),
+  moveCycleToCalibration: (token: string, id: string) =>
+    request<ReviewCycle>(token, `/performance/cycles/${id}/calibration`, {
+      method: 'POST',
+    }),
+  closeCycle: (token: string, id: string) =>
+    request<ReviewCycle>(token, `/performance/cycles/${id}/close`, {
+      method: 'POST',
+    }),
+  calibrationBoard: (token: string, id: string) =>
+    request<CalibrationView>(token, `/performance/cycles/${id}/calibration`),
+  cycleAppraisals: (token: string, cycleId: string) =>
+    request<Appraisal[]>(token, `/performance/appraisals?cycleId=${cycleId}`),
+  appraisal: (token: string, id: string) =>
+    request<Appraisal>(token, `/performance/appraisals/${id}`),
+  calibrateAppraisal: (token: string, id: string, finalRating: number) =>
+    request<Appraisal>(token, `/performance/appraisals/${id}/calibrate`, {
+      method: 'POST',
+      body: JSON.stringify({ finalRating }),
+    }),
+  setOutcome: (token: string, id: string, body: OutcomeInput) =>
+    request<Appraisal>(token, `/performance/appraisals/${id}/outcome`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  applyOutcome: (token: string, id: string) =>
+    request<Appraisal>(token, `/performance/appraisals/${id}/outcome/apply`, {
+      method: 'POST',
+    }),
+  employeeGoals: (token: string, employeeId: string) =>
+    request<Goal[]>(token, `/performance/goals?employeeId=${employeeId}`),
+  createGoal: (
+    token: string,
+    body: {
+      employeeId: string;
+      cycleId?: string | null;
+      parentGoalId?: string | null;
+      title: string;
+      description?: string;
+      weight?: number | null;
+    },
+  ) =>
+    request<Goal>(token, '/performance/goals', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateGoal: (
+    token: string,
+    id: string,
+    body: { progress?: number; status?: GoalStatus },
+  ) =>
+    request<Goal>(token, `/performance/goals/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
 };
 
 // Pulls the server's message out of a failed non-JSON response where possible,

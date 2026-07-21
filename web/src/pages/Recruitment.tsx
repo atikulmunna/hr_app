@@ -146,7 +146,7 @@ export function Recruitment({ token }: { token: string }) {
         <div className="list">
           {reqs.map((r) => (
             <article
-              className={`card row clickable ${r.id === selectedReqId ? 'selected' : ''}`}
+              className={`card row top clickable ${r.id === selectedReqId ? 'selected' : ''}`}
               key={r.id}
               onClick={() => selectReq(r.id)}
             >

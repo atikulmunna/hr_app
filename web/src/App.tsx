@@ -8,6 +8,7 @@ import { Inbox } from './pages/Inbox';
 import { Leave } from './pages/Leave';
 import { Analytics } from './pages/Analytics';
 import { Payroll } from './pages/Payroll';
+import { Performance } from './pages/Performance';
 import { Recruitment } from './pages/Recruitment';
 import { Reports } from './pages/Reports';
 import { Review } from './pages/Review';
@@ -25,6 +26,7 @@ type Tab =
   | 'shifts'
   | 'payroll'
   | 'recruitment'
+  | 'performance'
   | 'analytics'
   | 'reports'
   | 'config';
@@ -40,6 +42,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'shifts', label: 'Shifts' },
   { key: 'payroll', label: 'Payroll' },
   { key: 'recruitment', label: 'Recruitment' },
+  { key: 'performance', label: 'Performance' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'reports', label: 'Reports' },
   { key: 'config', label: 'Config' },
@@ -120,6 +123,7 @@ export default function App() {
           {tab === 'shifts' && <Shifts token={token} />}
           {tab === 'payroll' && <Payroll token={token} />}
           {tab === 'recruitment' && <Recruitment token={token} />}
+          {tab === 'performance' && <Performance token={token} />}
           {tab === 'analytics' && <Analytics token={token} />}
           {tab === 'reports' && <Reports token={token} />}
           {tab === 'config' && <Config token={token} />}
