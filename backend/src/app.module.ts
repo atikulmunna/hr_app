@@ -22,6 +22,7 @@ import { MssModule } from './modules/mss/mss.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { OvertimeModule } from './modules/attendance/overtime.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
+import { PerformanceModule } from './modules/performance/performance.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { RecruitmentModule } from './modules/recruitment/recruitment.module';
 import { RegularizationModule } from './modules/attendance/regularization.module';
@@ -58,6 +59,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     PayrollModule,
     AnalyticsModule,
     RecruitmentModule,
+    PerformanceModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -46,6 +46,11 @@ import { Application } from '../entities/application.entity';
 import { Interview } from '../entities/interview.entity';
 import { InterviewScorecard } from '../entities/interview-scorecard.entity';
 import { Offer } from '../entities/offer.entity';
+import { RatingScale } from '../entities/rating-scale.entity';
+import { ReviewCycle } from '../entities/review-cycle.entity';
+import { Goal } from '../entities/goal.entity';
+import { Appraisal } from '../entities/appraisal.entity';
+import { AppraisalOutcome } from '../entities/appraisal-outcome.entity';
 
 // Single source of TypeORM options.
 // runtime = true connects as the non-superuser app role (RLS enforced), used by
@@ -113,6 +118,11 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       Interview,
       InterviewScorecard,
       Offer,
+      RatingScale,
+      ReviewCycle,
+      Goal,
+      Appraisal,
+      AppraisalOutcome,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
