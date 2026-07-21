@@ -614,3 +614,46 @@ body {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* Recruitment / ATS (T-3.1) */
+.card.clickable {
+  cursor: pointer;
+}
+.card.clickable:hover {
+  border-color: var(--accent);
+}
+.card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.detail-panel {
+  margin: 4px 0 12px 16px;
+  border-left: 3px solid var(--accent);
+}
+.sub-card {
+  background: var(--subtle);
+  border-radius: 8px;
+  padding: 12px;
+}
+.scorecards {
+  margin-top: 8px;
+  gap: 6px;
+}
+.field.align-end {
+  justify-content: flex-end;
+}
+.letter {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 0;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
