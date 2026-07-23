@@ -13,6 +13,7 @@ import { ConsentModule } from './modules/consent/consent.module';
 import { CustomFieldModule } from './modules/custom-fields/custom-field.module';
 import { DepartmentModule } from './modules/departments/department.module';
 import { DeviceModule } from './modules/devices/device.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { EmployeeModule } from './modules/employees/employee.module';
 import { EntitiesModule } from './modules/entities/entities.module';
 import { GeofenceModule } from './modules/geofences/geofence.module';
@@ -62,6 +63,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     RecruitmentModule,
     PerformanceModule,
     LearningModule,
+    DocumentsModule,
   ],
 })
 export class AppModule implements NestModule {

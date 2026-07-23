@@ -25,6 +25,8 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'performance:manage',
     'learning:read',
     'learning:manage',
+    'document:read',
+    'document:manage',
   ],
   manager: [
     'entity:read',
@@ -40,7 +42,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'recruitment:read',
     'recruitment:manage',
   ],
-  auditor: ['entity:read', 'audit:read', 'employee:read'],
+  auditor: ['entity:read', 'audit:read', 'employee:read', 'document:read'],
   employee: ['self:read'],
 };
 

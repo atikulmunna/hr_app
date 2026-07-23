@@ -55,6 +55,9 @@ import { Skill } from '../entities/skill.entity';
 import { RoleSkill } from '../entities/role-skill.entity';
 import { EmployeeSkill } from '../entities/employee-skill.entity';
 import { Certification } from '../entities/certification.entity';
+import { DocumentRecord } from '../entities/document.entity';
+import { DocumentVersion } from '../entities/document-version.entity';
+import { DocumentAcknowledgement } from '../entities/document-acknowledgement.entity';
 
 // Single source of TypeORM options.
 // runtime = true connects as the non-superuser app role (RLS enforced), used by
@@ -131,6 +134,9 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       RoleSkill,
       EmployeeSkill,
       Certification,
+      DocumentRecord,
+      DocumentVersion,
+      DocumentAcknowledgement,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
