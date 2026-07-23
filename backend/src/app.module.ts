@@ -18,6 +18,7 @@ import { EntitiesModule } from './modules/entities/entities.module';
 import { GeofenceModule } from './modules/geofences/geofence.module';
 import { HealthModule } from './modules/health/health.module';
 import { LeaveModule } from './modules/leave/leave.module';
+import { LearningModule } from './modules/learning/learning.module';
 import { MssModule } from './modules/mss/mss.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { OvertimeModule } from './modules/attendance/overtime.module';
@@ -60,6 +61,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
     AnalyticsModule,
     RecruitmentModule,
     PerformanceModule,
+    LearningModule,
   ],
 })
 export class AppModule implements NestModule {
