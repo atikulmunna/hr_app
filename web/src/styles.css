@@ -709,3 +709,52 @@ body {
 .row.top {
   align-items: flex-start;
 }
+
+/* Learning: the per-role skill matrix (T-3.3). Wide grids scroll inside their
+   own container so the page body never scrolls sideways. */
+.matrix-wrap {
+  overflow-x: auto;
+}
+.matrix {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+}
+.matrix th,
+.matrix td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+.matrix th {
+  font-weight: 700;
+  background: var(--subtle);
+}
+.matrix .rowhead {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+}
+.matrix th.rowhead {
+  background: var(--subtle);
+}
+.matrix .req {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.matrix .cell-met {
+  background: var(--success-bg);
+  color: var(--success);
+  font-weight: 700;
+}
+.matrix .cell-gap {
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-weight: 700;
+}
+.matrix .cell-empty {
+  color: var(--muted-light);
+}

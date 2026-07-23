@@ -6,6 +6,7 @@ import { Employees } from './pages/Employees';
 import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
 import { Leave } from './pages/Leave';
+import { Learning } from './pages/Learning';
 import { Analytics } from './pages/Analytics';
 import { Payroll } from './pages/Payroll';
 import { Performance } from './pages/Performance';
@@ -27,6 +28,7 @@ type Tab =
   | 'payroll'
   | 'recruitment'
   | 'performance'
+  | 'learning'
   | 'analytics'
   | 'reports'
   | 'config';
@@ -43,6 +45,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'payroll', label: 'Payroll' },
   { key: 'recruitment', label: 'Recruitment' },
   { key: 'performance', label: 'Performance' },
+  { key: 'learning', label: 'Learning' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'reports', label: 'Reports' },
   { key: 'config', label: 'Config' },
@@ -124,6 +127,7 @@ export default function App() {
           {tab === 'payroll' && <Payroll token={token} />}
           {tab === 'recruitment' && <Recruitment token={token} />}
           {tab === 'performance' && <Performance token={token} />}
+          {tab === 'learning' && <Learning token={token} />}
           {tab === 'analytics' && <Analytics token={token} />}
           {tab === 'reports' && <Reports token={token} />}
           {tab === 'config' && <Config token={token} />}

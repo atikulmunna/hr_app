@@ -130,6 +130,7 @@ export function Recruitment({ token }: { token: string }) {
           pipeline. Select one to see its applications.
         </p>
 
+        <div className="stack">
         {showReqForm && (
           <NewRequisitionForm
             token={token}
@@ -186,6 +187,7 @@ export function Recruitment({ token }: { token: string }) {
             </article>
           ))}
           {reqs.length === 0 && <p className="muted">No requisitions yet.</p>}
+        </div>
         </div>
       </div>
 
@@ -260,6 +262,7 @@ function RequisitionPipeline({
         </p>
       )}
 
+      <div className="stack">
       {showForm && canAdd && (
         <NewCandidateForm
           token={token}
@@ -311,6 +314,7 @@ function RequisitionPipeline({
         {apps.length === 0 && canAdd && (
           <p className="muted">No candidates yet. Add one to start the pipeline.</p>
         )}
+      </div>
       </div>
     </div>
   );
