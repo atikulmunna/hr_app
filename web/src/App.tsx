@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { Approvals } from './pages/Approvals';
 import { Config } from './pages/Config';
+import { Documents } from './pages/Documents';
 import { Employees } from './pages/Employees';
 import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
@@ -29,6 +30,7 @@ type Tab =
   | 'recruitment'
   | 'performance'
   | 'learning'
+  | 'documents'
   | 'analytics'
   | 'reports'
   | 'config';
@@ -46,6 +48,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'recruitment', label: 'Recruitment' },
   { key: 'performance', label: 'Performance' },
   { key: 'learning', label: 'Learning' },
+  { key: 'documents', label: 'Documents' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'reports', label: 'Reports' },
   { key: 'config', label: 'Config' },
@@ -128,6 +131,7 @@ export default function App() {
           {tab === 'recruitment' && <Recruitment token={token} />}
           {tab === 'performance' && <Performance token={token} />}
           {tab === 'learning' && <Learning token={token} />}
+          {tab === 'documents' && <Documents token={token} />}
           {tab === 'analytics' && <Analytics token={token} />}
           {tab === 'reports' && <Reports token={token} />}
           {tab === 'config' && <Config token={token} />}

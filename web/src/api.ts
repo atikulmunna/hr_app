@@ -1068,6 +1068,62 @@ export interface Certification {
   reminded: boolean;
 }
 
+// --- Documents and compliance (T-3.4).
+export type DocumentVisibility = 'hr_only' | 'employee' | 'all';
+export type DocumentStatus = 'valid' | 'expiring' | 'expired';
+export interface DocumentSummary {
+  id: string;
+  employeeId: string | null;
+  employeeName: string | null;
+  employeeCode: string | null;
+  name: string;
+  category: string;
+  docType: string | null;
+  visibility: DocumentVisibility;
+  requiresAcknowledgement: boolean;
+  currentVersion: number;
+  expiresOn: string | null;
+  status: DocumentStatus;
+  daysToExpiry: number | null;
+  versionCount: number;
+  acknowledgedCount: number;
+}
+export interface DocumentVersionRow {
+  id: string;
+  version: number;
+  sha256: string;
+  note: string | null;
+  uploadedBySub: string | null;
+  createdAt: string;
+}
+export interface DocumentAckRow {
+  id: string;
+  version: number;
+  signerSub: string;
+  signerName: string;
+  sha256: string;
+  signerIp: string | null;
+  signedAt: string;
+}
+export interface DocumentDetail {
+  document: DocumentSummary;
+  versions: DocumentVersionRow[];
+  acknowledgements: DocumentAckRow[];
+}
+export interface MyDocument {
+  id: string;
+  name: string;
+  category: string;
+  docType: string | null;
+  visibility: DocumentVisibility;
+  requiresAcknowledgement: boolean;
+  currentVersion: number;
+  expiresOn: string | null;
+  currentSha256: string | null;
+  acknowledged: boolean;
+  signedAt: string | null;
+}
+
 async function request<T>(
   token: string,
   path: string,
@@ -1768,6 +1824,60 @@ export const api = {
     request<unknown>(token, `/learning/certifications/${id}`, {
       method: 'DELETE',
     }),
+
+  // --- Documents and compliance (T-3.4).
+  documents: (
+    token: string,
+    filter?: { employeeId?: string; category?: string },
+  ) => {
+    const params = new URLSearchParams();
+    if (filter?.employeeId) params.set('employeeId', filter.employeeId);
+    if (filter?.category) params.set('category', filter.category);
+    const q = params.toString();
+    return request<DocumentSummary[]>(
+      token,
+      `/documents${q ? `?${q}` : ''}`,
+    );
+  },
+  document: (token: string, id: string) =>
+    request<DocumentDetail>(token, `/documents/${id}`),
+  createDocument: (
+    token: string,
+    body: {
+      employeeId?: string | null;
+      name: string;
+      category?: string;
+      docType?: string;
+      visibility?: DocumentVisibility;
+      requiresAcknowledgement?: boolean;
+      sha256: string;
+      note?: string;
+      expiresOn?: string | null;
+    },
+  ) =>
+    request<DocumentSummary>(token, '/documents', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  addDocumentVersion: (
+    token: string,
+    id: string,
+    body: { sha256: string; note?: string; expiresOn?: string | null },
+  ) =>
+    request<DocumentSummary>(token, `/documents/${id}/versions`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  removeDocument: (token: string, id: string) =>
+    request<unknown>(token, `/documents/${id}`, { method: 'DELETE' }),
+  myDocuments: (token: string) =>
+    request<MyDocument[]>(token, '/me/documents'),
+  acknowledgeDocument: (token: string, id: string, signerName: string) =>
+    request<{ documentId: string; version: number; signedAt: string }>(
+      token,
+      `/me/documents/${id}/acknowledge`,
+      { method: 'POST', body: JSON.stringify({ signerName }) },
+    ),
 };
 
 // Pulls the server's message out of a failed non-JSON response where possible,
