@@ -13,8 +13,10 @@ import {
   EmploymentChangeType,
   EmploymentHistory,
 } from '../../entities/employment-history.entity';
+import { TenantContextService } from '../../common/tenant/tenant-context.service';
 import { AuditService } from '../audit/audit.service';
 import { CustomFieldService } from '../custom-fields/custom-field.service';
+import { ChecklistService } from '../lifecycle/checklist.service';
 
 export interface CreateEmployeeInput {
   legalEntityId: string;
@@ -85,8 +87,10 @@ function deriveEmploymentChange(
 export class EmployeeService {
   constructor(
     private readonly db: TenantDbService,
+    private readonly ctx: TenantContextService,
     private readonly audit: AuditService,
     private readonly customFields: CustomFieldService,
+    private readonly checklists: ChecklistService,
   ) {}
 
   list(): Promise<Employee[]> {
@@ -158,6 +162,14 @@ export class EmployeeService {
         },
         m,
       );
+      // A new hire's onboarding starts with the record (FR-M1-10).
+      await this.checklists.open(
+        m,
+        employee.id,
+        'onboarding',
+        employee.hireDate ?? today(),
+        this.ctx.actor?.sub,
+      );
       return employee;
     });
   }
@@ -194,6 +206,11 @@ export class EmployeeService {
         },
         m,
       );
+      // Termination opens offboarding, anchored on the day it is recorded
+      // (FR-M1-10).
+      if (before.status !== 'terminated' && after.status === 'terminated') {
+        await this.checklists.open(m, id, 'offboarding', today(), this.ctx.actor?.sub);
+      }
       return after;
     });
   }
@@ -292,4 +309,8 @@ export class EmployeeService {
     }
     return employee;
   }
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
 }

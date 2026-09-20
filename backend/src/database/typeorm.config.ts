@@ -58,6 +58,9 @@ import { Certification } from '../entities/certification.entity';
 import { DocumentRecord } from '../entities/document.entity';
 import { DocumentVersion } from '../entities/document-version.entity';
 import { DocumentAcknowledgement } from '../entities/document-acknowledgement.entity';
+import { ChecklistTemplateItem } from '../entities/checklist-template-item.entity';
+import { Checklist } from '../entities/checklist.entity';
+import { ChecklistItem } from '../entities/checklist-item.entity';
 
 // Single source of TypeORM options.
 // runtime = true connects as the non-superuser app role (RLS enforced), used by
@@ -137,6 +140,9 @@ export function buildDataSourceOptions(runtime = false): DataSourceOptions {
       DocumentRecord,
       DocumentVersion,
       DocumentAcknowledgement,
+      ChecklistTemplateItem,
+      Checklist,
+      ChecklistItem,
     ],
     migrations: [__dirname + '/migrations/*.{ts,js}'],
     synchronize: false,
