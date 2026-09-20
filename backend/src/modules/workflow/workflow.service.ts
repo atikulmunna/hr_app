@@ -26,6 +26,14 @@ export interface ApprovalView {
   steps: ApprovalStep[];
 }
 
+// Runs inside the deciding transaction once a request is finalized (approved or
+// rejected), so the feature module owning the request applies its effect at
+// the moment of decision, atomically with it. A failure rolls the decision back.
+export type DecisionHandler = (
+  view: ApprovalView,
+  manager: EntityManager,
+) => Promise<void>;
+
 // The senior backstop (COO). It can decide a request only when self-approval
 // would otherwise be structurally possible, i.e. the requester holds the
 // approver role, so ordinary requests keep their normal hierarchy and never
@@ -37,6 +45,8 @@ const ESCALATION_ROLE = 'tenant_admin';
 // engine drive the step sequence; they do not reimplement approvals (FR-M11-01).
 @Injectable()
 export class WorkflowService {
+  private readonly handlers = new Map<string, DecisionHandler>();
+
   constructor(
     private readonly db: TenantDbService,
     private readonly ctx: TenantContextService,
@@ -44,7 +54,22 @@ export class WorkflowService {
     private readonly notifications: NotificationService,
   ) {}
 
-  async createRequest(input: CreateApprovalInput): Promise<ApprovalView> {
+  // Registers the effect of a decision for one request type. Each type has one
+  // owner, so a second registration is a wiring mistake.
+  onDecided(requestType: string, handler: DecisionHandler): void {
+    if (this.handlers.has(requestType)) {
+      throw new Error(`A decision handler for "${requestType}" is already registered.`);
+    }
+    this.handlers.set(requestType, handler);
+  }
+
+  // Pass the caller's EntityManager to open the request inside their tenant
+  // transaction, so the request and the record that references it commit
+  // together.
+  async createRequest(
+    input: CreateApprovalInput,
+    manager?: EntityManager,
+  ): Promise<ApprovalView> {
     if (!input.requestType) {
       throw new BadRequestException('requestType is required.');
     }
@@ -107,7 +132,7 @@ export class WorkflowService {
         m,
       );
       return this.load(m, request.id);
-    });
+    }, manager);
   }
 
   getRequest(id: string): Promise<ApprovalView> {
@@ -257,7 +282,11 @@ export class WorkflowService {
           m,
         );
       }
-      return this.load(m, id);
+      const view = await this.load(m, id);
+      if (request.status !== 'pending') {
+        await this.handlers.get(request.requestType)?.(view, m);
+      }
+      return view;
     });
   }
 

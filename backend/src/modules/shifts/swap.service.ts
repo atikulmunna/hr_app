@@ -6,7 +6,7 @@ import { ShiftSwapRequest } from '../../entities/shift-swap-request.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { EmployeeService } from '../employees/employee.service';
-import { WorkflowService } from '../workflow/workflow.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 
 const SWAP_APPROVER_ROLES = ['manager'];
 
@@ -18,9 +18,7 @@ export interface SwapInput {
 
 // Shift-swap requests (T-1E.3, FR-M2-02). An employee offers one of their future
 // roster entries in exchange for a teammate's. On manager approval the two
-// entries exchange owners, materialized lazily and idempotently on the next
-// read (mirroring the regularization precedent; the workflow has no post-approval
-// hook).
+// entries exchange owners, in the deciding transaction.
 @Injectable()
 export class SwapService {
   constructor(
@@ -28,7 +26,9 @@ export class SwapService {
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
     private readonly workflow: WorkflowService,
-  ) {}
+  ) {
+    this.workflow.onDecided('shift_swap', (view, m) => this.onDecided(view, m));
+  }
 
   async request(user: AuthUser, input: SwapInput) {
     if (!input.requesterEntryId || !input.counterpartyEntryId) {
@@ -38,47 +38,45 @@ export class SwapService {
     }
     const employee = await this.employees.myProfile(user.sub, user.email);
 
-    const { counterpartyEmployeeId, myDate, theirDate } =
-      await this.db.withTenant(async (m) => {
-        const mine = await m.findOne(RosterEntry, {
-          where: { id: input.requesterEntryId },
-        });
-        if (!mine || mine.employeeId !== employee.id) {
-          throw new BadRequestException('You can only offer your own roster day.');
-        }
-        const theirs = await m.findOne(RosterEntry, {
-          where: { id: input.counterpartyEntryId },
-        });
-        if (!theirs) {
-          throw new NotFoundException('The teammate roster day was not found.');
-        }
-        if (theirs.employeeId === employee.id) {
-          throw new BadRequestException("Pick a teammate's day, not your own.");
-        }
-        assertFuture(mine.workDate);
-        assertFuture(theirs.workDate);
-        await this.assertNoOpenSwap(m, mine.id, theirs.id);
-        await this.assertNoConflict(m, mine, theirs);
-        return {
-          counterpartyEmployeeId: theirs.employeeId,
-          myDate: mine.workDate.slice(0, 10),
-          theirDate: theirs.workDate.slice(0, 10),
-        };
-      });
-
-    const approval = await this.workflow.createRequest({
-      requestType: 'shift_swap',
-      resourceType: 'roster',
-      payload: {
-        requesterEmployeeId: employee.id,
-        counterpartyEmployeeId,
-        requesterDate: myDate,
-        counterpartyDate: theirDate,
-      },
-      approverRoles: SWAP_APPROVER_ROLES,
-    });
-
     return this.db.withTenant(async (m) => {
+      const mine = await m.findOne(RosterEntry, {
+        where: { id: input.requesterEntryId },
+      });
+      if (!mine || mine.employeeId !== employee.id) {
+        throw new BadRequestException('You can only offer your own roster day.');
+      }
+      const theirs = await m.findOne(RosterEntry, {
+        where: { id: input.counterpartyEntryId },
+      });
+      if (!theirs) {
+        throw new NotFoundException('The teammate roster day was not found.');
+      }
+      if (theirs.employeeId === employee.id) {
+        throw new BadRequestException("Pick a teammate's day, not your own.");
+      }
+      assertFuture(mine.workDate);
+      assertFuture(theirs.workDate);
+      await this.assertNoOpenSwap(m, mine.id, theirs.id);
+      await this.assertNoConflict(m, mine, theirs);
+      const counterpartyEmployeeId = theirs.employeeId;
+      const myDate = mine.workDate.slice(0, 10);
+      const theirDate = theirs.workDate.slice(0, 10);
+
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'shift_swap',
+          resourceType: 'roster',
+          payload: {
+            requesterEmployeeId: employee.id,
+            counterpartyEmployeeId,
+            requesterDate: myDate,
+            counterpartyDate: theirDate,
+          },
+          approverRoles: SWAP_APPROVER_ROLES,
+        },
+        m,
+      );
+
       const saved = await m.save(
         m.create(ShiftSwapRequest, {
           tenantId: this.db.tenantId,
@@ -111,9 +109,8 @@ export class SwapService {
   }
 
   async listInvolving(employeeId: string): Promise<unknown[]> {
-    return this.db.withTenant(async (m) => {
-      await this.syncApproved(m, employeeId);
-      return m.query(
+    return this.db.withTenant((m) =>
+      m.query(
         `SELECT s.id,
                 s.requester_employee_id AS "requesterEmployeeId",
                 s.counterparty_employee_id AS "counterpartyEmployeeId",
@@ -135,29 +132,20 @@ export class SwapService {
          WHERE s.requester_employee_id = $1 OR s.counterparty_employee_id = $1
          ORDER BY s.created_at DESC`,
         [employeeId],
-      );
-    });
+      ),
+    );
   }
 
-  // Materializes every approved swap involving the employee that has not been
-  // applied. Idempotent (guarded by applied_at). Called before roster and
-  // summary reads so an approved swap is reflected in the schedule.
-  async syncApproved(m: EntityManager, employeeId: string): Promise<void> {
-    const pending: ShiftSwapRequest[] = await m
-      .createQueryBuilder(ShiftSwapRequest, 's')
-      .innerJoin(
-        'approval_requests',
-        'ar',
-        'ar.id = s.approval_request_id AND ar.status = :approved',
-        { approved: 'approved' },
-      )
-      .where(
-        '(s.requester_employee_id = :e OR s.counterparty_employee_id = :e)',
-        { e: employeeId },
-      )
-      .andWhere('s.applied_at IS NULL')
-      .getMany();
-    for (const swap of pending) {
+  // Exchanges the two roster days once the manager approves. A rejection leaves
+  // the roster untouched; the request's status is read from the approval.
+  private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
+    if (view.request.status !== 'approved') {
+      return;
+    }
+    const swap = await m.findOne(ShiftSwapRequest, {
+      where: { approvalRequestId: view.request.id },
+    });
+    if (swap && !swap.appliedAt) {
       await this.apply(m, swap);
     }
   }

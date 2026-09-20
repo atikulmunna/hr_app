@@ -8,7 +8,6 @@ import { TenantDbService } from '../../database/tenant-db.service';
 import { RosterEntry } from '../../entities/roster-entry.entity';
 import { Shift } from '../../entities/shift.entity';
 import { AuditService } from '../audit/audit.service';
-import { SwapService } from './swap.service';
 
 export interface AssignRosterInput {
   workDate?: string;
@@ -34,7 +33,6 @@ export class RosterService {
   constructor(
     private readonly db: TenantDbService,
     private readonly audit: AuditService,
-    private readonly swap: SwapService,
   ) {}
 
   listForEmployee(
@@ -43,10 +41,8 @@ export class RosterService {
     to: string,
   ): Promise<unknown[]> {
     assertRange(from, to);
-    return this.db.withTenant(async (m) => {
-      // Reflect any approved swap in the schedule before reading.
-      await this.swap.syncApproved(m, employeeId);
-      return m.query(
+    return this.db.withTenant((m) =>
+      m.query(
         `SELECT re.id,
                 to_char(re.work_date, 'YYYY-MM-DD') AS "workDate",
                 re.shift_id AS "shiftId", re.source, re.note,
@@ -57,8 +53,8 @@ export class RosterService {
          WHERE re.employee_id = $1 AND re.work_date BETWEEN $2 AND $3
          ORDER BY re.work_date`,
         [employeeId, from, to],
-      );
-    });
+      ),
+    );
   }
 
   // Upcoming roster entries of the employee's department peers, so an employee
@@ -179,8 +175,6 @@ export class RosterService {
     from: string,
     to: string,
   ): Promise<Map<string, Shift>> {
-    // Reflect any approved swap in the schedule before deriving the summary.
-    await this.swap.syncApproved(m, employeeId);
     const rows: Array<{ workDate: string; shift: Shift }> = await m
       .createQueryBuilder(RosterEntry, 're')
       .innerJoinAndMapOne('re.shift', Shift, 's', 's.id = re.shift_id')

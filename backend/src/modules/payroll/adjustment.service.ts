@@ -12,7 +12,7 @@ import { PayrollRun } from '../../entities/payroll-run.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { NotificationService } from '../notifications/notification.service';
-import { WorkflowService } from '../workflow/workflow.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 
 // Approved like a run, so the preparer is not the approver (O-09).
 const ADJUSTMENT_APPROVER_ROLES = ['tenant_admin'];
@@ -48,13 +48,16 @@ export class AdjustmentService {
     private readonly audit: AuditService,
     private readonly workflow: WorkflowService,
     private readonly notifications: NotificationService,
-  ) {}
+  ) {
+    this.workflow.onDecided('payroll_adjustment', (view, m) =>
+      this.onDecided(view, m),
+    );
+  }
 
   list(legalEntityId?: string): Promise<AdjustmentView[]> {
-    return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
-      return this.rows(m, legalEntityId ? { legalEntityId } : {});
-    });
+    return this.db.withTenant((m) =>
+      this.rows(m, legalEntityId ? { legalEntityId } : {}),
+    );
   }
 
   async create(
@@ -111,16 +114,19 @@ export class AdjustmentService {
         }
       }
 
-      const approval = await this.workflow.createRequest({
-        requestType: 'payroll_adjustment',
-        resourceType: 'payroll',
-        payload: {
-          employeeId: employee.id,
-          amount,
-          currencyCode: entity.currencyCode,
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'payroll_adjustment',
+          resourceType: 'payroll',
+          payload: {
+            employeeId: employee.id,
+            amount,
+            currencyCode: entity.currencyCode,
+          },
+          approverRoles: ADJUSTMENT_APPROVER_ROLES,
         },
-        approverRoles: ADJUSTMENT_APPROVER_ROLES,
-      });
+        m,
+      );
 
       const adjustment = await m.save(
         m.create(PayrollAdjustment, {
@@ -254,27 +260,14 @@ export class AdjustmentService {
     });
   }
 
-  // Reflects approval decisions, like payroll runs: the workflow has no
-  // post-approval hook, so a decision lands on the next read. Public so a run
-  // materializes approvals before deciding which adjustments to settle, rather
-  // than depending on someone having read the adjustment list first.
-  async syncApprovals(m: EntityManager): Promise<void> {
-    await m.query(`
-      UPDATE payroll_adjustments a
-         SET status = 'approved', updated_at = now()
-        FROM approval_requests ar
-       WHERE ar.id = a.approval_request_id
-         AND a.status = 'pending'
-         AND ar.status = 'approved'
-    `);
-    await m.query(`
-      UPDATE payroll_adjustments a
-         SET status = 'rejected', updated_at = now()
-        FROM approval_requests ar
-       WHERE ar.id = a.approval_request_id
-         AND a.status = 'pending'
-         AND ar.status = 'rejected'
-    `);
+  // Reflects the decision on the adjustment, so an approved one is picked up by
+  // the next run and a rejected one is never settled.
+  private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
+    await m.update(
+      PayrollAdjustment,
+      { approvalRequestId: view.request.id, status: 'pending' },
+      { status: view.request.status === 'approved' ? 'approved' : 'rejected' },
+    );
   }
 
   private async rows(

@@ -55,61 +55,59 @@ export class LeaveRequestService {
 
     const employee = await this.employees.myProfile(user.sub, user.email);
 
-    // Read-only validation: type, working days, notice, overlap, balance.
-    const { type, workingDays, teamConflicts } = await this.db.withTenant(
-      async (m) => {
-        const leaveType = await this.applicableType(
-          m,
-          input.leaveTypeId!,
-          employee.legalEntityId,
+    // Validation, approval routing, and the request itself commit together, so
+    // two overlapping applications cannot both pass the overlap check.
+    return this.db.withTenant(async (m) => {
+      const type = await this.applicableType(
+        m,
+        input.leaveTypeId!,
+        employee.legalEntityId,
+      );
+      const holidays = await this.holidaySet(m, employee.legalEntityId);
+      const workingDays = countWorkingDays(
+        input.startDate!,
+        input.endDate!,
+        holidays,
+      );
+      if (workingDays <= 0) {
+        throw new BadRequestException(
+          'The selected dates are all weekends or holidays.',
         );
-        const holidays = await this.holidaySet(m, employee.legalEntityId);
-        const days = countWorkingDays(
-          input.startDate!,
-          input.endDate!,
-          holidays,
-        );
-        if (days <= 0) {
-          throw new BadRequestException(
-            'The selected dates are all weekends or holidays.',
-          );
-        }
-        this.assertNotice(input.startDate!, leaveType.noticeDays);
-        await this.assertNoOverlap(
-          m,
-          employee.id,
-          input.startDate!,
-          input.endDate!,
-        );
-        await this.assertBalance(m, employee.id, leaveType, days);
-        const conflicts = await this.teamConflicts(
-          m,
-          employee.id,
-          employee.departmentId,
-          input.startDate!,
-          input.endDate!,
-        );
-        return { type: leaveType, workingDays: days, teamConflicts: conflicts };
-      },
-    );
+      }
+      this.assertNotice(input.startDate!, type.noticeDays);
+      await this.assertNoOverlap(
+        m,
+        employee.id,
+        input.startDate!,
+        input.endDate!,
+      );
+      await this.assertBalance(m, employee.id, type, workingDays);
+      const teamConflicts = await this.teamConflicts(
+        m,
+        employee.id,
+        employee.departmentId,
+        input.startDate!,
+        input.endDate!,
+      );
 
-    // Route through the shared workflow engine (opens its own transaction).
-    const approval = await this.workflow.createRequest({
-      requestType: 'leave_request',
-      resourceType: 'leave',
-      payload: {
-        employeeId: employee.id,
-        leaveTypeId: type.id,
-        typeName: type.name,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        workingDays,
-      },
-      approverRoles: LEAVE_APPROVER_ROLES,
-    });
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'leave_request',
+          resourceType: 'leave',
+          payload: {
+            employeeId: employee.id,
+            leaveTypeId: type.id,
+            typeName: type.name,
+            startDate: input.startDate,
+            endDate: input.endDate,
+            workingDays,
+          },
+          approverRoles: LEAVE_APPROVER_ROLES,
+        },
+        m,
+      );
 
-    const request = await this.db.withTenant(async (m) => {
-      const saved = await m.save(
+      const request = await m.save(
         m.create(LeaveRequest, {
           tenantId: this.db.tenantId,
           employeeId: employee.id,
@@ -125,7 +123,7 @@ export class LeaveRequestService {
         {
           action: 'leave.request',
           resourceType: 'leave_request',
-          resourceId: saved.id,
+          resourceId: request.id,
           after: {
             leaveTypeId: type.id,
             startDate: input.startDate,
@@ -135,10 +133,8 @@ export class LeaveRequestService {
         },
         m,
       );
-      return saved;
+      return { request, workingDays, teamConflicts };
     });
-
-    return { request, workingDays, teamConflicts };
   }
 
   myRequests(user: AuthUser): Promise<unknown[]> {

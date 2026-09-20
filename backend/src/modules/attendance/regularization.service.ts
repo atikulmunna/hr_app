@@ -10,7 +10,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { EmployeeService } from '../employees/employee.service';
-import { WorkflowService } from '../workflow/workflow.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 
 const REGULARIZATION_APPROVER_ROLES = ['manager'];
 // Per-employee rolling rate limit (FR-AT-34). Tenant-configurable with T-1C.12;
@@ -47,7 +47,13 @@ export class RegularizationService {
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
     private readonly workflow: WorkflowService,
-  ) {}
+  ) {
+    // An approved correction produces its counted marks the moment the manager
+    // decides, in the same transaction.
+    this.workflow.onDecided('regularization', (view, m) =>
+      this.onDecided(view, m),
+    );
+  }
 
   // Self-service: route the correction through the shared workflow engine for
   // manager approval before it produces a counted mark (FR-AT-32).
@@ -55,23 +61,22 @@ export class RegularizationService {
     const employee = await this.employees.myProfile(user.sub, user.email);
     const valid = validate(input);
 
-    await this.db.withTenant(async (m) => {
+    return this.db.withTenant(async (m) => {
       await this.assertNoLiveMark(m, employee.id, valid);
       await this.assertRateLimit(m, employee.id);
-    });
-
-    const approval = await this.workflow.createRequest({
-      requestType: 'regularization',
-      resourceType: 'attendance',
-      payload: {
-        employeeId: employee.id,
-        targetDate: valid.targetDate,
-        correctionType: valid.correctionType,
-      },
-      approverRoles: REGULARIZATION_APPROVER_ROLES,
-    });
-
-    return this.db.withTenant(async (m) => {
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'regularization',
+          resourceType: 'attendance',
+          payload: {
+            employeeId: employee.id,
+            targetDate: valid.targetDate,
+            correctionType: valid.correctionType,
+          },
+          approverRoles: REGULARIZATION_APPROVER_ROLES,
+        },
+        m,
+      );
       const saved = await m.save(
         m.create(RegularizationRequest, {
           tenantId: this.db.tenantId,
@@ -144,9 +149,8 @@ export class RegularizationService {
   }
 
   async listForEmployee(employeeId: string): Promise<unknown[]> {
-    return this.db.withTenant(async (m) => {
-      await this.syncApproved(m, employeeId);
-      return m.query(
+    return this.db.withTenant((m) =>
+      m.query(
         `SELECT r.id,
                 to_char(r.target_date, 'YYYY-MM-DD') AS "targetDate",
                 r.correction_type AS "correctionType",
@@ -160,26 +164,20 @@ export class RegularizationService {
          WHERE r.employee_id = $1
          ORDER BY r.created_at DESC`,
         [employeeId],
-      );
-    });
+      ),
+    );
   }
 
-  // Materializes every approved self-service request that has not yet been
-  // applied, in the caller's transaction. Idempotent (guarded by applied_at),
-  // mirroring the device re-bind apply-once precedent.
-  async syncApproved(m: EntityManager, employeeId: string): Promise<void> {
-    const pending: RegularizationRequest[] = await m
-      .createQueryBuilder(RegularizationRequest, 'r')
-      .innerJoin(
-        'approval_requests',
-        'ar',
-        'ar.id = r.approval_request_id AND ar.status = :approved',
-        { approved: 'approved' },
-      )
-      .where('r.employee_id = :employeeId', { employeeId })
-      .andWhere('r.applied_at IS NULL')
-      .getMany();
-    for (const req of pending) {
+  // Applies an approved request once. A rejection leaves the request as the
+  // record of what was asked; its status is read from the approval.
+  private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
+    if (view.request.status !== 'approved') {
+      return;
+    }
+    const req = await m.findOne(RegularizationRequest, {
+      where: { approvalRequestId: view.request.id },
+    });
+    if (req && !req.appliedAt) {
       await this.materialize(m, req, 'regularized', req.createdBySub);
     }
   }

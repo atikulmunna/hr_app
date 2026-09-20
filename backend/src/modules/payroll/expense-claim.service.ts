@@ -18,7 +18,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { EmployeeService } from '../employees/employee.service';
 import { NotificationService } from '../notifications/notification.service';
-import { WorkflowService } from '../workflow/workflow.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 import { AdjustmentService } from './adjustment.service';
 
 // Employee-submitted, so it routes to the manager like leave and overtime; the
@@ -90,16 +90,15 @@ export class ExpenseClaimService {
     private readonly workflow: WorkflowService,
     private readonly notifications: NotificationService,
     private readonly adjustments: AdjustmentService,
-  ) {}
+  ) {
+    this.workflow.onDecided('expense_claim', (view, m) => this.onDecided(view, m));
+  }
 
   // --- Employee self-service.
 
   async mine(user: AuthUser): Promise<ClaimView[]> {
     const me = await this.employees.myProfile(user.sub, user.email);
-    return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
-      return this.claimViews(m, { employeeId: me.id });
-    });
+    return this.db.withTenant((m) => this.claimViews(m, { employeeId: me.id }));
   }
 
   async create(user: AuthUser, title?: string): Promise<ClaimView> {
@@ -242,19 +241,22 @@ export class ExpenseClaimService {
         total += Number(line.amount);
       }
 
-      const approval = await this.workflow.createRequest({
-        requestType: 'expense_claim',
-        resourceType: 'expense',
-        resourceId: claim.id,
-        payload: {
-          employeeId: me.id,
-          title: claim.title,
-          amount: Number(total.toFixed(2)),
-          currencyCode: claim.currencyCode,
-          lineCount: lines.length,
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'expense_claim',
+          resourceType: 'expense',
+          resourceId: claim.id,
+          payload: {
+            employeeId: me.id,
+            title: claim.title,
+            amount: Number(total.toFixed(2)),
+            currencyCode: claim.currencyCode,
+            lineCount: lines.length,
+          },
+          approverRoles: EXPENSE_APPROVER_ROLES,
         },
-        approverRoles: EXPENSE_APPROVER_ROLES,
-      });
+        m,
+      );
 
       claim.status = 'pending';
       claim.approvalRequestId = approval.request.id;
@@ -301,15 +303,13 @@ export class ExpenseClaimService {
   // --- HR / payroll.
 
   listAll(legalEntityId?: string): Promise<ClaimView[]> {
-    return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
-      return this.claimViews(m, legalEntityId ? { legalEntityId } : {});
-    });
+    return this.db.withTenant((m) =>
+      this.claimViews(m, legalEntityId ? { legalEntityId } : {}),
+    );
   }
 
   get(id: string): Promise<ClaimView> {
     return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
       const [claim] = await this.claimViews(m, { id });
       if (!claim) {
         throw new NotFoundException('Claim not found.');
@@ -329,7 +329,6 @@ export class ExpenseClaimService {
       );
     }
     await this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
       const claim = await m.findOne(ExpenseClaim, { where: { id } });
       if (!claim) {
         throw new NotFoundException('Claim not found.');
@@ -424,25 +423,13 @@ export class ExpenseClaimService {
 
   // --- Internals.
 
-  // Reflects approval decisions, like payroll runs and adjustments: the
-  // workflow has no post-approval hook, so a decision lands on the next read.
-  async syncApprovals(m: EntityManager): Promise<void> {
-    await m.query(`
-      UPDATE expense_claims c
-         SET status = 'approved', updated_at = now()
-        FROM approval_requests ar
-       WHERE ar.id = c.approval_request_id
-         AND c.status = 'pending'
-         AND ar.status = 'approved'
-    `);
-    await m.query(`
-      UPDATE expense_claims c
-         SET status = 'rejected', updated_at = now()
-        FROM approval_requests ar
-       WHERE ar.id = c.approval_request_id
-         AND c.status = 'pending'
-         AND ar.status = 'rejected'
-    `);
+  // Reflects the decision on the claim at the moment it is made.
+  private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
+    await m.update(
+      ExpenseClaim,
+      { approvalRequestId: view.request.id, status: 'pending' },
+      { status: view.request.status === 'approved' ? 'approved' : 'rejected' },
+    );
   }
 
   private async getOwned(user: AuthUser, id: string): Promise<ClaimView> {

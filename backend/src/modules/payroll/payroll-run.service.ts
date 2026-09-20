@@ -16,7 +16,7 @@ import { SummaryService } from '../shifts/summary.service';
 import { AdjustmentService } from './adjustment.service';
 import { CompensationService } from './compensation.service';
 import { StatutoryCharge, StatutoryService, chargesFor } from './statutory.service';
-import { WorkflowService } from '../workflow/workflow.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 import {
   assertDraft,
   countDays,
@@ -133,7 +133,9 @@ export class PayrollRunService {
     private readonly statutory: StatutoryService,
     private readonly workflow: WorkflowService,
     private readonly adjustments: AdjustmentService,
-  ) {}
+  ) {
+    this.workflow.onDecided('payroll_run', (view, m) => this.onDecided(view, m));
+  }
 
   // Lists runs with their preview issues attached, because the lock action sits
   // on the list: a warning only visible after expanding a run would be missed
@@ -144,7 +146,6 @@ export class PayrollRunService {
   // amount of work however many runs have accumulated.
   async list(legalEntityId?: string): Promise<PayrollRunListItem[]> {
     return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
       const runs = await m.find(PayrollRun, {
         where: legalEntityId ? { legalEntityId } : {},
         order: { periodStart: 'DESC', createdAt: 'DESC' },
@@ -387,11 +388,6 @@ export class PayrollRunService {
       await m.delete(PayrollRunLine, { runId });
       await m.delete(PayrollRunEmployee, { runId });
 
-      // Materialize adjustment approvals first, so a run picks up an adjustment
-      // approved since the last read without depending on the adjustment list
-      // having been viewed.
-      await this.adjustments.syncApprovals(m);
-
       // Release any adjustments this (draft) run had settled, so a recompute
       // re-picks them up cleanly. A locked run never reaches here (compute is
       // draft-only), so a settled-and-frozen adjustment is safe.
@@ -520,7 +516,6 @@ export class PayrollRunService {
 
   async get(runId: string): Promise<RunView> {
     return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
       const run = await m.findOne(PayrollRun, { where: { id: runId } });
       if (!run) {
         throw new NotFoundException('Payroll run not found.');
@@ -626,21 +621,23 @@ export class PayrollRunService {
       );
     }
 
-    const approval = await this.workflow.createRequest({
-      requestType: 'payroll_run',
-      resourceType: 'payroll',
-      resourceId: runId,
-      payload: {
-        periodStart: view.periodStart,
-        periodEnd: view.periodEnd,
-        employees: view.totals.employees,
-        net: view.totals.net,
-        currencyCode: view.currencyCode,
-      },
-      approverRoles: PAYROLL_APPROVER_ROLES,
-    });
-
     await this.db.withTenant(async (m) => {
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'payroll_run',
+          resourceType: 'payroll',
+          resourceId: runId,
+          payload: {
+            periodStart: view.periodStart,
+            periodEnd: view.periodEnd,
+            employees: view.totals.employees,
+            net: view.totals.net,
+            currencyCode: view.currencyCode,
+          },
+          approverRoles: PAYROLL_APPROVER_ROLES,
+        },
+        m,
+      );
       await m.update(
         PayrollRun,
         { id: runId },
@@ -664,33 +661,21 @@ export class PayrollRunService {
     return this.get(runId);
   }
 
-  // Reflects approval decisions onto locked runs. Called on every read, like the
-  // regularization, swap, and profile-change precedents: the workflow has no
-  // post-approval hook, so a decision materializes the next time anyone looks
-  // rather than needing someone to press a button to find out.
-  //
-  // Set-based and idempotent: approving clears a run for disbursement, and a
-  // rejection returns it to draft so it can be corrected and locked again.
-  private async syncApprovals(m: EntityManager): Promise<void> {
-    await m.query(`
-      UPDATE payroll_runs pr
-         SET status = 'approved', approved_at = now()
-        FROM approval_requests ar
-       WHERE ar.id = pr.approval_request_id
-         AND pr.status = 'locked'
-         AND ar.status = 'approved'
-    `);
-    await m.query(`
-      UPDATE payroll_runs pr
-         SET status = 'draft',
-             locked_at = NULL,
-             locked_by = NULL,
-             approval_request_id = NULL
-        FROM approval_requests ar
-       WHERE ar.id = pr.approval_request_id
-         AND pr.status = 'locked'
-         AND ar.status = 'rejected'
-    `);
+  // Reflects the decision on the locked run: approving clears it for
+  // disbursement, and a rejection returns it to draft so it can be corrected
+  // and locked again.
+  private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
+    const where = { approvalRequestId: view.request.id, status: 'locked' as const };
+    if (view.request.status === 'approved') {
+      await m.update(PayrollRun, where, { status: 'approved', approvedAt: new Date() });
+      return;
+    }
+    await m.update(PayrollRun, where, {
+      status: 'draft',
+      lockedAt: null,
+      lockedBy: null,
+      approvalRequestId: null,
+    });
   }
 
   async remove(runId: string): Promise<void> {

@@ -24,9 +24,7 @@ export class ProfileController {
   ) {}
 
   @Get('profile')
-  async profile(@CurrentUser() user: AuthUser) {
-    // Reflect any approved change before returning the profile.
-    await this.profileChanges.applyApprovedFor(user);
+  profile(@CurrentUser() user: AuthUser) {
     return this.employees.myProfile(user.sub, user.email);
   }
 

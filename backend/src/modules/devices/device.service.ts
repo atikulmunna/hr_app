@@ -110,7 +110,7 @@ export class DeviceService {
 
     const me = await this.employees.myProfile(sub, email);
 
-    await this.db.withTenant(async (m) => {
+    return this.db.withTenant(async (m) => {
       const active = await m.findOne(Device, {
         where: { employeeId: me.id, status: 'active' },
       });
@@ -130,19 +130,21 @@ export class DeviceService {
           'A device-change request for this device is already awaiting approval.',
         );
       }
-    });
-
-    return this.workflow.createRequest({
-      requestType: 'device_rebind',
-      resourceType: 'device',
-      payload: {
-        employeeId: me.id,
-        reasonCode,
-        newFingerprint: fingerprint,
-        platform: input.platform,
-        deviceModel: input.deviceModel,
-      },
-      approverRoles: REBIND_APPROVER_ROLES,
+      return this.workflow.createRequest(
+        {
+          requestType: 'device_rebind',
+          resourceType: 'device',
+          payload: {
+            employeeId: me.id,
+            reasonCode,
+            newFingerprint: fingerprint,
+            platform: input.platform,
+            deviceModel: input.deviceModel,
+          },
+          approverRoles: REBIND_APPROVER_ROLES,
+        },
+        m,
+      );
     });
   }
 

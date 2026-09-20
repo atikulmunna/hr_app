@@ -83,7 +83,7 @@ function build(actor: Actor = { sub: 'alice', roles: ['employee'] }) {
     audit as never,
     notifications as never,
   );
-  return { service, manager, audit, notifications };
+  return { service, manager, db, audit, notifications };
 }
 
 const twoLevel = {
@@ -126,6 +126,13 @@ describe('createRequest', () => {
     const { service } = build({ sub: 'bob', roles: ['manager'] });
     const view = await service.createRequest(twoLevel);
     expect(view.request.escalatable).toBe(true);
+  });
+
+  it("joins the caller's transaction when given a manager", async () => {
+    const { service, db, manager } = build();
+    const outer = manager as unknown as EntityManager;
+    await service.createRequest(twoLevel, outer);
+    expect(db.withTenant).toHaveBeenCalledWith(expect.any(Function), outer);
   });
 
   it('audits the creation and notifies the first-level approver role', async () => {
@@ -257,6 +264,67 @@ describe('decide', () => {
         service.decide(id, 'approve', { sub: 'coo', roles: ['tenant_admin'] }),
       ).rejects.toThrow('You raised this request');
     });
+  });
+});
+
+describe('decision handlers', () => {
+  async function pending(actor?: Actor) {
+    const built = build(actor);
+    const view = await built.service.createRequest(twoLevel);
+    return { ...built, id: view.request.id };
+  }
+
+  it('refuses a second handler for the same request type', () => {
+    const { service } = build();
+    service.onDecided('leave_request', async () => undefined);
+    expect(() => service.onDecided('leave_request', async () => undefined)).toThrow(
+      'already registered',
+    );
+  });
+
+  it('runs the handler only once the request is finalized, in the same transaction', async () => {
+    const { service, id, manager } = await pending();
+    const handler = jest.fn().mockResolvedValue(undefined);
+    service.onDecided('leave_request', handler);
+
+    await service.decide(id, 'approve', { sub: 'm1', roles: ['manager'] });
+    expect(handler).not.toHaveBeenCalled();
+
+    await service.decide(id, 'approve', { sub: 'hr1', roles: ['hr_admin'] });
+    expect(handler).toHaveBeenCalledTimes(1);
+    const [view, m] = handler.mock.calls[0];
+    expect(view.request).toMatchObject({ id, status: 'approved' });
+    expect(view.steps).toHaveLength(2);
+    expect(m).toBe(manager);
+  });
+
+  it('runs the handler on rejection too', async () => {
+    const { service, id } = await pending();
+    const handler = jest.fn().mockResolvedValue(undefined);
+    service.onDecided('leave_request', handler);
+    await service.decide(id, 'reject', { sub: 'm1', roles: ['manager'] });
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ request: expect.objectContaining({ status: 'rejected' }) }),
+      expect.anything(),
+    );
+  });
+
+  it('ignores request types with no handler', async () => {
+    const { service, id } = await pending();
+    service.onDecided('something_else', jest.fn());
+    await expect(
+      service.decide(id, 'reject', { sub: 'm1', roles: ['manager'] }),
+    ).resolves.toMatchObject({ request: { status: 'rejected' } });
+  });
+
+  it('propagates a handler failure so the decision rolls back with it', async () => {
+    const { service, id } = await pending();
+    service.onDecided('leave_request', async () => {
+      throw new Error('roster day no longer exists');
+    });
+    await expect(
+      service.decide(id, 'reject', { sub: 'm1', roles: ['manager'] }),
+    ).rejects.toThrow('roster day no longer exists');
   });
 });
 

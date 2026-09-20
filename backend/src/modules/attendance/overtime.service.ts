@@ -121,8 +121,6 @@ export class OvertimeService {
       throw new BadRequestException('Overtime cannot be claimed for a future date.');
     }
 
-    await this.db.withTenant((m) => this.assertNoExisting(m, employeeId, workDate));
-
     // A derived claim must match what the marks actually support; anything more
     // is an exception and must be declared as one (FR-M2-06).
     if (source === 'derived') {
@@ -139,14 +137,17 @@ export class OvertimeService {
       }
     }
 
-    const approval = await this.workflow.createRequest({
-      requestType: 'overtime',
-      resourceType: 'attendance',
-      payload: { employeeId, workDate, hours, source },
-      approverRoles: OVERTIME_APPROVER_ROLES,
-    });
-
     return this.db.withTenant(async (m) => {
+      await this.assertNoExisting(m, employeeId, workDate);
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'overtime',
+          resourceType: 'attendance',
+          payload: { employeeId, workDate, hours, source },
+          approverRoles: OVERTIME_APPROVER_ROLES,
+        },
+        m,
+      );
       const saved = await m.save(
         m.create(OvertimeRequest, {
           tenantId: this.db.tenantId,

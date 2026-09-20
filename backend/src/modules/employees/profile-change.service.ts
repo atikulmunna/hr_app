@@ -4,7 +4,7 @@ import { TenantDbService } from '../../database/tenant-db.service';
 import { ProfileChangeRequest } from '../../entities/profile-change-request.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
-import { WorkflowService } from '../workflow/workflow.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 import { EmployeeService } from './employee.service';
 
 // Name changes are identity-sensitive, so they route to HR (FR-M9-01).
@@ -29,7 +29,9 @@ export class ProfileChangeService {
     private readonly audit: AuditService,
     private readonly employees: EmployeeService,
     private readonly workflow: WorkflowService,
-  ) {}
+  ) {
+    this.workflow.onDecided('profile_change', (view, m) => this.onDecided(view, m));
+  }
 
   // Submits a sensitive profile change for HR approval. Nothing changes on the
   // employee record until it is approved (FR-M9-01).
@@ -37,14 +39,16 @@ export class ProfileChangeService {
     const changes = this.validate(input);
     const employee = await this.employees.myProfile(user.sub, user.email);
 
-    const approval = await this.workflow.createRequest({
-      requestType: 'profile_change',
-      resourceType: 'employee',
-      payload: { employeeId: employee.id, changes },
-      approverRoles: PROFILE_APPROVER_ROLES,
-    });
-
     return this.db.withTenant(async (m) => {
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'profile_change',
+          resourceType: 'employee',
+          payload: { employeeId: employee.id, changes },
+          approverRoles: PROFILE_APPROVER_ROLES,
+        },
+        m,
+      );
       const saved = await m.save(
         m.create(ProfileChangeRequest, {
           tenantId: this.db.tenantId,
@@ -73,17 +77,9 @@ export class ProfileChangeService {
       .then((employee) => this.listForEmployee(employee.id));
   }
 
-  // Applies any approved-but-unapplied change for the caller, so a profile read
-  // reflects an approval without needing the change-request list to be opened.
-  async applyApprovedFor(user: AuthUser): Promise<void> {
-    const employee = await this.employees.myProfile(user.sub, user.email);
-    await this.db.withTenant((m) => this.syncApproved(m, employee.id));
-  }
-
   async listForEmployee(employeeId: string): Promise<unknown[]> {
-    return this.db.withTenant(async (m) => {
-      await this.syncApproved(m, employeeId);
-      return m.query(
+    return this.db.withTenant((m) =>
+      m.query(
         `SELECT p.id, p.changes,
                 p.applied_at AS "appliedAt", p.created_at AS "createdAt",
                 COALESCE(ar.status, 'pending') AS "status"
@@ -92,27 +88,20 @@ export class ProfileChangeService {
          WHERE p.employee_id = $1
          ORDER BY p.created_at DESC`,
         [employeeId],
-      );
-    });
+      ),
+    );
   }
 
-  // Applies every approved change request that has not yet been applied, in the
-  // caller's transaction. Idempotent (guarded by applied_at), mirroring the
-  // regularization/swap apply-once precedent.
-  async syncApproved(m: EntityManager, employeeId: string): Promise<void> {
-    const pending: ProfileChangeRequest[] = await m
-      .createQueryBuilder(ProfileChangeRequest, 'p')
-      .innerJoin(
-        'approval_requests',
-        'ar',
-        'ar.id = p.approval_request_id AND ar.status = :approved',
-        { approved: 'approved' },
-      )
-      .where('p.employee_id = :employeeId', { employeeId })
-      .andWhere('p.applied_at IS NULL')
-      .getMany();
-
-    for (const req of pending) {
+  // Writes the approved change onto the employee record at decision time. A
+  // rejection changes nothing; the request's status is read from the approval.
+  private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
+    if (view.request.status !== 'approved') {
+      return;
+    }
+    const req = await m.findOne(ProfileChangeRequest, {
+      where: { approvalRequestId: view.request.id },
+    });
+    if (req && !req.appliedAt) {
       await this.apply(m, req);
     }
   }

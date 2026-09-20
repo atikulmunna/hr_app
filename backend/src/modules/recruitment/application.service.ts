@@ -144,9 +144,6 @@ export class ApplicationService {
       );
     }
     const id = await this.db.withTenant(async (m) => {
-      // The requisition's approval is materialized lazily (like payroll runs),
-      // so reflect any just-made decision before checking it is open.
-      await this.requisitions.syncApprovals(m);
       const req = await m.findOne(JobRequisition, {
         where: { id: input.requisitionId },
       });

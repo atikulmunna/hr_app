@@ -9,7 +9,7 @@ import { JobRequisition } from '../../entities/job-requisition.entity';
 import { LegalEntity } from '../../entities/legal-entity.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
-import { WorkflowService } from '../workflow/workflow.service';
+import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 
 // A headcount request is senior sign-off, so it routes to the COO like payroll
 // and adjustments, reusing the engine's separation of duties (FR-M5-01,
@@ -51,18 +51,16 @@ export class RequisitionService {
     private readonly db: TenantDbService,
     private readonly audit: AuditService,
     private readonly workflow: WorkflowService,
-  ) {}
+  ) {
+    this.workflow.onDecided('requisition', (view, m) => this.onDecided(view, m));
+  }
 
   list(): Promise<RequisitionView[]> {
-    return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
-      return this.views(m, {});
-    });
+    return this.db.withTenant((m) => this.views(m, {}));
   }
 
   get(id: string): Promise<RequisitionView> {
     return this.db.withTenant(async (m) => {
-      await this.syncApprovals(m);
       const [req] = await this.views(m, { id });
       if (!req) {
         throw new NotFoundException('Requisition not found.');
@@ -132,17 +130,20 @@ export class RequisitionService {
           `Only a draft requisition can be submitted (this one is ${req.status}).`,
         );
       }
-      const approval = await this.workflow.createRequest({
-        requestType: 'requisition',
-        resourceType: 'requisition',
-        resourceId: req.id,
-        payload: {
-          title: req.title,
-          headcount: req.headcount,
-          legalEntityId: req.legalEntityId,
+      const approval = await this.workflow.createRequest(
+        {
+          requestType: 'requisition',
+          resourceType: 'requisition',
+          resourceId: req.id,
+          payload: {
+            title: req.title,
+            headcount: req.headcount,
+            legalEntityId: req.legalEntityId,
+          },
+          approverRoles: REQUISITION_APPROVER_ROLES,
         },
-        approverRoles: REQUISITION_APPROVER_ROLES,
-      });
+        m,
+      );
       req.status = 'pending';
       req.approvalRequestId = approval.request.id;
       await m.save(req);
@@ -199,25 +200,13 @@ export class RequisitionService {
     }
   }
 
-  // The workflow has no post-approval hook, so a decision lands on the next read
-  // (same pattern as payroll runs and expense claims).
-  async syncApprovals(m: EntityManager): Promise<void> {
-    await m.query(`
-      UPDATE job_requisitions r
-         SET status = 'approved', updated_at = now()
-        FROM approval_requests ar
-       WHERE ar.id = r.approval_request_id
-         AND r.status = 'pending'
-         AND ar.status = 'approved'
-    `);
-    await m.query(`
-      UPDATE job_requisitions r
-         SET status = 'rejected', updated_at = now()
-        FROM approval_requests ar
-       WHERE ar.id = r.approval_request_id
-         AND r.status = 'pending'
-         AND ar.status = 'rejected'
-    `);
+  // Opens or rejects the requisition at the moment the COO decides.
+  private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
+    await m.update(
+      JobRequisition,
+      { approvalRequestId: view.request.id, status: 'pending' },
+      { status: view.request.status === 'approved' ? 'approved' : 'rejected' },
+    );
   }
 
   private async views(
