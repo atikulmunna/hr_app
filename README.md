@@ -36,6 +36,17 @@ pnpm backend:dev
 
 Backend runs at `http://localhost:3000/api/v1`.
 
+## Tests and CI
+
+```bash
+pnpm --filter @hris/backend test    # Jest unit tests (scoring, payroll math, approval engine)
+pnpm --filter @hris/web build       # type-check + Vite build
+cd mobile && flutter analyze && flutter test
+```
+
+The same three checks run on every push and pull request via
+`.github/workflows/ci.yml`.
+
 - Health (public): `GET /api/v1/health`
 - Current user: `GET /api/v1/auth/me` (requires a bearer token)
 - Tenant-scoped entities: `GET /api/v1/entities` (requires a bearer token)

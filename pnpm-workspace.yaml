@@ -5,3 +5,6 @@ packages:
   # mobile (Flutter) is not a pnpm package
 allowBuilds:
   esbuild: true
+  # Optional native helpers pulled in by jest; the JS fallbacks are enough.
+  '@parcel/watcher': false
+  unrs-resolver: false
