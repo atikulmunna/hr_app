@@ -8,6 +8,7 @@ import { Geofences } from './pages/Geofences';
 import { Inbox } from './pages/Inbox';
 import { Leave } from './pages/Leave';
 import { Learning } from './pages/Learning';
+import { Lifecycle } from './pages/Lifecycle';
 import { Analytics } from './pages/Analytics';
 import { Payroll } from './pages/Payroll';
 import { Performance } from './pages/Performance';
@@ -23,6 +24,7 @@ type Tab =
   | 'inbox'
   | 'team'
   | 'employees'
+  | 'lifecycle'
   | 'geofences'
   | 'leave'
   | 'shifts'
@@ -41,6 +43,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'inbox', label: 'Inbox' },
   { key: 'team', label: 'Team' },
   { key: 'employees', label: 'Employees' },
+  { key: 'lifecycle', label: 'Lifecycle' },
   { key: 'geofences', label: 'Geofences' },
   { key: 'leave', label: 'Leave' },
   { key: 'shifts', label: 'Shifts' },
@@ -124,6 +127,7 @@ export default function App() {
           {tab === 'inbox' && <Inbox token={token} />}
           {tab === 'team' && <Team token={token} />}
           {tab === 'employees' && <Employees token={token} />}
+          {tab === 'lifecycle' && <Lifecycle token={token} />}
           {tab === 'geofences' && <Geofences token={token} />}
           {tab === 'leave' && <Leave token={token} />}
           {tab === 'shifts' && <Shifts token={token} />}

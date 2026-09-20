@@ -1124,6 +1124,79 @@ export interface MyDocument {
   signedAt: string | null;
 }
 
+// Lifecycle (T-3.4b): the org chart and on/offboarding checklists.
+export interface OrgNode {
+  id: string;
+  employeeCode: string;
+  name: string;
+  jobTitle: string | null;
+  departmentName: string | null;
+  legalEntityName: string;
+  managerId: string | null;
+  span: number;
+  reports: OrgNode[];
+}
+
+export type ChecklistKind = 'onboarding' | 'offboarding';
+
+export interface ChecklistTemplateItem {
+  id: string;
+  kind: ChecklistKind;
+  title: string;
+  assigneeRole: string;
+  dueOffsetDays: number;
+  sortOrder: number;
+}
+
+export interface TemplateItemInput {
+  title: string;
+  assigneeRole: string;
+  dueOffsetDays: number;
+}
+
+export interface ChecklistSummary {
+  id: string;
+  kind: ChecklistKind;
+  status: 'open' | 'complete';
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  anchorDate: string;
+  openedAt: string;
+  completedAt: string | null;
+  total: number;
+  done: number;
+  overdue: number;
+}
+
+export interface ChecklistItem {
+  id: string;
+  checklistId: string;
+  title: string;
+  assigneeRole: string;
+  dueOn: string | null;
+  sortOrder: number;
+  status: 'pending' | 'done';
+  note: string | null;
+  completedBySub: string | null;
+  completedAt: string | null;
+}
+
+export interface ChecklistView extends ChecklistSummary {
+  items: ChecklistItem[];
+}
+
+export interface TaskView {
+  id: string;
+  checklistId: string;
+  kind: ChecklistKind;
+  title: string;
+  assigneeRole: string;
+  dueOn: string | null;
+  employeeId: string;
+  employeeName: string;
+}
+
 async function request<T>(
   token: string,
   path: string,
@@ -1878,6 +1951,45 @@ export const api = {
       `/me/documents/${id}/acknowledge`,
       { method: 'POST', body: JSON.stringify({ signerName }) },
     ),
+
+  // --- Lifecycle (T-3.4b).
+  orgChart: (token: string) =>
+    request<{ headcount: number; roots: OrgNode[] }>(token, '/org/chart'),
+  checklistTemplates: (token: string) =>
+    request<Record<ChecklistKind, ChecklistTemplateItem[]>>(
+      token,
+      '/lifecycle/templates',
+    ),
+  replaceChecklistTemplate: (
+    token: string,
+    kind: ChecklistKind,
+    items: TemplateItemInput[],
+  ) =>
+    request<ChecklistTemplateItem[]>(token, `/lifecycle/templates/${kind}`, {
+      method: 'PUT',
+      body: JSON.stringify({ items }),
+    }),
+  checklists: (token: string, status?: 'open' | 'complete') =>
+    request<ChecklistSummary[]>(
+      token,
+      `/lifecycle/checklists${status ? `?status=${status}` : ''}`,
+    ),
+  checklist: (token: string, id: string) =>
+    request<ChecklistView>(token, `/lifecycle/checklists/${id}`),
+  openChecklist: (
+    token: string,
+    body: { employeeId: string; kind: ChecklistKind; anchorDate?: string },
+  ) =>
+    request<ChecklistView>(token, '/lifecycle/checklists', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  myTasks: (token: string) => request<TaskView[]>(token, '/me/tasks'),
+  completeTask: (token: string, itemId: string, note?: string) =>
+    request<ChecklistView>(token, `/me/tasks/${itemId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
 };
 
 // Pulls the server's message out of a failed non-JSON response where possible,

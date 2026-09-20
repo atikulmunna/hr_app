@@ -758,3 +758,53 @@ body {
 .matrix .cell-empty {
   color: var(--muted-light);
 }
+
+/* Lifecycle: the org chart as a nested tree, checklist progress, and the
+   template editor rows (T-3.4b). */
+.org-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.org-tree .org-tree {
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+.org-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.org-toggle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--subtle);
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.org-toggle:disabled {
+  cursor: default;
+  color: var(--muted-light);
+}
+.dist-row.progress {
+  grid-template-columns: 90px 1fr 40px;
+  margin-top: 8px;
+}
+.dist-row.progress .dist-count {
+  font-weight: 600;
+  color: var(--muted);
+}
+.template-row {
+  align-items: flex-end;
+}
+.template-row .actions {
+  flex: 0 0 auto;
+}
