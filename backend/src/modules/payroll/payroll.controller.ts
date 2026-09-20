@@ -110,6 +110,11 @@ export class PayrollController {
     return this.payslips.mine(user);
   }
 
+  @Get('me/payslips/:runId/detail')
+  myPayslipDetail(@CurrentUser() user: AuthUser, @Param('runId') runId: string) {
+    return this.payslips.myDetail(user, runId);
+  }
+
   @Get('me/payslips/:runId')
   @Header('Content-Type', 'application/pdf')
   async myPayslip(

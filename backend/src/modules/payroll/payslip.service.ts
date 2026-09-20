@@ -18,6 +18,13 @@ export interface PayslipSummary {
   net: number;
 }
 
+export interface PayslipDetail extends RunEmployeeView {
+  runId: string;
+  periodStart: string;
+  periodEnd: string;
+  status: string;
+}
+
 // Payslips (FR-M4-09) and the disbursement file (FR-M4-08).
 //
 // A payslip is rendered from the run's frozen lines rather than stored, so there
@@ -63,17 +70,22 @@ export class PayslipService {
     return this.pdf(runId, me.id);
   }
 
+  // The payslip as data (period, totals, and every line) for the mobile app,
+  // which renders its own breakdown rather than embedding the PDF.
+  async myDetail(user: AuthUser, runId: string): Promise<PayslipDetail> {
+    const me = await this.employees.myProfile(user.sub, user.email);
+    const { run, row } = await this.rowFor(runId, me.id);
+    return {
+      runId: run.id,
+      periodStart: run.periodStart,
+      periodEnd: run.periodEnd,
+      status: run.status,
+      ...row,
+    };
+  }
+
   async pdf(runId: string, employeeId: string): Promise<Buffer> {
-    const run = await this.runs.get(runId);
-    if (run.status === 'draft') {
-      throw new BadRequestException(
-        'This run is still a draft, so it has no payslips yet. Lock it first.',
-      );
-    }
-    const row = run.employees.find((e) => e.employeeId === employeeId);
-    if (!row) {
-      throw new NotFoundException('This employee is not in that payroll run.');
-    }
+    const { run, row } = await this.rowFor(runId, employeeId);
     const { employee, entity } = await this.db.withTenant(async (m) => {
       const found = await m.findOne(Employee, { where: { id: employeeId } });
       return {
@@ -84,6 +96,24 @@ export class PayslipService {
       };
     });
     return render(run, row, entity?.name ?? '', employee?.jobTitle ?? '');
+  }
+
+  // The employee's frozen row in a run that has payslips (locked or approved).
+  private async rowFor(
+    runId: string,
+    employeeId: string,
+  ): Promise<{ run: RunView; row: RunEmployeeView }> {
+    const run = await this.runs.get(runId);
+    if (run.status === 'draft') {
+      throw new BadRequestException(
+        'This run is still a draft, so it has no payslips yet. Lock it first.',
+      );
+    }
+    const row = run.employees.find((e) => e.employeeId === employeeId);
+    if (!row) {
+      throw new NotFoundException('This employee is not in that payroll run.');
+    }
+    return { run, row };
   }
 
   // A bank file for an approved run (FR-M4-08). Only approved: paying out an

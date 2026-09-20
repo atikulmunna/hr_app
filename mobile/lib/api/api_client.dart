@@ -23,6 +23,50 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getProfile() => _getJson('/me/profile');
 
+  /// The caller's identity as the backend sees it: roles and permissions.
+  Future<Map<String, dynamic>> getMe() => _getJson('/auth/me');
+
+  /// The employee's own payslips (locked or approved runs), newest first.
+  Future<List<Map<String, dynamic>>> getPayslips() =>
+      _getList('/me/payslips');
+
+  /// One payslip as data: period, totals, and every pay line.
+  Future<Map<String, dynamic>> getPayslipDetail(String runId) =>
+      _getJson('/me/payslips/$runId/detail');
+
+  /// The caller's direct reports with each one's status today. Empty for a
+  /// non-manager.
+  Future<List<Map<String, dynamic>>> getTeam() => _getList('/me/team');
+
+  /// Requests whose current step the caller's roles may decide.
+  Future<List<Map<String, dynamic>>> getPendingApprovals() =>
+      _getList('/approvals/pending');
+
+  /// Approves or rejects a request at its current step.
+  Future<Map<String, dynamic>> decideApproval(
+    String id,
+    String decision, {
+    String? comment,
+  }) => _postJson('/approvals/$id/decide', {
+    'decision': decision,
+    'comment': ?comment,
+  });
+
+  /// HR analytics (analytics:read). Each returns the dashboard's summary shape.
+  Future<Map<String, dynamic>> getHeadcount() => _getJson('/analytics/headcount');
+  Future<Map<String, dynamic>> getOvertimeAnalytics({int months = 1}) =>
+      _getJson('/analytics/overtime?months=$months');
+  Future<Map<String, dynamic>> getAttrition({int months = 12}) =>
+      _getJson('/analytics/attrition?months=$months');
+
+  /// Payroll runs, newest period first (payroll:read).
+  Future<List<Map<String, dynamic>>> getPayrollRuns() =>
+      _getList('/payroll/runs');
+
+  /// Job requisitions (recruitment:read).
+  Future<List<Map<String, dynamic>>> getRequisitions() =>
+      _getList('/recruitment/requisitions');
+
   /// Directly edits the caller's non-sensitive contact fields (phone, emergency
   /// contact). Body: phone, emergencyContactName, emergencyContactPhone.
   Future<Map<String, dynamic>> updateProfileContact(
