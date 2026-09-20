@@ -6,26 +6,19 @@ import {
   Post,
 } from '@nestjs/common';
 import { AuthUser, CurrentUser } from '../auth/current-user.decorator';
-import {
-  CreateApprovalInput,
-  WorkflowService,
-} from './workflow.service';
+import { WorkflowService } from './workflow.service';
 
 interface DecideBody {
   decision: 'approve' | 'reject';
   comment?: string;
 }
 
-// Generic approval endpoints. Feature modules normally call WorkflowService
-// directly; these support manager review queues and testing.
+// The approver's queue and decision endpoints. Requests are only ever raised by
+// feature modules calling WorkflowService, which is what fixes the approver
+// roles for each request type; there is deliberately no generic create route.
 @Controller('approvals')
 export class WorkflowController {
   constructor(private readonly workflow: WorkflowService) {}
-
-  @Post()
-  create(@Body() body: CreateApprovalInput) {
-    return this.workflow.createRequest(body);
-  }
 
   @Get('pending')
   pending(@CurrentUser() user: AuthUser) {
@@ -33,8 +26,8 @@ export class WorkflowController {
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.workflow.getRequest(id);
+  get(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.workflow.getRequest(id, { sub: user.sub, roles: user.roles });
   }
 
   @Post(':id/decide')

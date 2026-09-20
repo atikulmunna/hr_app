@@ -135,8 +135,26 @@ export class WorkflowService {
     }, manager);
   }
 
-  getRequest(id: string): Promise<ApprovalView> {
-    return this.db.withTenant((m) => this.load(m, id));
+  // A request is visible to whoever raised it, to holders of any of its
+  // approver roles, and to the tenant admin. Anyone else gets the same 404 as
+  // for a request that does not exist, so ids do not leak.
+  getRequest(
+    id: string,
+    actor: { sub?: string; roles: string[] },
+  ): Promise<ApprovalView> {
+    return this.db.withTenant(async (m) => {
+      const view = await this.load(m, id);
+      const isRequester =
+        !!view.request.requesterSub && view.request.requesterSub === actor.sub;
+      const isApprover = view.steps.some((s) =>
+        actor.roles.includes(s.approverRole),
+      );
+      const isAdmin = actor.roles.includes(ESCALATION_ROLE);
+      if (!isRequester && !isApprover && !isAdmin) {
+        throw new NotFoundException('Approval request not found.');
+      }
+      return view;
+    });
   }
 
   // Requests whose current step is decidable by one of the caller's roles.

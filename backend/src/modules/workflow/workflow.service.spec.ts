@@ -329,17 +329,38 @@ describe('decision handlers', () => {
 });
 
 describe('getRequest', () => {
-  it('returns the request with its ordered steps', async () => {
+  const requester = { sub: 'alice', roles: ['employee'] };
+
+  it('returns the request with its ordered steps to its requester', async () => {
     const { service } = build();
     const created = await service.createRequest(twoLevel);
-    const view = await service.getRequest(created.request.id);
+    const view = await service.getRequest(created.request.id, requester);
     expect(view.request.id).toBe(created.request.id);
     expect(view.steps.map((s) => s.stepOrder)).toEqual([1, 2]);
   });
 
-  it('404s on an unknown id', async () => {
+  it('is visible to any of its approver roles and to the tenant admin', async () => {
     const { service } = build();
-    await expect(service.getRequest('nope')).rejects.toThrow(NotFoundException);
+    const { request } = await service.createRequest(twoLevel);
+    for (const roles of [['manager'], ['hr_admin'], ['tenant_admin']]) {
+      await expect(
+        service.getRequest(request.id, { sub: 'someone', roles }),
+      ).resolves.toMatchObject({ request: { id: request.id } });
+    }
+  });
+
+  it('404s for anyone else, and on an unknown id', async () => {
+    const { service } = build();
+    const { request } = await service.createRequest(twoLevel);
+    await expect(
+      service.getRequest(request.id, { sub: 'carol', roles: ['employee'] }),
+    ).rejects.toThrow(NotFoundException);
+    await expect(
+      service.getRequest(request.id, { sub: 'carol', roles: ['recruiter'] }),
+    ).rejects.toThrow(NotFoundException);
+    await expect(service.getRequest('nope', requester)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
 
