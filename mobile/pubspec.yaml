@@ -35,7 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
-  # Hanken Grotesk (design handoff typeface), fetched by the google_fonts package.
+  # Hanken Grotesk (the app typeface), fetched by the google_fonts package.
   google_fonts: ^6.2.1
 
   # Auth and networking

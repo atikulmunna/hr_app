@@ -33,16 +33,6 @@
       "attributes": {
         "pkce.code.challenge.method": "S256"
       }
-    },
-    {
-      "clientId": "hris-backend",
-      "name": "HRIS Backend Service",
-      "enabled": true,
-      "publicClient": false,
-      "secret": "backend-dev-secret",
-      "standardFlowEnabled": false,
-      "serviceAccountsEnabled": true,
-      "directAccessGrantsEnabled": false
     }
   ],
   "roles": {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens: color palette from ui_design/README.md.
+/// Design tokens: the app color palette.
 /// These are the single source of colour truth for the app.
 abstract final class AppColors {
   // Light surfaces

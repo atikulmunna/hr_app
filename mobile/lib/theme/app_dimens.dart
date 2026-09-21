@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// Spacing, radii, and shadow tokens from ui_design/README.md.
+/// Spacing, radii, and shadow tokens.
 abstract final class AppRadii {
   static const card = 26.0;
   static const hero = 30.0;

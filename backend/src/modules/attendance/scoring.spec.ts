@@ -132,7 +132,7 @@ describe('critical, co-occurrence, and hard-block rules', () => {
 });
 
 describe('geofencing', () => {
-  const office = { id: 'hq', latitude: 23.7925, longitude: 90.4078, radiusM: 150 };
+  const office = { id: 'hq', latitude: 23.7275, longitude: 90.39, radiusM: 150 };
 
   it('measures distance with the haversine formula', () => {
     expect(haversineMeters(0, 0, 0, 0)).toBe(0);

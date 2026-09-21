@@ -1,6 +1,7 @@
 # HRIS Platform
 
-Multi-tenant HRIS platform with mobile attendance and verification, for a fictional Example Corp.
+Multi-tenant HRIS platform with mobile attendance and verification. The seed data
+describes a fictional "Example Corp" tenant with Singapore and Bangladesh entities.
 
 Stack: Flutter (mobile), React + TypeScript (web, added later), Node/TypeScript NestJS (backend), PostgreSQL.
 
@@ -55,6 +56,19 @@ Tenant isolation is enforced by Postgres row-level security keyed on the
 `app.current_tenant_id` session setting, applied per request via the tenant
 context and `TenantDbService`.
 
+## Development credentials
+
+Every password and secret in this repository is a localhost-only default for
+the Docker development stack: the Postgres passwords in
+`infra/docker-compose.yml` and `backend/.env.example`, the Keycloak bootstrap
+admin (`admin` / `admin`), the demo users in
+`infra/keycloak/realms/example-realm.json`, and the `hris_app` role password
+created by the `AppRole` migration. None of them may be reused outside a local
+machine. A real deployment must set `DB_PASSWORD`, `APP_DB_PASSWORD`,
+`KEYCLOAK_URL`, and `WEB_ORIGIN` from a secrets manager, run Keycloak with
+TLS and a non-default admin, and rotate the `hris_app` role password after
+the first migration.
+
 ## Authentication (Keycloak)
 
 `pnpm db:up` also starts Keycloak and its database.
@@ -77,3 +91,7 @@ TOKEN=$(curl -s -X POST \
 
 curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/v1/entities
 ```
+
+## License
+
+MIT, see `LICENSE`.

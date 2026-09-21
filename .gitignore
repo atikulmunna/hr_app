@@ -2,6 +2,8 @@
 # Local-only planning and spec files (repo hygiene, never commit)
 # ---------------------------------------------------------------------------
 CLAUDE.md
+AGENTS.md
+agents.md
 tasks.md
 *srs*
 *SRS*
@@ -10,6 +12,8 @@ tasks.md
 *plan*.md
 *planning*.md
 *notes*.md
+*spec*.md
+*SPEC*.md
 /docs/private/
 
 # ---------------------------------------------------------------------------
@@ -78,6 +82,7 @@ pnpm-debug.log*
 *.iml
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # ---------------------------------------------------------------------------
 # Claude Code local state

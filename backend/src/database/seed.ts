@@ -4,7 +4,8 @@ import { AppDataSource } from './data-source';
 
 loadEnv();
 
-// Seeds the Example Corp tenant with its Singapore and Bangladesh legal entities.
+// Seeds the fictional Example Corp tenant with Singapore and Bangladesh legal
+// entities.
 // Idempotent: safe to run repeatedly.
 async function seed(): Promise<void> {
   await AppDataSource.initialize();
@@ -70,7 +71,7 @@ async function seed(): Promise<void> {
       );
     }
 
-    // A geofence for the Bangladesh head office for attendance marking.
+    // A demo geofence for the Bangladesh head office, used for attendance marking.
     const geoCount = await m.query(`SELECT count(*)::int AS n FROM geofences`);
     if (geoCount[0].n === 0) {
       const bd = await m.query(
