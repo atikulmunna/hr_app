@@ -5,6 +5,18 @@ describes a fictional "Oasis Corp" tenant with Singapore and Bangladesh entities
 
 Stack: Flutter (mobile), React + TypeScript (web, added later), Node/TypeScript NestJS (backend), PostgreSQL.
 
+## Screenshots
+
+HR console, signed in as the demo HR administrator.
+
+| Onboarding checklists | Org chart |
+| --- | --- |
+| ![Lifecycle tab: role-assigned onboarding tasks with progress per employee](docs/screenshots/lifecycle-checklists.jpg) | ![Org chart derived from the reporting hierarchy](docs/screenshots/org-chart.jpg) |
+
+| Employees | Analytics |
+| --- | --- |
+| ![Employee directory with a per-employee detail panel](docs/screenshots/employees.jpg) | ![HR analytics: headcount, attrition, absence, and overtime](docs/screenshots/analytics.jpg) |
+
 ## Monorepo layout
 
 - `backend/` NestJS API, workflow engine, scoring, jobs.
