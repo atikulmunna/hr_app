@@ -6,7 +6,7 @@ import App from './App';
 import { config } from './config';
 import './styles.css';
 
-// Authorization-code + PKCE against the example realm's public hris-web client.
+// Authorization-code + PKCE against the oasis realm's public hris-web client.
 const oidcConfig = {
   authority: config.oidc.authority,
   client_id: config.oidc.clientId,

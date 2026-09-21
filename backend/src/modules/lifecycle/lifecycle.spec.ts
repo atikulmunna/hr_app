@@ -9,7 +9,7 @@ function row(id: string, managerId: string | null = null): OrgNodeRow {
     name: `Person ${id}`,
     jobTitle: null,
     departmentName: null,
-    legalEntityName: 'Example Corp',
+    legalEntityName: 'Oasis Corp',
     managerId,
   };
 }

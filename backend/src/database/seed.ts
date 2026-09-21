@@ -4,19 +4,19 @@ import { AppDataSource } from './data-source';
 
 loadEnv();
 
-// Seeds the fictional Example Corp tenant with Singapore and Bangladesh legal
+// Seeds the fictional Oasis Corp tenant with Singapore and Bangladesh legal
 // entities.
 // Idempotent: safe to run repeatedly.
 async function seed(): Promise<void> {
   await AppDataSource.initialize();
   await AppDataSource.transaction(async (m) => {
-    const existing = await m.query(`SELECT id FROM tenants WHERE slug = 'example'`);
+    const existing = await m.query(`SELECT id FROM tenants WHERE slug = 'oasis'`);
     let tenantId: string;
     if (existing.length > 0) {
       tenantId = existing[0].id;
     } else {
       const rows = await m.query(
-        `INSERT INTO tenants (slug, name) VALUES ('example', 'Example Corp') RETURNING id`,
+        `INSERT INTO tenants (slug, name) VALUES ('oasis', 'Oasis Corp') RETURNING id`,
       );
       tenantId = rows[0].id;
     }
@@ -32,8 +32,8 @@ async function seed(): Promise<void> {
     if (count[0].n === 0) {
       await m.query(
         `INSERT INTO legal_entities (tenant_id, name, country_code, currency_code, residency_region)
-         VALUES ($1, 'Example Corp Singapore', 'SG', 'SGD', 'default'),
-                ($1, 'Example Corp Bangladesh', 'BD', 'BDT', 'default')`,
+         VALUES ($1, 'Oasis Corp Singapore', 'SG', 'SGD', 'default'),
+                ($1, 'Oasis Corp Bangladesh', 'BD', 'BDT', 'default')`,
         [tenantId],
       );
     }
@@ -55,7 +55,7 @@ async function seed(): Promise<void> {
       const mgr = await m.query(
         `INSERT INTO employees
            (tenant_id, legal_entity_id, department_id, employee_code, first_name, last_name, email, job_title, employment_type)
-         VALUES ($1, $2, $3, 'EMP-002', 'Demo', 'Manager', 'demo.manager@example.com', 'Engineering Manager', 'permanent')
+         VALUES ($1, $2, $3, 'EMP-002', 'Demo', 'Manager', 'demo.manager@oasis.example', 'Engineering Manager', 'permanent')
          RETURNING id`,
         [tenantId, sgId, deptId],
       );
@@ -65,8 +65,8 @@ async function seed(): Promise<void> {
         `INSERT INTO employees
            (tenant_id, legal_entity_id, department_id, manager_id, employee_code, first_name, last_name, email, phone, job_title, employment_type, hire_date)
          VALUES
-           ($1, $2, $3, $4, 'EMP-001', 'Ayesha', 'Rahman', 'demo.employee@example.com', '+8801700000000', 'Software Engineer', 'permanent', '2024-02-01'),
-           ($1, $2, $3, NULL, 'EMP-003', 'Demo', 'Admin', 'demo.admin@example.com', NULL, 'HR Administrator', 'permanent', '2023-06-15')`,
+           ($1, $2, $3, $4, 'EMP-001', 'Ayesha', 'Rahman', 'demo.employee@oasis.example', '+8801700000000', 'Software Engineer', 'permanent', '2024-02-01'),
+           ($1, $2, $3, NULL, 'EMP-003', 'Demo', 'Admin', 'demo.admin@oasis.example', NULL, 'HR Administrator', 'permanent', '2023-06-15')`,
         [tenantId, sgId, deptId, managerId],
       );
     }
@@ -86,7 +86,7 @@ async function seed(): Promise<void> {
 
     // eslint-disable-next-line no-console
     console.log(
-      `Seeded tenant "example" (${tenantId}) with entities, a department, employees, and a geofence.`,
+      `Seeded tenant "oasis" (${tenantId}) with entities, a department, employees, and a geofence.`,
     );
   });
   await AppDataSource.destroy();

@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-// Resolves a Keycloak realm slug (e.g. "example") to the tenant's UUID.
+// Resolves a Keycloak realm slug (e.g. "oasis") to the tenant's UUID.
 // Realm-per-tenant: the realm name equals the tenant slug.
 @Injectable()
 export class TenantsService {

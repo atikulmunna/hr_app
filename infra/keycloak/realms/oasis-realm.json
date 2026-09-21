@@ -1,7 +1,7 @@
 {
-  "realm": "example",
+  "realm": "oasis",
   "enabled": true,
-  "displayName": "Example Corp",
+  "displayName": "Oasis Corp",
   "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
@@ -29,7 +29,7 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["com.example.hris://auth/*", "http://localhost/*"],
+      "redirectUris": ["com.oasis.hris://auth/*", "http://localhost/*"],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       }
@@ -49,7 +49,7 @@
     {
       "username": "demo.employee",
       "enabled": true,
-      "email": "demo.employee@example.com",
+      "email": "demo.employee@oasis.example",
       "emailVerified": true,
       "firstName": "Demo",
       "lastName": "Employee",
@@ -61,7 +61,7 @@
     {
       "username": "demo.admin",
       "enabled": true,
-      "email": "demo.admin@example.com",
+      "email": "demo.admin@oasis.example",
       "emailVerified": true,
       "firstName": "Demo",
       "lastName": "Admin",
@@ -73,7 +73,7 @@
     {
       "username": "demo.manager",
       "enabled": true,
-      "email": "demo.manager@example.com",
+      "email": "demo.manager@oasis.example",
       "emailVerified": true,
       "firstName": "Demo",
       "lastName": "Manager",
@@ -85,7 +85,7 @@
     {
       "username": "demo.owner",
       "enabled": true,
-      "email": "demo.owner@example.com",
+      "email": "demo.owner@oasis.example",
       "emailVerified": true,
       "firstName": "Demo",
       "lastName": "Owner",

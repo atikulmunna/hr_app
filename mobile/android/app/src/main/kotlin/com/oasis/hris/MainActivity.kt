@@ -1,4 +1,4 @@
-package com.example.hris
+package com.oasis.hris
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -15,7 +15,7 @@ import java.io.File
 // instead of a third-party plugin. Each probe is best-effort: any failure is
 // reported as "not flagged" (false) so a mark never crashes on signal capture.
 class MainActivity : FlutterActivity() {
-    private val channelName = "com.example.hris/device_integrity"
+    private val channelName = "com.oasis.hris/device_integrity"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

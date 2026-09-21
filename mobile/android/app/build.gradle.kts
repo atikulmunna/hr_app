@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.hris"
+    namespace = "com.oasis.hris"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.hris"
+        applicationId = "com.oasis.hris"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -30,8 +30,8 @@ android {
         versionName = flutter.versionName
 
         // OIDC redirect scheme for flutter_appauth (Keycloak redirect
-        // com.example.hris://auth). Matches the hris-mobile client in the realm.
-        manifestPlaceholders["appAuthRedirectScheme"] = "com.example.hris"
+        // com.oasis.hris://auth). Matches the hris-mobile client in the realm.
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.oasis.hris"
     }
 
     buildTypes {

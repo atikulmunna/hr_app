@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: AppColors.ink, size: 30),
             ),
             const SizedBox(height: 24),
-            Text('Example Corp', style: AppText.screenTitle),
+            Text('Oasis Corp', style: AppText.screenTitle),
             const SizedBox(height: 4),
             Text('Sign in to your HRIS account', style: AppText.body),
             const SizedBox(height: 32),

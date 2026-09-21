@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 /// unavailable, it returns an empty map so the signals are posted as null and
 /// scored by the backend as "not flagged" (null-not-false).
 abstract final class DeviceIntegrity {
-  static const _channel = MethodChannel('com.example.hris/device_integrity');
+  static const _channel = MethodChannel('com.oasis.hris/device_integrity');
 
   static Future<Map<String, bool>> read() async {
     if (!Platform.isAndroid) return const {};

@@ -1,7 +1,7 @@
 # HRIS Platform
 
 Multi-tenant HRIS platform with mobile attendance and verification. The seed data
-describes a fictional "Example Corp" tenant with Singapore and Bangladesh entities.
+describes a fictional "Oasis Corp" tenant with Singapore and Bangladesh entities.
 
 Stack: Flutter (mobile), React + TypeScript (web, added later), Node/TypeScript NestJS (backend), PostgreSQL.
 
@@ -62,7 +62,7 @@ Every password and secret in this repository is a localhost-only default for
 the Docker development stack: the Postgres passwords in
 `infra/docker-compose.yml` and `backend/.env.example`, the Keycloak bootstrap
 admin (`admin` / `admin`), the demo users in
-`infra/keycloak/realms/example-realm.json`, and the `hris_app` role password
+`infra/keycloak/realms/oasis-realm.json`, and the `hris_app` role password
 created by the `AppRole` migration. None of them may be reused outside a local
 machine. A real deployment must set `DB_PASSWORD`, `APP_DB_PASSWORD`,
 `KEYCLOAK_URL`, and `WEB_ORIGIN` from a secrets manager, run Keycloak with
@@ -74,7 +74,7 @@ the first migration.
 `pnpm db:up` also starts Keycloak and its database.
 
 - Admin console: `http://localhost:8080` (admin / admin).
-- Realm: `example` (realm-per-tenant; realm name maps to the tenant slug).
+- Realm: `oasis` (realm-per-tenant; realm name maps to the tenant slug).
 - Demo user: `demo.employee` / `demo123` (role `employee`).
 
 The backend validates Keycloak-issued JWTs against the realm JWKS, resolves the
@@ -85,7 +85,7 @@ Get a token and call a protected endpoint:
 
 ```bash
 TOKEN=$(curl -s -X POST \
-  http://localhost:8080/realms/example/protocol/openid-connect/token \
+  http://localhost:8080/realms/oasis/protocol/openid-connect/token \
   -d grant_type=password -d client_id=hris-mobile \
   -d username=demo.employee -d password=demo123 | jq -r .access_token)
 
