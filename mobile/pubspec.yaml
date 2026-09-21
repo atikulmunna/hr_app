@@ -40,7 +40,7 @@ dependencies:
 
   # Auth and networking
   flutter_appauth: ^8.0.0        # OIDC/PKCE login against Keycloak
-  flutter_secure_storage: ^9.2.2 # encrypted token storage
+  flutter_secure_storage: ^11.2.0 # encrypted token storage
   http: ^1.2.2                   # backend API calls
   geolocator: ^14.0.2
 
