@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Hanken Grotesk (the app typeface), fetched by the google_fonts package.
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.1
 
   # Auth and networking
   flutter_appauth: ^8.0.0        # OIDC/PKCE login against Keycloak
