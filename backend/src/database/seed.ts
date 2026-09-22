@@ -2,7 +2,9 @@ import 'reflect-metadata';
 import { config as loadEnv } from 'dotenv';
 import { AppDataSource } from './data-source';
 
-loadEnv();
+// quiet: dotenv 17 started logging a line on every load; these are CLI
+// entry points whose own output should stay the only thing they print.
+loadEnv({ quiet: true });
 
 // Seeds the fictional Oasis Corp tenant with Singapore and Bangladesh legal
 // entities.
