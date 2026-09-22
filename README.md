@@ -7,7 +7,24 @@ Stack: Flutter (mobile), React + TypeScript (web, added later), Node/TypeScript 
 
 ## Screenshots
 
-HR console, signed in as the demo HR administrator.
+### Employee app (Flutter)
+
+Captured on a Pixel 7 emulator. Home, Attendance, Leave, and Profile are the
+employee's own view; Team is the manager's view with a leave request waiting
+for approval; HR Console is the administrator's org-wide summary.
+
+<p>
+  <img src="docs/screenshots/mobile/home.jpg" width="180" alt="Home: check-in hero and the month at a glance">
+  <img src="docs/screenshots/mobile/attendance.jpg" width="180" alt="Attendance: check-in dial, timeline, schedule, corrections">
+  <img src="docs/screenshots/mobile/leave.jpg" width="180" alt="Leave: balances and a pending request">
+  <img src="docs/screenshots/mobile/team-manager.jpg" width="180" alt="Team (manager): pending approval and direct reports">
+  <img src="docs/screenshots/mobile/profile.jpg" width="180" alt="Profile: contact edit and a pending name change">
+  <img src="docs/screenshots/mobile/hr-console.jpg" width="180" alt="HR Console: headcount, overtime, approvals, attrition">
+</p>
+
+### HR console (React)
+
+Signed in as the demo HR administrator.
 
 | Onboarding checklists | Org chart |
 | --- | --- |
