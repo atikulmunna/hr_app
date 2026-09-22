@@ -70,6 +70,6 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(TenantMiddleware).forRoutes('*');
+    consumer.apply(TenantMiddleware).forRoutes('{*path}');
   }
 }

@@ -108,7 +108,7 @@ the first migration.
 
 The backend validates Keycloak-issued JWTs against the realm JWKS, resolves the
 tenant from the realm, and sets the tenant context automatically, so requests
-need only a bearer token (no `x-tenant-id` header).
+need only a bearer token; the tenant is never read from a request header.
 
 Get a token and call a protected endpoint:
 
