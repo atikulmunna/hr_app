@@ -14,6 +14,7 @@ import {
   StatutoryRule,
 } from '../../entities/statutory-rule.entity';
 import { AuditService } from '../audit/audit.service';
+import { round2 } from './payroll-math';
 
 export interface BracketInput {
   lowerBound?: number;
@@ -391,6 +392,3 @@ function validateBrackets(input: BracketInput[] | undefined): {
   return brackets;
 }
 
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}

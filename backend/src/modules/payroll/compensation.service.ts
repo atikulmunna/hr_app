@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { TenantDbService } from '../../database/tenant-db.service';
+import { round2 } from './payroll-math';
 import { Employee } from '../../entities/employee.entity';
 import { EmployeePayComponent } from '../../entities/employee-pay-component.entity';
 import { LegalEntity } from '../../entities/legal-entity.entity';
@@ -313,9 +314,9 @@ function totals(lines: CompensationLine[]): {
   const deductions = sum(lines.filter((l) => l.componentType === 'deduction'));
   return {
     lines,
-    gross: round(gross),
-    deductions: round(deductions),
-    net: round(gross - deductions),
+    gross: round2(gross),
+    deductions: round2(deductions),
+    net: round2(gross - deductions),
   };
 }
 
@@ -323,6 +324,3 @@ function sum(lines: CompensationLine[]): number {
   return lines.reduce((total, line) => total + line.amount, 0);
 }
 
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
-}

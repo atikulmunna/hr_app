@@ -128,8 +128,22 @@ export function sum(lines: { amount: string }[]): number {
   return lines.reduce((total, line) => total + Number(line.amount), 0);
 }
 
+// Rounds money to cents, half away from zero, on the decimal value rather than
+// its binary approximation.
+//
+// `Math.round(value * 100) / 100` gets this wrong whenever an amount lands
+// exactly on half a cent, which percentages and prorations do often: 1.005 is
+// held as 1.00499999999999989, so it rounded down to 1.00 while the arithmetic
+// says 1.01. Scaling first and re-reading the product at 15 significant digits
+// discards that noise (100.49999999999999 reads back as 100.5), and rounding
+// the magnitude keeps a negative adjustment symmetrical with a positive one.
 export function round2(value: number): number {
-  return Math.round(value * 100) / 100;
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  const scaled = Number((value * 100).toPrecision(15));
+  const cents = Math.round(Math.abs(scaled)) * Math.sign(scaled);
+  return cents === 0 ? 0 : cents / 100;
 }
 
 // What a reviewer must see before locking (FR-M4-07). Anything blocking would

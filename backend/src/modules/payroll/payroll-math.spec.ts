@@ -152,14 +152,29 @@ describe('sum and round2', () => {
     expect(round2(0.1 + 0.2)).toBe(0.3);
   });
 
-  // Known limitation of double arithmetic: a value that sits exactly on a half
-  // cent rounds by its binary representation, not half-up. 1.005 is stored just
-  // below the half and 2.675 just above it. Moving payroll to integer cents
-  // would make both round the same way; until then this pins the behaviour so
-  // a change is deliberate.
-  it('documents half-cent rounding by float representation', () => {
-    expect(round2(1.005)).toBe(1);
+  // Half a cent is where percentages and prorations land constantly, and it is
+  // where the old Math.round(v * 100) / 100 disagreed with the arithmetic: it
+  // rounded the binary approximation, so 1.005 (held as 1.00499999999999989)
+  // paid a cent less than it should.
+  it('rounds a half cent away from zero, on the decimal value', () => {
+    expect(round2(1.005)).toBe(1.01);
+    expect(round2(1.015)).toBe(1.02);
     expect(round2(2.675)).toBe(2.68);
+    expect(round2(8.245)).toBe(8.25);
+    // A 5% charge on 1234.50, the shape a statutory percentage produces.
+    expect(round2(61.725)).toBe(61.73);
+  });
+
+  it('rounds a negative amount symmetrically, so a recovery matches a payment', () => {
+    expect(round2(-1.005)).toBe(-1.01);
+    expect(round2(-2.675)).toBe(-2.68);
+    expect(round2(-61.725)).toBe(-61.73);
+  });
+
+  it('never yields a non-finite amount', () => {
+    expect(round2(Number.NaN)).toBe(0);
+    expect(round2(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(Object.is(round2(-0), 0)).toBe(true);
   });
 });
 
