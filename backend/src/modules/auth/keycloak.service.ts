@@ -10,6 +10,38 @@ export interface KeycloakClaims extends JWTPayload {
   preferred_username?: string;
   email?: string;
   realm_access?: { roles?: string[] };
+  // Keycloak stamps "Bearer" on an access token and "ID" on an ID token.
+  typ?: string;
+  // The client the token was issued to (authorized party).
+  azp?: string;
+}
+
+// The clients of this application. Realm-per-tenant means every tenant realm
+// defines the same two public clients (see infra/keycloak/realms).
+const ACCEPTED_CLIENTS = ['hris-web', 'hris-mobile'];
+
+// A valid signature and a trusted issuer are not enough: the realm also issues
+// ID tokens, and tokens for other clients, which share both. This rejects
+// anything that is not an access token minted for this application.
+export function assertAccessToken(claims: KeycloakClaims): void {
+  // An ID token is issued to the client to describe the user, not to call an
+  // API with. It is handled more loosely than an access token, so accepting one
+  // here would widen what counts as a credential.
+  if (claims.typ !== 'Bearer') {
+    throw new UnauthorizedException(
+      'An access token is required; this is not one.',
+    );
+  }
+  // azp names the client the token was issued to. aud only carries a client
+  // when the realm adds an audience mapper, so both are considered.
+  const audience =
+    typeof claims.aud === 'string' ? [claims.aud] : (claims.aud ?? []);
+  const parties = [claims.azp, ...audience];
+  if (!parties.some((party) => party && ACCEPTED_CLIENTS.includes(party))) {
+    throw new UnauthorizedException(
+      'Token was not issued for this application.',
+    );
+  }
 }
 
 // Verifies Keycloak-issued JWTs against the issuing realm's JWKS.
@@ -56,11 +88,16 @@ export class KeycloakService {
       throw new UnauthorizedException('Malformed token.');
     }
     const realm = this.realmFromIssuer(iss);
+    let claims: KeycloakClaims;
     try {
       const { payload } = await jwtVerify(token, this.jwks(realm), { issuer: iss });
-      return { realm, claims: payload as KeycloakClaims };
+      claims = payload as KeycloakClaims;
     } catch {
       throw new UnauthorizedException('Invalid or expired token.');
     }
+    // Outside the catch: these rejections are specific, and folding them into
+    // it would report them as an invalid signature.
+    assertAccessToken(claims);
+    return { realm, claims };
   }
 }
