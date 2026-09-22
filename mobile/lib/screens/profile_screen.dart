@@ -294,7 +294,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      await AuthScope.of(context).signOut();
+      // The root swaps to the login screen on sign-out, but this profile route
+      // was pushed above it and would stay on top, so leave it first.
+      final auth = AuthScope.of(context);
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      await auth.signOut();
     }
   }
 
