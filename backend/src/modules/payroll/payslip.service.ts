@@ -139,7 +139,8 @@ export class PayslipService {
 }
 
 // Draws the payslip. Deliberately plain: it is a record, not a brochure.
-function render(
+// Exported for the rendering test; the service is the only production caller.
+export function render(
   run: RunView,
   row: RunEmployeeView,
   entityName: string,
