@@ -131,7 +131,7 @@ export class DataSubjectService {
 
   // Erases the employee's directly identifying data and unlinks the account,
   // retaining transactional and audit records under statutory hold (DR-04).
-  async erase(employeeId: string, actorSub: string | undefined) {
+  async erase(employeeId: string) {
     return this.db.withTenant(async (m) => {
       const employee = await m.findOne(Employee, { where: { id: employeeId } });
       if (!employee) {

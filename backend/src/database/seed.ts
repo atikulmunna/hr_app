@@ -88,7 +88,6 @@ async function seed(): Promise<void> {
       );
     }
 
-    // eslint-disable-next-line no-console
     console.log(
       `Seeded tenant "oasis" (${tenantId}) with entities, a department, employees, and a geofence.`,
     );
@@ -97,7 +96,6 @@ async function seed(): Promise<void> {
 }
 
 seed().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });

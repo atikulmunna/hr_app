@@ -22,7 +22,7 @@ export class DataSubjectController {
 
   @RequirePermissions('employee:manage')
   @Post('employees/:id/erasure')
-  erase(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.dataSubject.erase(id, user.sub);
+  erase(@Param('id') id: string) {
+    return this.dataSubject.erase(id);
   }
 }

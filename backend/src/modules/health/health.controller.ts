@@ -14,7 +14,7 @@ export class HealthController {
       await this.dataSource.query('SELECT 1');
       db = 'up';
     } catch {
-      db = 'down';
+      // Leave db as 'down'; the endpoint reports rather than throws.
     }
     return { status: 'ok', service: 'hris-backend', db };
   }

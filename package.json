@@ -12,7 +12,9 @@
     "backend:migrate": "pnpm --filter @hris/backend migration:run",
     "backend:seed": "pnpm --filter @hris/backend seed",
     "format": "prettier --write \"backend/src/**/*.ts\" \"web/src/**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"backend/src/**/*.ts\" \"web/src/**/*.{ts,tsx}\""
+    "format:check": "prettier --check \"backend/src/**/*.ts\" \"web/src/**/*.{ts,tsx}\"",
+    "lint": "eslint backend/src web/src",
+    "lint:fix": "eslint backend/src web/src --fix"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

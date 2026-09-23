@@ -8,7 +8,6 @@ import { TenantDbService } from '../../database/tenant-db.service';
 import { AttendanceEvent } from '../../entities/attendance-event.entity';
 import {
   CorrectionType,
-  RegularizationOrigin,
   RegularizationRequest,
 } from '../../entities/regularization-request.entity';
 import { AuditService } from '../audit/audit.service';
