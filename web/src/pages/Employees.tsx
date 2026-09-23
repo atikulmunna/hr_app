@@ -55,6 +55,10 @@ const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   { key: 'privacy', label: 'Privacy' },
 ];
 
+// How many employees to fetch at a time. The roster grows with headcount, so
+// it is read in windows and extended on demand.
+const ROSTER_PAGE_SIZE = 50;
+
 export function Employees({ token }: { token: string }) {
   const [list, setList] = useState<Employee[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,20 +67,48 @@ export function Employees({ token }: { token: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const rows = await api.employees(token);
-      setList(rows);
+      // Keep whatever pages are already open, so an edit does not collapse the
+      // roster back to the first page.
+      const size = Math.max(list.length, ROSTER_PAGE_SIZE);
+      const page = await api.employeesPage(token, size, 0);
+      setList(page.items);
+      setTotal(page.total);
       setSelectedId((prev) =>
-        prev && rows.some((r) => r.id === prev) ? prev : (rows[0]?.id ?? null),
+        prev && page.items.some((r) => r.id === prev)
+          ? prev
+          : (page.items[0]?.id ?? null),
       );
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
       setLoading(false);
     }
+    // list is read to size the refresh, but changing it must not re-trigger it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const page = await api.employeesPage(
+        token,
+        ROSTER_PAGE_SIZE,
+        list.length,
+      );
+      setList((prev) => [...prev, ...page.items]);
+      setTotal(page.total);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     void load();
@@ -184,6 +216,19 @@ export function Employees({ token }: { token: string }) {
             </button>
           ))}
         </div>
+        {list.length < total && (
+          <div className="actions">
+            <button
+              className="btn small-btn"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+            >
+              {loadingMore
+                ? 'Loading...'
+                : `Load more (${list.length} of ${total})`}
+            </button>
+          </div>
+        )}
       </div>
       <div className="detail">
         {creating ? (

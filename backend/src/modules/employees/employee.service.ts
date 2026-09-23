@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { Page, pageOf } from '../../common/pagination';
 import { TenantDbService } from '../../database/tenant-db.service';
 import { Employee, EmploymentType } from '../../entities/employee.entity';
 import {
@@ -90,10 +91,17 @@ export class EmployeeService {
     private readonly checklists: ChecklistService,
   ) {}
 
-  list(): Promise<Employee[]> {
-    return this.db.withTenant((m) =>
-      m.find(Employee, { order: { employeeCode: 'ASC' } }),
-    );
+  // One page of the roster. The caller decides the window; the endpoint caps it,
+  // so a large tenant cannot be asked for its whole roster in a single request.
+  list(page: { limit: number; offset: number }): Promise<Page<Employee>> {
+    return this.db.withTenant(async (m) => {
+      const [items, total] = await m.findAndCount(Employee, {
+        order: { employeeCode: 'ASC' },
+        take: page.limit,
+        skip: page.offset,
+      });
+      return pageOf(items, total, page);
+    });
   }
 
   get(id: string): Promise<Employee> {

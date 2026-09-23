@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { PageParams, parsePage } from '../../common/pagination';
 import { AuthUser, CurrentUser } from '../auth/current-user.decorator';
 import { NotificationService } from './notification.service';
 
@@ -7,8 +8,12 @@ export class NotificationsController {
   constructor(private readonly notifications: NotificationService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
-    return this.notifications.listForUser(user.sub, user.roles);
+  list(@CurrentUser() user: AuthUser, @Query() query: PageParams) {
+    return this.notifications.listForUser(
+      user.sub,
+      user.roles,
+      parsePage(query),
+    );
   }
 
   @Post(':id/read')

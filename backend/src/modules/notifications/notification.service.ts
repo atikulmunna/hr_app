@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { Page, pageOf } from '../../common/pagination';
 import { TenantDbService } from '../../database/tenant-db.service';
 import { Notification } from '../../entities/notification.entity';
 
@@ -55,12 +56,15 @@ export class NotificationService {
   }
 
   // Notifications addressed to the caller directly or via one of their roles.
+  // An inbox only grows, so this returns a window with the total rather than a
+  // fixed most-recent slice the caller cannot read past.
   listForUser(
     sub: string | undefined,
     roles: string[],
-  ): Promise<Notification[]> {
-    return this.db.withTenant((m) =>
-      m
+    page: { limit: number; offset: number },
+  ): Promise<Page<Notification>> {
+    return this.db.withTenant(async (m) => {
+      const [items, total] = await m
         .createQueryBuilder(Notification, 'n')
         .where('n.recipientSub = :sub', { sub: sub ?? '' })
         .orWhere(roles.length ? 'n.recipientRole IN (:...roles)' : '1 = 0', {
@@ -68,9 +72,11 @@ export class NotificationService {
         })
         .orderBy('n.readAt', 'ASC', 'NULLS FIRST')
         .addOrderBy('n.createdAt', 'DESC')
-        .limit(50)
-        .getMany(),
-    );
+        .take(page.limit)
+        .skip(page.offset)
+        .getManyAndCount();
+      return pageOf(items, total, page);
+    });
   }
 
   async markRead(

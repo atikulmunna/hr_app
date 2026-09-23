@@ -6,7 +6,9 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { PageParams, parsePage } from '../../common/pagination';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { EmployeeBulkService } from './employee-bulk.service';
 import {
@@ -28,8 +30,8 @@ export class EmployeesController {
 
   @RequirePermissions('employee:read')
   @Get()
-  list() {
-    return this.employees.list();
+  list(@Query() query: PageParams) {
+    return this.employees.list(parsePage(query));
   }
 
   // Declared before the :id route so "export" is not matched as an id.

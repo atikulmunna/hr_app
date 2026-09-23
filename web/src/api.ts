@@ -1179,6 +1179,15 @@ export interface TaskView {
   employeeName: string;
 }
 
+// One page of a collection. The server caps how much it will return at once,
+// so the total is what tells a caller whether more remains.
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 async function request<T>(
   token: string,
   path: string,
@@ -1212,8 +1221,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ decision, comment }),
     }),
-  notifications: (token: string) =>
-    request<AppNotification[]>(token, '/notifications'),
+  notifications: (token: string, limit = 50, offset = 0) =>
+    request<Page<AppNotification>>(
+      token,
+      `/notifications?limit=${limit}&offset=${offset}`,
+    ),
   markNotificationRead: (token: string, id: string) =>
     request<unknown>(token, `/notifications/${id}/read`, { method: 'POST' }),
   reviewCases: (token: string, status = 'open') =>
@@ -1252,7 +1264,27 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
-  employees: (token: string) => request<Employee[]>(token, '/employees'),
+  employeesPage: (token: string, limit = 50, offset = 0) =>
+    request<Page<Employee>>(
+      token,
+      `/employees?limit=${limit}&offset=${offset}`,
+    ),
+  // Every employee, fetched a page at a time. The pickers that choose an
+  // employee need the full roster; walking the pages keeps them correct
+  // without asking the server for an unbounded response.
+  employees: async (token: string): Promise<Employee[]> => {
+    const all: Employee[] = [];
+    for (let offset = 0; ; offset += 200) {
+      const page = await request<Page<Employee>>(
+        token,
+        `/employees?limit=200&offset=${offset}`,
+      );
+      all.push(...page.items);
+      if (all.length >= page.total || page.items.length === 0) {
+        return all;
+      }
+    }
+  },
   exportEmployeesCsv: async (token: string): Promise<string> => {
     const res = await fetch(`${config.apiBase}/employees/export`, {
       headers: { Authorization: `Bearer ${token}` },

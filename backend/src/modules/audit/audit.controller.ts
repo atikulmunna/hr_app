@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
+import { PageParams, parsePage } from '../../common/pagination';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { AuditService } from './audit.service';
 
@@ -9,7 +10,7 @@ export class AuditController {
   // Recent audit entries for the current tenant. Auditor or HR admin only.
   @RequirePermissions('audit:read')
   @Get()
-  list() {
-    return this.audit.list();
+  list(@Query() query: PageParams) {
+    return this.audit.list(parsePage(query));
   }
 }

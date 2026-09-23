@@ -9,23 +9,50 @@ const TYPE_LABELS: Record<string, string> = {
   'approval.rejected': 'Rejected',
 };
 
+// How many notifications to fetch at a time. An inbox only grows, so the page
+// is read in windows and extended on demand rather than loaded whole.
+const PAGE_SIZE = 50;
+
 export function Inbox({ token }: { token: string }) {
   const [items, setItems] = useState<AppNotification[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Reloads from the start, keeping however many pages are already on screen so
+  // marking one read does not collapse the list back to the first page.
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setItems(await api.notifications(token));
+      const size = Math.max(items.length, PAGE_SIZE);
+      const page = await api.notifications(token, size, 0);
+      setItems(page.items);
+      setTotal(page.total);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
       setLoading(false);
     }
+    // items is read to size the refresh, but changing it must not re-trigger it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const page = await api.notifications(token, PAGE_SIZE, items.length);
+      setItems((prev) => [...prev, ...page.items]);
+      setTotal(page.total);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     void load();
@@ -52,9 +79,20 @@ export function Inbox({ token }: { token: string }) {
         <h2>
           Notifications{unread > 0 && <span className="count">{unread}</span>}
         </h2>
-        <button className="btn" onClick={() => void load()} disabled={loading}>
-          Refresh
-        </button>
+        <div className="head-actions">
+          {total > 0 && (
+            <span className="muted small">
+              {items.length} of {total}
+            </span>
+          )}
+          <button
+            className="btn"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && <div className="banner error">{error}</div>}
@@ -94,6 +132,18 @@ export function Inbox({ token }: { token: string }) {
           </article>
         ))}
       </div>
+
+      {items.length < total && (
+        <div className="actions">
+          <button
+            className="btn"
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Loading...' : `Load ${PAGE_SIZE} more`}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
