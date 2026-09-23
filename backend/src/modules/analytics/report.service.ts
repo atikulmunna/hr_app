@@ -68,19 +68,41 @@ const DATASETS: Record<string, DatasetDef> = {
       { key: 'employeeCode', label: 'Code', sql: 'e.employee_code' },
       { key: 'name', label: 'Name', sql: "e.first_name || ' ' || e.last_name" },
       { key: 'entity', label: 'Entity', sql: 'le.name' },
-      { key: 'department', label: 'Department', sql: "COALESCE(d.name, 'Unassigned')" },
+      {
+        key: 'department',
+        label: 'Department',
+        sql: "COALESCE(d.name, 'Unassigned')",
+      },
       { key: 'status', label: 'Status', sql: 'e.status' },
       { key: 'jobTitle', label: 'Job title', sql: 'e.job_title' },
-      { key: 'hireDate', label: 'Hire date', sql: "to_char(e.hire_date, 'YYYY-MM-DD')" },
+      {
+        key: 'hireDate',
+        label: 'Hire date',
+        sql: "to_char(e.hire_date, 'YYYY-MM-DD')",
+      },
     ],
     dimensions: [
       { key: 'entity', label: 'Entity', sql: 'le.name' },
-      { key: 'department', label: 'Department', sql: "COALESCE(d.name, 'Unassigned')" },
+      {
+        key: 'department',
+        label: 'Department',
+        sql: "COALESCE(d.name, 'Unassigned')",
+      },
       { key: 'status', label: 'Status', sql: 'e.status' },
     ],
     filters: [
-      { key: 'legalEntityId', label: 'Entity', type: 'entity', sql: 'e.legal_entity_id' },
-      { key: 'departmentId', label: 'Department', type: 'department', sql: 'e.department_id' },
+      {
+        key: 'legalEntityId',
+        label: 'Entity',
+        type: 'entity',
+        sql: 'e.legal_entity_id',
+      },
+      {
+        key: 'departmentId',
+        label: 'Department',
+        type: 'department',
+        sql: 'e.department_id',
+      },
       {
         key: 'status',
         label: 'Status',
@@ -101,26 +123,52 @@ const DATASETS: Record<string, DatasetDef> = {
       { key: 'employeeCode', label: 'Code', sql: 'e.employee_code' },
       { key: 'name', label: 'Name', sql: "e.first_name || ' ' || e.last_name" },
       { key: 'entity', label: 'Entity', sql: 'le.name' },
-      { key: 'period', label: 'Period', sql: "to_char(r.period_start, 'YYYY-MM')" },
+      {
+        key: 'period',
+        label: 'Period',
+        sql: "to_char(r.period_start, 'YYYY-MM')",
+      },
       { key: 'gross', label: 'Gross', sql: 'pe.gross::float' },
       { key: 'deductions', label: 'Deductions', sql: 'pe.deductions::float' },
       { key: 'net', label: 'Net', sql: 'pe.net::float' },
-      { key: 'employer', label: 'Employer cost', sql: 'pe.employer_contributions::float' },
+      {
+        key: 'employer',
+        label: 'Employer cost',
+        sql: 'pe.employer_contributions::float',
+      },
       { key: 'currency', label: 'Currency', sql: 'pe.currency_code' },
     ],
     dimensions: [
       { key: 'entity', label: 'Entity', sql: 'le.name' },
-      { key: 'period', label: 'Period', sql: "to_char(date_trunc('month', r.period_start), 'YYYY-MM')" },
+      {
+        key: 'period',
+        label: 'Period',
+        sql: "to_char(date_trunc('month', r.period_start), 'YYYY-MM')",
+      },
     ],
     filters: [
-      { key: 'legalEntityId', label: 'Entity', type: 'entity', sql: 'r.legal_entity_id' },
-      { key: 'from', label: 'Period from', type: 'dateFrom', sql: 'r.period_start' },
+      {
+        key: 'legalEntityId',
+        label: 'Entity',
+        type: 'entity',
+        sql: 'r.legal_entity_id',
+      },
+      {
+        key: 'from',
+        label: 'Period from',
+        type: 'dateFrom',
+        sql: 'r.period_start',
+      },
       { key: 'to', label: 'Period to', type: 'dateTo', sql: 'r.period_start' },
     ],
     measures: [
       { key: 'gross', label: 'Gross', sql: 'sum(pe.gross)::float' },
       { key: 'net', label: 'Net', sql: 'sum(pe.net)::float' },
-      { key: 'employer', label: 'Employer cost', sql: 'sum(pe.employer_contributions)::float' },
+      {
+        key: 'employer',
+        label: 'Employer cost',
+        sql: 'sum(pe.employer_contributions)::float',
+      },
     ],
     currencySql: 'pe.currency_code',
   },
@@ -134,21 +182,47 @@ const DATASETS: Record<string, DatasetDef> = {
       { key: 'employeeCode', label: 'Code', sql: 'e.employee_code' },
       { key: 'name', label: 'Name', sql: "e.first_name || ' ' || e.last_name" },
       { key: 'entity', label: 'Entity', sql: 'le.name' },
-      { key: 'department', label: 'Department', sql: "COALESCE(d.name, 'Unassigned')" },
+      {
+        key: 'department',
+        label: 'Department',
+        sql: "COALESCE(d.name, 'Unassigned')",
+      },
       { key: 'eventType', label: 'Event', sql: 'ev.event_type' },
-      { key: 'date', label: 'Date', sql: "to_char(ev.server_ts, 'YYYY-MM-DD')" },
+      {
+        key: 'date',
+        label: 'Date',
+        sql: "to_char(ev.server_ts, 'YYYY-MM-DD')",
+      },
       { key: 'band', label: 'Risk band', sql: 'ev.band' },
       { key: 'riskScore', label: 'Risk score', sql: 'ev.risk_score' },
     ],
     dimensions: [
       { key: 'band', label: 'Risk band', sql: 'ev.band' },
-      { key: 'department', label: 'Department', sql: "COALESCE(d.name, 'Unassigned')" },
+      {
+        key: 'department',
+        label: 'Department',
+        sql: "COALESCE(d.name, 'Unassigned')",
+      },
       { key: 'entity', label: 'Entity', sql: 'le.name' },
-      { key: 'month', label: 'Month', sql: "to_char(date_trunc('month', ev.server_ts), 'YYYY-MM')" },
+      {
+        key: 'month',
+        label: 'Month',
+        sql: "to_char(date_trunc('month', ev.server_ts), 'YYYY-MM')",
+      },
     ],
     filters: [
-      { key: 'legalEntityId', label: 'Entity', type: 'entity', sql: 'e.legal_entity_id' },
-      { key: 'departmentId', label: 'Department', type: 'department', sql: 'e.department_id' },
+      {
+        key: 'legalEntityId',
+        label: 'Entity',
+        type: 'entity',
+        sql: 'e.legal_entity_id',
+      },
+      {
+        key: 'departmentId',
+        label: 'Department',
+        type: 'department',
+        sql: 'e.department_id',
+      },
       {
         key: 'band',
         label: 'Risk band',
@@ -156,7 +230,12 @@ const DATASETS: Record<string, DatasetDef> = {
         sql: 'ev.band',
         options: ['clean', 'yellow', 'red'],
       },
-      { key: 'from', label: 'From', type: 'dateFrom', sql: 'ev.server_ts::date' },
+      {
+        key: 'from',
+        label: 'From',
+        type: 'dateFrom',
+        sql: 'ev.server_ts::date',
+      },
       { key: 'to', label: 'To', type: 'dateTo', sql: 'ev.server_ts::date' },
     ],
     measures: [],
@@ -193,7 +272,14 @@ export class ReportService {
     const { clause, params } = this.where(def, spec.filters ?? {});
     return this.db.withTenant((m) =>
       spec.groupBy
-        ? this.grouped(m, spec.dataset as string, def, spec.groupBy, clause, params)
+        ? this.grouped(
+            m,
+            spec.dataset as string,
+            def,
+            spec.groupBy,
+            clause,
+            params,
+          )
         : this.detail(m, spec.dataset as string, def, clause, params),
     );
   }
@@ -260,7 +346,8 @@ export class ReportService {
         );
       }
       params.push(value);
-      const op = f.type === 'dateFrom' ? '>=' : f.type === 'dateTo' ? '<=' : '=';
+      const op =
+        f.type === 'dateFrom' ? '>=' : f.type === 'dateTo' ? '<=' : '=';
       clauses.push(`${f.sql} ${op} $${params.length}`);
     }
     return {
@@ -331,7 +418,10 @@ export class ReportService {
 
   // --- Exporters.
 
-  private table(result: ReportResult): { headers: string[]; rows: unknown[][] } {
+  private table(result: ReportResult): {
+    headers: string[];
+    rows: unknown[][];
+  } {
     const headers = result.columns.map((c) => c.label);
     const rows = result.rows.map((r) => result.columns.map((c) => r[c.key]));
     return { headers, rows };
@@ -356,7 +446,11 @@ export class ReportService {
 
   private toPdf(result: ReportResult): Promise<Buffer> {
     const { headers, rows } = this.table(result);
-    const doc = new PDFDocument({ margin: 36, size: 'A4', layout: 'landscape' });
+    const doc = new PDFDocument({
+      margin: 36,
+      size: 'A4',
+      layout: 'landscape',
+    });
     const chunks: Buffer[] = [];
     return new Promise((resolve) => {
       doc.on('data', (c: Buffer) => chunks.push(c));

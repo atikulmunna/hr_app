@@ -6,11 +6,7 @@ import { EmployeeService } from '../employees/employee.service';
 import { AttendanceSummary, SummaryService } from '../shifts/summary.service';
 
 export type TodayStatus =
-  | 'leave'
-  | 'checked_out'
-  | 'checked_in'
-  | 'absent'
-  | 'not_in';
+  'leave' | 'checked_out' | 'checked_in' | 'absent' | 'not_in';
 
 export interface TeamMember {
   id: string;
@@ -202,8 +198,7 @@ function assertRange(from: string, to: string): void {
   ) {
     throw new BadRequestException('Provide a valid from and to date range.');
   }
-  const days =
-    (Date.parse(to) - Date.parse(from)) / 86_400_000 + 1;
+  const days = (Date.parse(to) - Date.parse(from)) / 86_400_000 + 1;
   if (days > MAX_RANGE_DAYS) {
     throw new BadRequestException('The date range is too long.');
   }

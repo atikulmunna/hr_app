@@ -7,11 +7,7 @@ import {
 } from 'typeorm';
 
 export type EmploymentType =
-  | 'permanent'
-  | 'contract'
-  | 'probation'
-  | 'intern'
-  | 'consultant';
+  'permanent' | 'contract' | 'probation' | 'intern' | 'consultant';
 
 export type EmployeeStatus = 'active' | 'on_leave' | 'terminated';
 

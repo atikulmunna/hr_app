@@ -5,10 +5,7 @@ import {
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { TenantDbService } from '../../database/tenant-db.service';
-import {
-  Employee,
-  EmploymentType,
-} from '../../entities/employee.entity';
+import { Employee, EmploymentType } from '../../entities/employee.entity';
 import {
   EmploymentChangeType,
   EmploymentHistory,
@@ -180,8 +177,7 @@ export class EmployeeService {
       const before = { ...current };
       for (const field of UPDATABLE_FIELDS) {
         if (patch[field] !== undefined) {
-          (current as unknown as Record<string, unknown>)[field] =
-            patch[field];
+          (current as unknown as Record<string, unknown>)[field] = patch[field];
         }
       }
       if (patch.customFields !== undefined) {
@@ -209,7 +205,13 @@ export class EmployeeService {
       // Termination opens offboarding, anchored on the day it is recorded
       // (FR-M1-10).
       if (before.status !== 'terminated' && after.status === 'terminated') {
-        await this.checklists.open(m, id, 'offboarding', today(), this.ctx.actor?.sub);
+        await this.checklists.open(
+          m,
+          id,
+          'offboarding',
+          today(),
+          this.ctx.actor?.sub,
+        );
       }
       return after;
     });
@@ -278,7 +280,10 @@ export class EmployeeService {
 
   // The caller's own profile. Links the Keycloak identity to the employee by
   // email on first access, then by keycloak_sub thereafter.
-  myProfile(sub: string | undefined, email: string | undefined): Promise<Employee> {
+  myProfile(
+    sub: string | undefined,
+    email: string | undefined,
+  ): Promise<Employee> {
     return this.db.withTenant(async (m) => {
       if (sub) {
         const bySub = await m.findOne(Employee, {
@@ -298,7 +303,9 @@ export class EmployeeService {
           return byEmail;
         }
       }
-      throw new NotFoundException('No employee profile linked to this account.');
+      throw new NotFoundException(
+        'No employee profile linked to this account.',
+      );
     });
   }
 

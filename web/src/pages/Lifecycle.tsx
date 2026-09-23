@@ -24,8 +24,18 @@ export function Lifecycle({ token }: { token: string }) {
   return (
     <div className="stack">
       {error && <div className="banner error">{error}</div>}
-      <MyTasksPanel token={token} onError={setError} version={version} onChange={bump} />
-      <ChecklistsPanel token={token} onError={setError} version={version} onChange={bump} />
+      <MyTasksPanel
+        token={token}
+        onError={setError}
+        version={version}
+        onChange={bump}
+      />
+      <ChecklistsPanel
+        token={token}
+        onError={setError}
+        version={version}
+        onChange={bump}
+      />
       <OrgChartPanel token={token} onError={setError} />
       <TemplatesPanel token={token} onError={setError} />
     </div>
@@ -68,7 +78,10 @@ function MyTasksPanel({
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    api.myTasks(token).then(setTasks).catch((e) => fail(onError, e));
+    api
+      .myTasks(token)
+      .then(setTasks)
+      .catch((e) => fail(onError, e));
   }, [token, version, onError]);
 
   const complete = async (id: string) => {
@@ -94,7 +107,9 @@ function MyTasksPanel({
         )}
         {tasks.map((t) => (
           <div className="line" key={t.id}>
-            <span className={`pill ${dueClass(t.dueOn)}`}>{dueLabel(t.dueOn)}</span>
+            <span className={`pill ${dueClass(t.dueOn)}`}>
+              {dueLabel(t.dueOn)}
+            </span>
             <span className="grow">
               {t.title}{' '}
               <span className="muted small">
@@ -118,7 +133,9 @@ function MyTasksPanel({
 
 function dueLabel(dueOn: string | null): string {
   if (!dueOn) return 'No date';
-  const diff = Math.round((Date.parse(dueOn) - Date.parse(today())) / 86_400_000);
+  const diff = Math.round(
+    (Date.parse(dueOn) - Date.parse(today())) / 86_400_000,
+  );
   if (diff < 0) return `${-diff} d overdue`;
   if (diff === 0) return 'Due today';
   return `Due in ${diff} d`;
@@ -170,7 +187,10 @@ function ChecklistsPanel({
       setDetail(null);
       return;
     }
-    api.checklist(token, selectedId).then(setDetail).catch((e) => fail(onError, e));
+    api
+      .checklist(token, selectedId)
+      .then(setDetail)
+      .catch((e) => fail(onError, e));
   }, [token, selectedId, version, onError]);
 
   const complete = async (itemId: string) => {
@@ -212,98 +232,104 @@ function ChecklistsPanel({
       </div>
 
       <div className="stack">
-      {showOpen && (
-        <OpenChecklistForm
-          token={token}
-          onError={onError}
-          onOpened={(view) => {
-            setShowOpen(false);
-            setStatus('open');
-            setSelectedId(view.id);
-            onChange();
-          }}
-        />
-      )}
-
-      {lists.length === 0 && (
-        <p className="muted small">
-          {status === 'open'
-            ? 'No onboarding or offboarding is in progress.'
-            : 'No completed checklists yet.'}
-        </p>
-      )}
-
-      {lists.length > 0 && (
-      <div className="split">
-        <div className="master">
-          <div className="list">
-            {lists.map((c) => (
-              <button
-                key={c.id}
-                className={`card employee-row ${selectedId === c.id ? 'active' : ''}`}
-                onClick={() => setSelectedId(selectedId === c.id ? null : c.id)}
-              >
-                <div className="row-title">
-                  <span className="tag">{KIND_LABELS[c.kind]}</span>
-                  {c.overdue > 0 && (
-                    <span className="pill day-absent">{c.overdue} overdue</span>
-                  )}
-                </div>
-                <div>{c.employeeName}</div>
-                <div className="muted small">
-                  {c.employeeCode} · from {c.anchorDate}
-                </div>
-                <Progress done={c.done} total={c.total} />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {detail && (
-          <article className="card detail-panel stack">
-            <div className="section-head">
-              <h3>
-                {KIND_LABELS[detail.kind]}: {detail.employeeName}
-              </h3>
-              <span className="muted small">
-                {detail.done}/{detail.total} done
-                {detail.completedAt
-                  ? `, completed ${new Date(detail.completedAt).toLocaleDateString()}`
-                  : ''}
-              </span>
-            </div>
-            {detail.items.map((i) => (
-              <div className="line" key={i.id}>
-                <span
-                  className={`pill ${
-                    i.status === 'done' ? 'status-approved' : dueClass(i.dueOn)
-                  }`}
-                >
-                  {i.status === 'done' ? 'Done' : dueLabel(i.dueOn)}
-                </span>
-                <span className="grow">
-                  {i.title}{' '}
-                  <span className="muted small">
-                    {ROLE_LABELS[i.assigneeRole] ?? i.assigneeRole}
-                    {i.dueOn ? ` · due ${i.dueOn}` : ''}
-                    {i.note ? ` · ${i.note}` : ''}
-                  </span>
-                </span>
-                {i.status === 'pending' && detail.status === 'open' && (
-                  <button
-                    className="btn small-btn"
-                    disabled={busy === i.id}
-                    onClick={() => void complete(i.id)}
-                  >
-                    Mark done
-                  </button>
-                )}
-              </div>
-            ))}
-          </article>
+        {showOpen && (
+          <OpenChecklistForm
+            token={token}
+            onError={onError}
+            onOpened={(view) => {
+              setShowOpen(false);
+              setStatus('open');
+              setSelectedId(view.id);
+              onChange();
+            }}
+          />
         )}
-      </div>
-      )}
+
+        {lists.length === 0 && (
+          <p className="muted small">
+            {status === 'open'
+              ? 'No onboarding or offboarding is in progress.'
+              : 'No completed checklists yet.'}
+          </p>
+        )}
+
+        {lists.length > 0 && (
+          <div className="split">
+            <div className="master">
+              <div className="list">
+                {lists.map((c) => (
+                  <button
+                    key={c.id}
+                    className={`card employee-row ${selectedId === c.id ? 'active' : ''}`}
+                    onClick={() =>
+                      setSelectedId(selectedId === c.id ? null : c.id)
+                    }
+                  >
+                    <div className="row-title">
+                      <span className="tag">{KIND_LABELS[c.kind]}</span>
+                      {c.overdue > 0 && (
+                        <span className="pill day-absent">
+                          {c.overdue} overdue
+                        </span>
+                      )}
+                    </div>
+                    <div>{c.employeeName}</div>
+                    <div className="muted small">
+                      {c.employeeCode} · from {c.anchorDate}
+                    </div>
+                    <Progress done={c.done} total={c.total} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {detail && (
+              <article className="card detail-panel stack">
+                <div className="section-head">
+                  <h3>
+                    {KIND_LABELS[detail.kind]}: {detail.employeeName}
+                  </h3>
+                  <span className="muted small">
+                    {detail.done}/{detail.total} done
+                    {detail.completedAt
+                      ? `, completed ${new Date(detail.completedAt).toLocaleDateString()}`
+                      : ''}
+                  </span>
+                </div>
+                {detail.items.map((i) => (
+                  <div className="line" key={i.id}>
+                    <span
+                      className={`pill ${
+                        i.status === 'done'
+                          ? 'status-approved'
+                          : dueClass(i.dueOn)
+                      }`}
+                    >
+                      {i.status === 'done' ? 'Done' : dueLabel(i.dueOn)}
+                    </span>
+                    <span className="grow">
+                      {i.title}{' '}
+                      <span className="muted small">
+                        {ROLE_LABELS[i.assigneeRole] ?? i.assigneeRole}
+                        {i.dueOn ? ` · due ${i.dueOn}` : ''}
+                        {i.note ? ` · ${i.note}` : ''}
+                      </span>
+                    </span>
+                    {i.status === 'pending' && detail.status === 'open' && (
+                      <button
+                        className="btn small-btn"
+                        disabled={busy === i.id}
+                        onClick={() => void complete(i.id)}
+                      >
+                        Mark done
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </article>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -351,7 +377,9 @@ function OpenChecklistForm({
     if (!employeeId) return;
     setSaving(true);
     try {
-      onOpened(await api.openChecklist(token, { employeeId, kind, anchorDate }));
+      onOpened(
+        await api.openChecklist(token, { employeeId, kind, anchorDate }),
+      );
     } catch (e) {
       fail(onError, e);
     } finally {
@@ -364,7 +392,11 @@ function OpenChecklistForm({
       <div className="field-row">
         <label className="field">
           Employee
-          <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} required>
+          <select
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
+            required
+          >
             <option value="">Choose...</option>
             {employees.map((e) => (
               <option key={e.id} value={e.id}>
@@ -375,7 +407,10 @@ function OpenChecklistForm({
         </label>
         <label className="field">
           Kind
-          <select value={kind} onChange={(e) => setKind(e.target.value as ChecklistKind)}>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as ChecklistKind)}
+          >
             <option value="onboarding">Onboarding</option>
             <option value="offboarding">Offboarding</option>
           </select>
@@ -395,7 +430,11 @@ function OpenChecklistForm({
         the leaving date for offboarding.
       </p>
       <div className="actions">
-        <button className="btn primary" type="submit" disabled={saving || !employeeId}>
+        <button
+          className="btn primary"
+          type="submit"
+          disabled={saving || !employeeId}
+        >
           Open
         </button>
       </div>
@@ -432,7 +471,9 @@ function OrgChartPanel({
         <span className="muted small">{headcount} active</span>
       </div>
       <div className="card">
-        {roots.length === 0 && <p className="muted small">No active employees.</p>}
+        {roots.length === 0 && (
+          <p className="muted small">No active employees.</p>
+        )}
         <ul className="org-tree">
           {roots.map((n) => (
             <OrgBranch key={n.id} node={n} />
@@ -492,12 +533,18 @@ function TemplatesPanel({
   onError: (m: string) => void;
 }) {
   const [kind, setKind] = useState<ChecklistKind>('onboarding');
-  const [templates, setTemplates] = useState<Record<ChecklistKind, ChecklistTemplateItem[]> | null>(null);
+  const [templates, setTemplates] = useState<Record<
+    ChecklistKind,
+    ChecklistTemplateItem[]
+  > | null>(null);
   const [draft, setDraft] = useState<TemplateItemInput[] | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.checklistTemplates(token).then(setTemplates).catch((e) => fail(onError, e));
+    api
+      .checklistTemplates(token)
+      .then(setTemplates)
+      .catch((e) => fail(onError, e));
   }, [token, onError]);
 
   const items = templates?.[kind] ?? [];
@@ -512,9 +559,12 @@ function TemplatesPanel({
     );
 
   const update = (index: number, patch: Partial<TemplateItemInput>) =>
-    setDraft((d) => d && d.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+    setDraft(
+      (d) => d && d.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
 
-  const remove = (index: number) => setDraft((d) => d && d.filter((_, i) => i !== index));
+  const remove = (index: number) =>
+    setDraft((d) => d && d.filter((_, i) => i !== index));
 
   const move = (index: number, delta: number) =>
     setDraft((d) => {
@@ -561,7 +611,11 @@ function TemplatesPanel({
           </div>
           {draft ? (
             <>
-              <button className="btn" onClick={() => setDraft(null)} disabled={saving}>
+              <button
+                className="btn"
+                onClick={() => setDraft(null)}
+                disabled={saving}
+              >
                 Cancel
               </button>
               <button
@@ -586,87 +640,103 @@ function TemplatesPanel({
       </p>
 
       <div className="card">
-      {!draft &&
-        items.map((i) => (
-          <div className="line" key={i.id}>
-            <span className="tag">{ROLE_LABELS[i.assigneeRole] ?? i.assigneeRole}</span>
-            <span className="grow">{i.title}</span>
-            <span className="muted small">
-              {i.dueOffsetDays === 0
-                ? 'on the day'
-                : i.dueOffsetDays > 0
-                  ? `+${i.dueOffsetDays} d`
-                  : `${i.dueOffsetDays} d`}
-            </span>
-          </div>
-        ))}
-
-      {draft && (
-        <div className="stack">
-          {draft.map((row, index) => (
-            <div className="field-row template-row" key={index}>
-              <label className="field grow">
-                Task
-                <input
-                  value={row.title}
-                  onChange={(e) => update(index, { title: e.target.value })}
-                />
-              </label>
-              <label className="field">
-                Owner
-                <select
-                  value={row.assigneeRole}
-                  onChange={(e) => update(index, { assigneeRole: e.target.value })}
-                >
-                  {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Offset (days)
-                <input
-                  type="number"
-                  value={row.dueOffsetDays}
-                  onChange={(e) =>
-                    update(index, { dueOffsetDays: Number.parseInt(e.target.value || '0', 10) })
-                  }
-                />
-              </label>
-              <div className="actions">
-                <button className="btn small-btn" onClick={() => move(index, -1)} disabled={index === 0}>
-                  Up
-                </button>
-                <button
-                  className="btn small-btn"
-                  onClick={() => move(index, 1)}
-                  disabled={index === draft.length - 1}
-                >
-                  Down
-                </button>
-                <button className="btn danger small-btn" onClick={() => remove(index)}>
-                  Remove
-                </button>
-              </div>
+        {!draft &&
+          items.map((i) => (
+            <div className="line" key={i.id}>
+              <span className="tag">
+                {ROLE_LABELS[i.assigneeRole] ?? i.assigneeRole}
+              </span>
+              <span className="grow">{i.title}</span>
+              <span className="muted small">
+                {i.dueOffsetDays === 0
+                  ? 'on the day'
+                  : i.dueOffsetDays > 0
+                    ? `+${i.dueOffsetDays} d`
+                    : `${i.dueOffsetDays} d`}
+              </span>
             </div>
           ))}
-          <div className="actions">
-            <button
-              className="btn"
-              onClick={() =>
-                setDraft((d) => [
-                  ...(d ?? []),
-                  { title: '', assigneeRole: 'hr_admin', dueOffsetDays: 0 },
-                ])
-              }
-            >
-              Add task
-            </button>
+
+        {draft && (
+          <div className="stack">
+            {draft.map((row, index) => (
+              <div className="field-row template-row" key={index}>
+                <label className="field grow">
+                  Task
+                  <input
+                    value={row.title}
+                    onChange={(e) => update(index, { title: e.target.value })}
+                  />
+                </label>
+                <label className="field">
+                  Owner
+                  <select
+                    value={row.assigneeRole}
+                    onChange={(e) =>
+                      update(index, { assigneeRole: e.target.value })
+                    }
+                  >
+                    {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  Offset (days)
+                  <input
+                    type="number"
+                    value={row.dueOffsetDays}
+                    onChange={(e) =>
+                      update(index, {
+                        dueOffsetDays: Number.parseInt(
+                          e.target.value || '0',
+                          10,
+                        ),
+                      })
+                    }
+                  />
+                </label>
+                <div className="actions">
+                  <button
+                    className="btn small-btn"
+                    onClick={() => move(index, -1)}
+                    disabled={index === 0}
+                  >
+                    Up
+                  </button>
+                  <button
+                    className="btn small-btn"
+                    onClick={() => move(index, 1)}
+                    disabled={index === draft.length - 1}
+                  >
+                    Down
+                  </button>
+                  <button
+                    className="btn danger small-btn"
+                    onClick={() => remove(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="actions">
+              <button
+                className="btn"
+                onClick={() =>
+                  setDraft((d) => [
+                    ...(d ?? []),
+                    { title: '', assigneeRole: 'hr_admin', dueOffsetDays: 0 },
+                  ])
+                }
+              >
+                Add task
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );

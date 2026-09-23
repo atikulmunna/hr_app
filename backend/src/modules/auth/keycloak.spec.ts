@@ -17,9 +17,7 @@ describe('assertAccessToken', () => {
   });
 
   it('accepts the shape Keycloak emits for a public client, aud "account"', () => {
-    expect(() =>
-      assertAccessToken(claims({ aud: 'account' })),
-    ).not.toThrow();
+    expect(() => assertAccessToken(claims({ aud: 'account' }))).not.toThrow();
   });
 
   it('rejects an ID token, which shares the issuer and signature', () => {
@@ -42,9 +40,9 @@ describe('assertAccessToken', () => {
   });
 
   it('rejects a token minted for a different client in the same realm', () => {
-    expect(() => assertAccessToken(claims({ azp: 'some-other-client' }))).toThrow(
-      'Token was not issued for this application.',
-    );
+    expect(() =>
+      assertAccessToken(claims({ azp: 'some-other-client' })),
+    ).toThrow('Token was not issued for this application.');
     expect(() =>
       assertAccessToken({ typ: 'Bearer', azp: 'attacker', aud: 'account' }),
     ).toThrow(UnauthorizedException);
@@ -57,9 +55,9 @@ describe('assertAccessToken', () => {
     expect(() =>
       assertAccessToken({ typ: 'Bearer', aud: ['account', 'hris-mobile'] }),
     ).not.toThrow();
-    expect(() => assertAccessToken({ typ: 'Bearer', aud: ['account'] })).toThrow(
-      UnauthorizedException,
-    );
+    expect(() =>
+      assertAccessToken({ typ: 'Bearer', aud: ['account'] }),
+    ).toThrow(UnauthorizedException);
   });
 
   it('rejects a token that names no client at all', () => {

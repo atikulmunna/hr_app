@@ -165,8 +165,8 @@ export class LeaveRequestService {
 
   async myBalances(user: AuthUser): Promise<LeaveBalance[]> {
     const employee = await this.employees.myProfile(user.sub, user.email);
-    const rows: Array<Omit<LeaveBalance, 'remaining'>> = await this.db.withTenant(
-      (m) =>
+    const rows: Array<Omit<LeaveBalance, 'remaining'>> =
+      await this.db.withTenant((m) =>
         m.query(
           `SELECT lt.id AS "leaveTypeId", lt.code, lt.name,
                   lt.annual_quota::float AS "annualQuota",
@@ -184,7 +184,7 @@ export class LeaveRequestService {
            ORDER BY lt.name`,
           [employee.id, employee.legalEntityId, ACTIVE_STATUSES],
         ),
-    );
+      );
     return rows.map((r) => ({
       ...r,
       remaining: Math.max(r.annualQuota - r.used, 0),

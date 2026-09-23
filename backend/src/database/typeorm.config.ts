@@ -68,11 +68,11 @@ import { ChecklistItem } from '../entities/checklist-item.entity';
 // used by the CLI DataSource for migrations and seeding.
 export function buildDataSourceOptions(runtime = false): DataSourceOptions {
   const username = runtime
-    ? process.env.APP_DB_USER ?? 'hris_app'
-    : process.env.DB_USER ?? 'hris';
+    ? (process.env.APP_DB_USER ?? 'hris_app')
+    : (process.env.DB_USER ?? 'hris');
   const password = runtime
-    ? process.env.APP_DB_PASSWORD ?? 'hris_app_pw'
-    : process.env.DB_PASSWORD ?? 'hris_dev_pw';
+    ? (process.env.APP_DB_PASSWORD ?? 'hris_app_pw')
+    : (process.env.DB_PASSWORD ?? 'hris_dev_pw');
   return {
     type: 'postgres',
     host: process.env.DB_HOST ?? 'localhost',

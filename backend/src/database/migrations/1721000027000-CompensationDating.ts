@@ -19,7 +19,9 @@ export class CompensationDating1721000027000 implements MigrationInterface {
   name = 'CompensationDating1721000027000';
 
   public async up(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE employee_pay_components ADD COLUMN effective_from date`);
+    await q.query(
+      `ALTER TABLE employee_pay_components ADD COLUMN effective_from date`,
+    );
     // Existing rows have always been in force, so date them from their creation.
     await q.query(
       `UPDATE employee_pay_components SET effective_from = created_at::date`,
@@ -55,13 +57,17 @@ export class CompensationDating1721000027000 implements MigrationInterface {
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE legal_entities DROP COLUMN IF EXISTS proration_basis`);
+    await q.query(
+      `ALTER TABLE legal_entities DROP COLUMN IF EXISTS proration_basis`,
+    );
     await q.query(`DROP INDEX IF EXISTS idx_employee_pay_components_as_of`);
     await q.query(`
       ALTER TABLE employee_pay_components
         DROP CONSTRAINT IF EXISTS employee_pay_components_revision_key
     `);
-    await q.query(`ALTER TABLE employee_pay_components DROP COLUMN IF EXISTS effective_from`);
+    await q.query(
+      `ALTER TABLE employee_pay_components DROP COLUMN IF EXISTS effective_from`,
+    );
     await q.query(`
       ALTER TABLE employee_pay_components
         ADD CONSTRAINT employee_pay_components_tenant_id_employee_id_pay_component_key

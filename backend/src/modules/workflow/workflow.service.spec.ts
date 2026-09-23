@@ -28,7 +28,9 @@ class FakeManager {
   }
 
   async save<T extends { id?: string }>(row: T): Promise<T> {
-    const rows = ('requestType' in row ? this.requests : this.steps) as unknown as T[];
+    const rows = ('requestType' in row
+      ? this.requests
+      : this.steps) as unknown as T[];
     if (!row.id) {
       row.id = `id-${this.nextId++}`;
       rows.push(row);
@@ -39,16 +41,24 @@ class FakeManager {
     return row;
   }
 
-  async findOne<T>(entity: unknown, opts: { where: Partial<T> }): Promise<T | null> {
+  async findOne<T>(
+    entity: unknown,
+    opts: { where: Partial<T> },
+  ): Promise<T | null> {
     return (this.matches(entity, opts.where)[0] as T) ?? null;
   }
 
   async find<T>(entity: unknown, opts: { where: Partial<T> }): Promise<T[]> {
     const rows = this.matches(entity, opts.where) as unknown as ApprovalStep[];
-    return [...rows].sort((a, b) => a.stepOrder - b.stepOrder) as unknown as T[];
+    return [...rows].sort(
+      (a, b) => a.stepOrder - b.stepOrder,
+    ) as unknown as T[];
   }
 
-  async count<T>(entity: unknown, opts: { where: Partial<T> }): Promise<number> {
+  async count<T>(
+    entity: unknown,
+    opts: { where: Partial<T> },
+  ): Promise<number> {
     return this.matches(entity, opts.where).length;
   }
 
@@ -74,7 +84,9 @@ function build(actor: Actor = { sub: 'alice', roles: ['employee'] }) {
       fn(manager as unknown as EntityManager),
     ),
   };
-  const ctx = { actor: { sub: actor.sub, username: actor.sub, roles: actor.roles } };
+  const ctx = {
+    actor: { sub: actor.sub, username: actor.sub, roles: actor.roles },
+  };
   const audit = { record: jest.fn().mockResolvedValue(undefined) };
   const notifications = { notify: jest.fn().mockResolvedValue(undefined) };
   const service = new WorkflowService(
@@ -99,7 +111,10 @@ describe('createRequest', () => {
       service.createRequest({ requestType: '', approverRoles: ['manager'] }),
     ).rejects.toThrow(BadRequestException);
     await expect(
-      service.createRequest({ requestType: 'leave_request', approverRoles: [] }),
+      service.createRequest({
+        requestType: 'leave_request',
+        approverRoles: [],
+      }),
     ).rejects.toThrow('At least one approver role is required.');
   });
 
@@ -115,11 +130,15 @@ describe('createRequest', () => {
       currentStep: 1,
       escalatable: false,
     });
-    expect(view.steps.map((s) => [s.stepOrder, s.approverRole, s.status])).toEqual([
+    expect(
+      view.steps.map((s) => [s.stepOrder, s.approverRole, s.status]),
+    ).toEqual([
       [1, 'manager', 'pending'],
       [2, 'hr_admin', 'pending'],
     ]);
-    expect(manager.steps.every((s) => s.requestId === view.request.id)).toBe(true);
+    expect(manager.steps.every((s) => s.requestId === view.request.id)).toBe(
+      true,
+    );
   });
 
   it('marks the request escalatable when the requester holds an approver role', async () => {
@@ -148,7 +167,10 @@ describe('createRequest', () => {
     );
     expect(notifications.notify).toHaveBeenCalledTimes(1);
     expect(notifications.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ recipientRole: 'manager', type: 'approval.pending' }),
+      expect.objectContaining({
+        recipientRole: 'manager',
+        type: 'approval.pending',
+      }),
       expect.anything(),
     );
   });
@@ -186,7 +208,12 @@ describe('decide', () => {
 
   it('advances to the next level on approval and notifies that role', async () => {
     const { service, id, notifications } = await pending();
-    const view = await service.decide(id, 'approve', { sub: 'm1', roles: ['manager'] }, 'ok');
+    const view = await service.decide(
+      id,
+      'approve',
+      { sub: 'm1', roles: ['manager'] },
+      'ok',
+    );
 
     expect(view.request.status).toBe('pending');
     expect(view.request.currentStep).toBe(2);
@@ -198,7 +225,10 @@ describe('decide', () => {
     expect(view.steps[0].decidedAt).toBeInstanceOf(Date);
     expect(view.steps[1].status).toBe('pending');
     expect(notifications.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ recipientRole: 'hr_admin', type: 'approval.pending' }),
+      expect.objectContaining({
+        recipientRole: 'hr_admin',
+        type: 'approval.pending',
+      }),
       expect.anything(),
     );
   });
@@ -206,12 +236,18 @@ describe('decide', () => {
   it('approves the request once the last step is approved and tells the requester', async () => {
     const { service, id, notifications, audit } = await pending();
     await service.decide(id, 'approve', { sub: 'm1', roles: ['manager'] });
-    const view = await service.decide(id, 'approve', { sub: 'hr1', roles: ['hr_admin'] });
+    const view = await service.decide(id, 'approve', {
+      sub: 'hr1',
+      roles: ['hr_admin'],
+    });
 
     expect(view.request.status).toBe('approved');
     expect(view.steps.map((s) => s.status)).toEqual(['approved', 'approved']);
     expect(notifications.notify).toHaveBeenLastCalledWith(
-      expect.objectContaining({ recipientSub: 'alice', type: 'approval.approved' }),
+      expect.objectContaining({
+        recipientSub: 'alice',
+        type: 'approval.approved',
+      }),
       expect.anything(),
     );
     expect(audit.record).toHaveBeenLastCalledWith(
@@ -222,13 +258,19 @@ describe('decide', () => {
 
   it('rejects the whole request at any level and leaves later steps pending', async () => {
     const { service, id, notifications } = await pending();
-    const view = await service.decide(id, 'reject', { sub: 'm1', roles: ['manager'] });
+    const view = await service.decide(id, 'reject', {
+      sub: 'm1',
+      roles: ['manager'],
+    });
 
     expect(view.request.status).toBe('rejected');
     expect(view.request.currentStep).toBe(1);
     expect(view.steps.map((s) => s.status)).toEqual(['rejected', 'pending']);
     expect(notifications.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ recipientSub: 'alice', type: 'approval.rejected' }),
+      expect.objectContaining({
+        recipientSub: 'alice',
+        type: 'approval.rejected',
+      }),
       expect.anything(),
     );
   });
@@ -248,7 +290,10 @@ describe('decide', () => {
         sub: 'coo',
         roles: ['tenant_admin'],
       });
-      expect(view.steps[0]).toMatchObject({ status: 'approved', decidedBySub: 'coo' });
+      expect(view.steps[0]).toMatchObject({
+        status: 'approved',
+        decidedBySub: 'coo',
+      });
     });
 
     it('keeps the COO out of an ordinary request', async () => {
@@ -259,7 +304,10 @@ describe('decide', () => {
     });
 
     it('still binds the COO to separation of duties', async () => {
-      const { service, id } = await pending({ sub: 'coo', roles: ['tenant_admin', 'manager'] });
+      const { service, id } = await pending({
+        sub: 'coo',
+        roles: ['tenant_admin', 'manager'],
+      });
       await expect(
         service.decide(id, 'approve', { sub: 'coo', roles: ['tenant_admin'] }),
       ).rejects.toThrow('You raised this request');
@@ -277,9 +325,9 @@ describe('decision handlers', () => {
   it('refuses a second handler for the same request type', () => {
     const { service } = build();
     service.onDecided('leave_request', async () => undefined);
-    expect(() => service.onDecided('leave_request', async () => undefined)).toThrow(
-      'already registered',
-    );
+    expect(() =>
+      service.onDecided('leave_request', async () => undefined),
+    ).toThrow('already registered');
   });
 
   it('runs the handler only once the request is finalized, in the same transaction', async () => {
@@ -304,7 +352,9 @@ describe('decision handlers', () => {
     service.onDecided('leave_request', handler);
     await service.decide(id, 'reject', { sub: 'm1', roles: ['manager'] });
     expect(handler).toHaveBeenCalledWith(
-      expect.objectContaining({ request: expect.objectContaining({ status: 'rejected' }) }),
+      expect.objectContaining({
+        request: expect.objectContaining({ status: 'rejected' }),
+      }),
       expect.anything(),
     );
   });

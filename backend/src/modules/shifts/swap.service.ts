@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { TenantDbService } from '../../database/tenant-db.service';
 import { RosterEntry } from '../../entities/roster-entry.entity';
@@ -43,7 +47,9 @@ export class SwapService {
         where: { id: input.requesterEntryId },
       });
       if (!mine || mine.employeeId !== employee.id) {
-        throw new BadRequestException('You can only offer your own roster day.');
+        throw new BadRequestException(
+          'You can only offer your own roster day.',
+        );
       }
       const theirs = await m.findOne(RosterEntry, {
         where: { id: input.counterpartyEntryId },
@@ -94,7 +100,11 @@ export class SwapService {
           action: 'shift_swap.request',
           resourceType: 'shift_swap_request',
           resourceId: saved.id,
-          after: { counterpartyEmployeeId, requesterDate: myDate, counterpartyDate: theirDate },
+          after: {
+            counterpartyEmployeeId,
+            requesterDate: myDate,
+            counterpartyDate: theirDate,
+          },
         },
         m,
       );

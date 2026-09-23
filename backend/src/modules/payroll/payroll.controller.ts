@@ -111,7 +111,10 @@ export class PayrollController {
   }
 
   @Get('me/payslips/:runId/detail')
-  myPayslipDetail(@CurrentUser() user: AuthUser, @Param('runId') runId: string) {
+  myPayslipDetail(
+    @CurrentUser() user: AuthUser,
+    @Param('runId') runId: string,
+  ) {
     return this.payslips.myDetail(user, runId);
   }
 

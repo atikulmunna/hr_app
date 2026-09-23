@@ -92,13 +92,13 @@ export function StatutoryRules({
         </button>
       </div>
       <p className="muted small">
-        Tax, provident fund, and contributions, per legal entity. Rates are dated:
-        add a rule with a later date to supersede an old one. A run applies what
-        was in force at its cut-off, so changing a rate never rewrites a past
-        period. Employee amounts reduce net pay; employer amounts are a cost and
-        do not. Set "annual figures" for income tax so its yearly brackets are
-        annualized against monthly pay; keep "monthly" for provident fund and
-        CPF-style contributions.
+        Tax, provident fund, and contributions, per legal entity. Rates are
+        dated: add a rule with a later date to supersede an old one. A run
+        applies what was in force at its cut-off, so changing a rate never
+        rewrites a past period. Employee amounts reduce net pay; employer
+        amounts are a cost and do not. Set "annual figures" for income tax so
+        its yearly brackets are annualized against monthly pay; keep "monthly"
+        for provident fund and CPF-style contributions.
       </p>
 
       {showForm && (
@@ -235,7 +235,9 @@ function NewStatutoryRuleForm({
           <label>Legal entity</label>
           <select
             value={form.legalEntityId}
-            onChange={(e) => setForm({ ...form, legalEntityId: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, legalEntityId: e.target.value })
+            }
           >
             <option value="">Select an entity</option>
             {entities.map((ent) => (
@@ -294,7 +296,10 @@ function NewStatutoryRuleForm({
           <select
             value={form.basis}
             onChange={(e) =>
-              setForm({ ...form, basis: e.target.value as 'monthly' | 'annual' })
+              setForm({
+                ...form,
+                basis: e.target.value as 'monthly' | 'annual',
+              })
             }
           >
             <option value="monthly">Monthly figures</option>
@@ -306,7 +311,9 @@ function NewStatutoryRuleForm({
           <input
             type="date"
             value={form.effectiveFrom}
-            onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, effectiveFrom: e.target.value })
+            }
           />
         </div>
       </div>
@@ -335,7 +342,9 @@ function NewStatutoryRuleForm({
             <label>Wage ceiling (optional)</label>
             <input
               value={form.wageCeiling}
-              onChange={(e) => setForm({ ...form, wageCeiling: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, wageCeiling: e.target.value })
+              }
             />
           </div>
         </div>
@@ -401,7 +410,11 @@ function NewStatutoryRuleForm({
       )}
 
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Create statutory rule
         </button>
       </div>

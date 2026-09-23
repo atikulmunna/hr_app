@@ -39,21 +39,65 @@ export interface TemplateItem {
 // from the hire date or the termination date.
 const DEFAULT_TEMPLATES: Record<ChecklistKind, TemplateItem[]> = {
   onboarding: [
-    { title: 'Sign the employment contract', assigneeRole: 'employee', dueOffsetDays: 0 },
-    { title: 'Collect ID, tax, and bank details', assigneeRole: 'hr_admin', dueOffsetDays: 0 },
-    { title: 'Assign shift, geofence, and leave policy', assigneeRole: 'hr_admin', dueOffsetDays: 1 },
-    { title: 'Set up workstation and system accounts', assigneeRole: 'manager', dueOffsetDays: 1 },
-    { title: 'Welcome and team introductions', assigneeRole: 'manager', dueOffsetDays: 2 },
-    { title: 'Acknowledge company policies', assigneeRole: 'employee', dueOffsetDays: 5 },
+    {
+      title: 'Sign the employment contract',
+      assigneeRole: 'employee',
+      dueOffsetDays: 0,
+    },
+    {
+      title: 'Collect ID, tax, and bank details',
+      assigneeRole: 'hr_admin',
+      dueOffsetDays: 0,
+    },
+    {
+      title: 'Assign shift, geofence, and leave policy',
+      assigneeRole: 'hr_admin',
+      dueOffsetDays: 1,
+    },
+    {
+      title: 'Set up workstation and system accounts',
+      assigneeRole: 'manager',
+      dueOffsetDays: 1,
+    },
+    {
+      title: 'Welcome and team introductions',
+      assigneeRole: 'manager',
+      dueOffsetDays: 2,
+    },
+    {
+      title: 'Acknowledge company policies',
+      assigneeRole: 'employee',
+      dueOffsetDays: 5,
+    },
     { title: '30-day check-in', assigneeRole: 'manager', dueOffsetDays: 30 },
   ],
   offboarding: [
-    { title: 'Hand over responsibilities and documents', assigneeRole: 'employee', dueOffsetDays: -5 },
-    { title: 'Return company equipment and access cards', assigneeRole: 'employee', dueOffsetDays: 0 },
-    { title: 'Confirm handover is complete', assigneeRole: 'manager', dueOffsetDays: 0 },
-    { title: 'Revoke system and building access', assigneeRole: 'hr_admin', dueOffsetDays: 0 },
+    {
+      title: 'Hand over responsibilities and documents',
+      assigneeRole: 'employee',
+      dueOffsetDays: -5,
+    },
+    {
+      title: 'Return company equipment and access cards',
+      assigneeRole: 'employee',
+      dueOffsetDays: 0,
+    },
+    {
+      title: 'Confirm handover is complete',
+      assigneeRole: 'manager',
+      dueOffsetDays: 0,
+    },
+    {
+      title: 'Revoke system and building access',
+      assigneeRole: 'hr_admin',
+      dueOffsetDays: 0,
+    },
     { title: 'Exit interview', assigneeRole: 'hr_admin', dueOffsetDays: 0 },
-    { title: 'Final settlement and last payslip', assigneeRole: 'hr_admin', dueOffsetDays: 7 },
+    {
+      title: 'Final settlement and last payslip',
+      assigneeRole: 'hr_admin',
+      dueOffsetDays: 7,
+    },
   ],
 };
 
@@ -149,7 +193,10 @@ export class ChecklistService {
     });
   }
 
-  replaceTemplate(kind: ChecklistKind, items: unknown): Promise<ChecklistTemplateItem[]> {
+  replaceTemplate(
+    kind: ChecklistKind,
+    items: unknown,
+  ): Promise<ChecklistTemplateItem[]> {
     const valid = validateTemplateItems(items);
     return this.db.withTenant(async (m) => {
       await m.delete(ChecklistTemplateItem, { kind });
@@ -233,7 +280,10 @@ export class ChecklistService {
       throw new BadRequestException('employeeId is required.');
     }
     const anchor = input.anchorDate ?? new Date().toISOString().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(anchor) || Number.isNaN(Date.parse(anchor))) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(anchor) ||
+      Number.isNaN(Date.parse(anchor))
+    ) {
       throw new BadRequestException('anchorDate must be a YYYY-MM-DD date.');
     }
     return this.db.withTenant(async (m) => {
@@ -275,13 +325,19 @@ export class ChecklistService {
 
   // --- Completing.
 
-  completeItem(user: AuthUser, itemId: string, note?: string): Promise<ChecklistView> {
+  completeItem(
+    user: AuthUser,
+    itemId: string,
+    note?: string,
+  ): Promise<ChecklistView> {
     return this.db.withTenant(async (m) => {
       const item = await m.findOne(ChecklistItem, { where: { id: itemId } });
       if (!item) {
         throw new NotFoundException('Task not found.');
       }
-      const checklist = await m.findOne(Checklist, { where: { id: item.checklistId } });
+      const checklist = await m.findOne(Checklist, {
+        where: { id: item.checklistId },
+      });
       if (!checklist || checklist.status !== 'open') {
         throw new BadRequestException('This checklist is already complete.');
       }
@@ -300,7 +356,11 @@ export class ChecklistService {
           action: 'checklist.item_complete',
           resourceType: 'checklist_item',
           resourceId: item.id,
-          after: { checklistId: checklist.id, title: item.title, note: item.note },
+          after: {
+            checklistId: checklist.id,
+            title: item.title,
+            note: item.note,
+          },
         },
         m,
       );
@@ -352,7 +412,11 @@ export class ChecklistService {
     if (item.assigneeRole === 'employee' && me && checklist.employeeId === me) {
       return;
     }
-    if (item.assigneeRole === 'manager' && me && user.roles.includes('manager')) {
+    if (
+      item.assigneeRole === 'manager' &&
+      me &&
+      user.roles.includes('manager')
+    ) {
       const [row] = (await m.query(
         `SELECT 1 FROM employees WHERE id = $1 AND manager_id = $2`,
         [checklist.employeeId, me],
@@ -378,7 +442,10 @@ export class ChecklistService {
       return rows;
     }
     await this.insertTemplate(m, kind, DEFAULT_TEMPLATES[kind]);
-    return m.find(ChecklistTemplateItem, { where: { kind }, order: { sortOrder: 'ASC' } });
+    return m.find(ChecklistTemplateItem, {
+      where: { kind },
+      order: { sortOrder: 'ASC' },
+    });
   }
 
   private async insertTemplate(
@@ -483,7 +550,10 @@ export class ChecklistService {
     )) as TaskView[];
   }
 
-  private async resolveEmployeeId(m: EntityManager, user: AuthUser): Promise<string | null> {
+  private async resolveEmployeeId(
+    m: EntityManager,
+    user: AuthUser,
+  ): Promise<string | null> {
     const rows = (await m.query(
       `SELECT id FROM employees
         WHERE keycloak_sub = $1 OR (email = $2 AND $2 <> '')
@@ -493,7 +563,10 @@ export class ChecklistService {
     return rows[0]?.id ?? null;
   }
 
-  private async employeeName(m: EntityManager, employeeId: string): Promise<string> {
+  private async employeeName(
+    m: EntityManager,
+    employeeId: string,
+  ): Promise<string> {
     const [row] = (await m.query(
       `SELECT first_name || ' ' || last_name AS name FROM employees WHERE id = $1`,
       [employeeId],
@@ -517,7 +590,11 @@ export class ChecklistService {
          LEFT JOIN employees mgr ON mgr.id = e.manager_id
         WHERE e.id = $1`,
       [checklist.employeeId],
-    )) as { name: string; employeeSub: string | null; managerSub: string | null }[];
+    )) as {
+      name: string;
+      employeeSub: string | null;
+      managerSub: string | null;
+    }[];
     const title = `${capitalize(checklist.kind)} started`;
     const data = { checklistId: checklist.id, kind: checklist.kind };
     if (roles.has('hr_admin')) {

@@ -38,8 +38,12 @@ export class Documents1721000040000 implements MigrationInterface {
         updated_at timestamptz NOT NULL DEFAULT now()
       )
     `);
-    await q.query(`CREATE INDEX idx_documents_employee ON documents(employee_id)`);
-    await q.query(`CREATE INDEX idx_documents_expires ON documents(expires_on)`);
+    await q.query(
+      `CREATE INDEX idx_documents_employee ON documents(employee_id)`,
+    );
+    await q.query(
+      `CREATE INDEX idx_documents_expires ON documents(expires_on)`,
+    );
 
     // --- Version history: each version is an immutable metadata record with the
     // file's SHA-256 (FR-M1-07). The document points at its current version.

@@ -10,7 +10,12 @@ import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { EmployeeService } from '../employees/employee.service';
 
-const GOAL_STATUSES: GoalStatus[] = ['active', 'achieved', 'missed', 'cancelled'];
+const GOAL_STATUSES: GoalStatus[] = [
+  'active',
+  'achieved',
+  'missed',
+  'cancelled',
+];
 
 export interface CreateGoalInput {
   employeeId?: string;
@@ -64,12 +69,17 @@ export class GoalService {
     if (!title) {
       throw new BadRequestException('A goal needs a title.');
     }
-    if (input.weight != null && (Number.isNaN(input.weight) || input.weight < 0)) {
+    if (
+      input.weight != null &&
+      (Number.isNaN(input.weight) || input.weight < 0)
+    ) {
       throw new BadRequestException('Weight must be zero or more.');
     }
     const id = await this.db.withTenant(async (m) => {
       if (input.parentGoalId) {
-        const parent = await m.findOne(Goal, { where: { id: input.parentGoalId } });
+        const parent = await m.findOne(Goal, {
+          where: { id: input.parentGoalId },
+        });
         if (!parent) {
           throw new BadRequestException('Unknown parent goal.');
         }
@@ -131,7 +141,9 @@ export class GoalService {
         input.progress < 0 ||
         input.progress > 100
       ) {
-        throw new BadRequestException('Progress must be a whole number from 0 to 100.');
+        throw new BadRequestException(
+          'Progress must be a whole number from 0 to 100.',
+        );
       }
     }
     if (input.status !== undefined && !GOAL_STATUSES.includes(input.status)) {

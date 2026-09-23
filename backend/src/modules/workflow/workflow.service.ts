@@ -58,7 +58,9 @@ export class WorkflowService {
   // owner, so a second registration is a wiring mistake.
   onDecided(requestType: string, handler: DecisionHandler): void {
     if (this.handlers.has(requestType)) {
-      throw new Error(`A decision handler for "${requestType}" is already registered.`);
+      throw new Error(
+        `A decision handler for "${requestType}" is already registered.`,
+      );
     }
     this.handlers.set(requestType, handler);
   }
@@ -116,7 +118,10 @@ export class WorkflowService {
           action: 'approval.create',
           resourceType: 'approval_request',
           resourceId: request.id,
-          after: { requestType: input.requestType, approverRoles: input.approverRoles },
+          after: {
+            requestType: input.requestType,
+            approverRoles: input.approverRoles,
+          },
         },
         m,
       );
@@ -208,9 +213,7 @@ export class WorkflowService {
         throw new NotFoundException('Approval request not found.');
       }
       if (request.status !== 'pending') {
-        throw new BadRequestException(
-          `Request is already ${request.status}.`,
-        );
+        throw new BadRequestException(`Request is already ${request.status}.`);
       }
       const step = await m.findOne(ApprovalStep, {
         where: { requestId: id, stepOrder: request.currentStep },

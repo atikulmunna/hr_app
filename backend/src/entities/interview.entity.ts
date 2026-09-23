@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 // A scheduled interview for an application (T-3.1, FR-M5-05). Each interview
 // gathers one scorecard per reviewer, so a hiring decision rests on collaborative

@@ -125,69 +125,73 @@ export function Recruitment({ token }: { token: string }) {
           </button>
         </div>
         <p className="muted small">
-          A headcount request. Draft it, then submit it for the COO to approve in
-          the Approvals tab. Once approved it accepts candidates through the
+          A headcount request. Draft it, then submit it for the COO to approve
+          in the Approvals tab. Once approved it accepts candidates through the
           pipeline. Select one to see its applications.
         </p>
 
         <div className="stack">
-        {showReqForm && (
-          <NewRequisitionForm
-            token={token}
-            entities={entities}
-            departments={departments}
-            onError={setError}
-            onCreated={() => {
-              setShowReqForm(false);
-              void loadReqs();
-            }}
-          />
-        )}
+          {showReqForm && (
+            <NewRequisitionForm
+              token={token}
+              entities={entities}
+              departments={departments}
+              onError={setError}
+              onCreated={() => {
+                setShowReqForm(false);
+                void loadReqs();
+              }}
+            />
+          )}
 
-        <div className="list">
-          {reqs.map((r) => (
-            <article
-              className={`card row top clickable ${r.id === selectedReqId ? 'selected' : ''}`}
-              key={r.id}
-              onClick={() => selectReq(r.id)}
-            >
-              <div className="grow">
-                <div className="row-title">
-                  <span className={pillClass(r.status)}>{r.status}</span>
-                  <span className="notif-title">{r.title}</span>
-                  <span className="muted small">{r.legalEntityName}</span>
-                  {r.departmentName && (
-                    <span className="tag">{r.departmentName}</span>
+          <div className="list">
+            {reqs.map((r) => (
+              <article
+                className={`card row top clickable ${r.id === selectedReqId ? 'selected' : ''}`}
+                key={r.id}
+                onClick={() => selectReq(r.id)}
+              >
+                <div className="grow">
+                  <div className="row-title">
+                    <span className={pillClass(r.status)}>{r.status}</span>
+                    <span className="notif-title">{r.title}</span>
+                    <span className="muted small">{r.legalEntityName}</span>
+                    {r.departmentName && (
+                      <span className="tag">{r.departmentName}</span>
+                    )}
+                  </div>
+                  <div className="muted small">
+                    {r.headcount} opening{r.headcount === 1 ? '' : 's'} ·{' '}
+                    {r.employmentType} · {r.openApplications} in pipeline ·{' '}
+                    {r.hires} hired
+                  </div>
+                </div>
+                <div className="actions" onClick={(e) => e.stopPropagation()}>
+                  {r.status === 'draft' && (
+                    <button
+                      className="btn primary"
+                      onClick={() =>
+                        void run(() => api.submitRequisition(token, r.id))
+                      }
+                    >
+                      Submit for approval
+                    </button>
+                  )}
+                  {(r.status === 'approved' || r.status === 'pending') && (
+                    <button
+                      className="btn"
+                      onClick={() =>
+                        void run(() => api.closeRequisition(token, r.id))
+                      }
+                    >
+                      Close
+                    </button>
                   )}
                 </div>
-                <div className="muted small">
-                  {r.headcount} opening{r.headcount === 1 ? '' : 's'} ·{' '}
-                  {r.employmentType} · {r.openApplications} in pipeline ·{' '}
-                  {r.hires} hired
-                </div>
-              </div>
-              <div className="actions" onClick={(e) => e.stopPropagation()}>
-                {r.status === 'draft' && (
-                  <button
-                    className="btn primary"
-                    onClick={() => void run(() => api.submitRequisition(token, r.id))}
-                  >
-                    Submit for approval
-                  </button>
-                )}
-                {(r.status === 'approved' || r.status === 'pending') && (
-                  <button
-                    className="btn"
-                    onClick={() => void run(() => api.closeRequisition(token, r.id))}
-                  >
-                    Close
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-          {reqs.length === 0 && <p className="muted">No requisitions yet.</p>}
-        </div>
+              </article>
+            ))}
+            {reqs.length === 0 && <p className="muted">No requisitions yet.</p>}
+          </div>
         </div>
       </div>
 
@@ -263,58 +267,62 @@ function RequisitionPipeline({
       )}
 
       <div className="stack">
-      {showForm && canAdd && (
-        <NewCandidateForm
-          token={token}
-          requisitionId={requisition.id}
-          employees={employees}
-          onError={onError}
-          onCreated={() => {
-            setShowForm(false);
-            onChanged();
-          }}
-        />
-      )}
-
-      <div className="list">
-        {apps.map((a) => (
-          <div key={a.id}>
-            <article
-              className={`card row clickable ${a.id === selectedAppId ? 'selected' : ''}`}
-              onClick={() => onSelectApp(a.id === selectedAppId ? null : a.id)}
-            >
-              <div className="grow">
-                <div className="row-title">
-                  <span className={pillClass(a.status)}>{a.stageName}</span>
-                  <span className="notif-title">{a.candidateName}</span>
-                  <span className="muted small">{a.candidateEmail}</span>
-                  <span className="tag">{sourceLabel(a.source)}</span>
-                  {a.referralName && (
-                    <span className="muted small">ref: {a.referralName}</span>
-                  )}
-                  {a.hasOffer && a.offerStatus && (
-                    <span className={pillClass(a.offerStatus)}>
-                      offer {a.offerStatus}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </article>
-            {a.id === selectedAppId && (
-              <ApplicationDetail
-                token={token}
-                applicationId={a.id}
-                stages={stages}
-                onError={onError}
-                onChanged={onChanged}
-              />
-            )}
-          </div>
-        ))}
-        {apps.length === 0 && canAdd && (
-          <p className="muted">No candidates yet. Add one to start the pipeline.</p>
+        {showForm && canAdd && (
+          <NewCandidateForm
+            token={token}
+            requisitionId={requisition.id}
+            employees={employees}
+            onError={onError}
+            onCreated={() => {
+              setShowForm(false);
+              onChanged();
+            }}
+          />
         )}
-      </div>
+
+        <div className="list">
+          {apps.map((a) => (
+            <div key={a.id}>
+              <article
+                className={`card row clickable ${a.id === selectedAppId ? 'selected' : ''}`}
+                onClick={() =>
+                  onSelectApp(a.id === selectedAppId ? null : a.id)
+                }
+              >
+                <div className="grow">
+                  <div className="row-title">
+                    <span className={pillClass(a.status)}>{a.stageName}</span>
+                    <span className="notif-title">{a.candidateName}</span>
+                    <span className="muted small">{a.candidateEmail}</span>
+                    <span className="tag">{sourceLabel(a.source)}</span>
+                    {a.referralName && (
+                      <span className="muted small">ref: {a.referralName}</span>
+                    )}
+                    {a.hasOffer && a.offerStatus && (
+                      <span className={pillClass(a.offerStatus)}>
+                        offer {a.offerStatus}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </article>
+              {a.id === selectedAppId && (
+                <ApplicationDetail
+                  token={token}
+                  applicationId={a.id}
+                  stages={stages}
+                  onError={onError}
+                  onChanged={onChanged}
+                />
+              )}
+            </div>
+          ))}
+          {apps.length === 0 && canAdd && (
+            <p className="muted">
+              No candidates yet. Add one to start the pipeline.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -387,8 +395,8 @@ function ApplicationDetail({
           </div>
           <div className="muted small">
             {sourceLabel(app.source)}
-            {app.referralName ? ` · referred by ${app.referralName}` : ''} · added{' '}
-            {app.createdAt}
+            {app.referralName ? ` · referred by ${app.referralName}` : ''} ·
+            added {app.createdAt}
           </div>
         </div>
       </div>
@@ -397,7 +405,10 @@ function ApplicationDetail({
         <div className="field-row">
           <div className="field">
             <label>Move to stage</label>
-            <select value={moveStage} onChange={(e) => setMoveStage(e.target.value)}>
+            <select
+              value={moveStage}
+              onChange={(e) => setMoveStage(e.target.value)}
+            >
               {stages.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -409,7 +420,9 @@ function ApplicationDetail({
             <button
               className="btn primary"
               disabled={moveStage === app.stageId}
-              onClick={() => void act(() => api.moveApplication(token, app.id, moveStage))}
+              onClick={() =>
+                void act(() => api.moveApplication(token, app.id, moveStage))
+              }
             >
               Move
             </button>
@@ -417,7 +430,9 @@ function ApplicationDetail({
           <div className="field align-end">
             <button
               className="btn"
-              onClick={() => void act(() => api.rejectApplication(token, app.id))}
+              onClick={() =>
+                void act(() => api.rejectApplication(token, app.id))
+              }
             >
               Reject
             </button>
@@ -427,12 +442,7 @@ function ApplicationDetail({
 
       <Interviews app={app} token={token} onAct={act} />
 
-      <OfferSection
-        app={app}
-        offer={offer}
-        token={token}
-        onAct={act}
-      />
+      <OfferSection app={app} offer={offer} token={token} onAct={act} />
     </article>
   );
 }
@@ -446,7 +456,11 @@ function Interviews({
   token: string;
   onAct: (fn: () => Promise<unknown>) => Promise<void>;
 }) {
-  const [form, setForm] = useState({ scheduledAt: '', mode: 'video', interviewerName: '' });
+  const [form, setForm] = useState({
+    scheduledAt: '',
+    mode: 'video',
+    interviewerName: '',
+  });
   const interviews = app.interviews ?? [];
 
   return (
@@ -466,9 +480,14 @@ function Interviews({
               <div className="row-title" key={c.id}>
                 <span className="tag">{c.rating}/5</span>
                 <span className={recClass(c.recommendation)}>
-                  {RECOMMENDATIONS.find((r) => r.value === c.recommendation)?.label}
+                  {
+                    RECOMMENDATIONS.find((r) => r.value === c.recommendation)
+                      ?.label
+                  }
                 </span>
-                <span className="muted small">{c.reviewerName ?? c.reviewerSub}</span>
+                <span className="muted small">
+                  {c.reviewerName ?? c.reviewerSub}
+                </span>
                 {c.comments && <span>{c.comments}</span>}
               </div>
             ))}
@@ -489,7 +508,9 @@ function Interviews({
             <input
               type="datetime-local"
               value={form.scheduledAt}
-              onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, scheduledAt: e.target.value })
+              }
             />
           </div>
           <div className="field">
@@ -507,7 +528,9 @@ function Interviews({
             <label>Interviewer</label>
             <input
               value={form.interviewerName}
-              onChange={(e) => setForm({ ...form, interviewerName: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, interviewerName: e.target.value })
+              }
             />
           </div>
           <div className="field align-end">
@@ -517,7 +540,11 @@ function Interviews({
               onClick={() =>
                 void onAct(async () => {
                   await api.scheduleInterview(token, app.id, form);
-                  setForm({ scheduledAt: '', mode: 'video', interviewerName: '' });
+                  setForm({
+                    scheduledAt: '',
+                    mode: 'video',
+                    interviewerName: '',
+                  });
                 })
               }
             >
@@ -622,7 +649,9 @@ function OfferSection({
             <label>Monthly salary</label>
             <input
               value={form.salaryAmount}
-              onChange={(e) => setForm({ ...form, salaryAmount: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, salaryAmount: e.target.value })
+              }
             />
           </div>
           <div className="field">
@@ -690,7 +719,9 @@ function OfferSection({
                 <button
                   className="btn primary"
                   disabled={!signerName.trim()}
-                  onClick={() => void onAct(() => api.signOffer(token, offer.id, signerName))}
+                  onClick={() =>
+                    void onAct(() => api.signOffer(token, offer.id, signerName))
+                  }
                 >
                   Sign offer
                 </button>
@@ -698,7 +729,9 @@ function OfferSection({
               <div className="field align-end">
                 <button
                   className="btn"
-                  onClick={() => void onAct(() => api.declineOffer(token, offer.id))}
+                  onClick={() =>
+                    void onAct(() => api.declineOffer(token, offer.id))
+                  }
                 >
                   Decline
                 </button>
@@ -710,7 +743,9 @@ function OfferSection({
             <div className="actions">
               <button
                 className="btn primary"
-                onClick={() => void onAct(() => api.convertOffer(token, offer.id))}
+                onClick={() =>
+                  void onAct(() => api.convertOffer(token, offer.id))
+                }
               >
                 Convert to employee
               </button>
@@ -791,7 +826,11 @@ function NewRequisitionForm({
           <select
             value={form.legalEntityId}
             onChange={(e) =>
-              setForm({ ...form, legalEntityId: e.target.value, departmentId: '' })
+              setForm({
+                ...form,
+                legalEntityId: e.target.value,
+                departmentId: '',
+              })
             }
           >
             <option value="">Select entity</option>
@@ -838,7 +877,9 @@ function NewRequisitionForm({
           <label>Employment type</label>
           <select
             value={form.employmentType}
-            onChange={(e) => setForm({ ...form, employmentType: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, employmentType: e.target.value })
+            }
           >
             <option value="permanent">Permanent</option>
             <option value="contract">Contract</option>
@@ -854,7 +895,11 @@ function NewRequisitionForm({
         </div>
       </div>
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Create draft
         </button>
       </div>
@@ -915,21 +960,27 @@ function NewCandidateForm({
           <label>Candidate name</label>
           <input
             value={form.candidateName}
-            onChange={(e) => setForm({ ...form, candidateName: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, candidateName: e.target.value })
+            }
           />
         </div>
         <div className="field">
           <label>Email</label>
           <input
             value={form.candidateEmail}
-            onChange={(e) => setForm({ ...form, candidateEmail: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, candidateEmail: e.target.value })
+            }
           />
         </div>
         <div className="field">
           <label>Phone</label>
           <input
             value={form.candidatePhone}
-            onChange={(e) => setForm({ ...form, candidatePhone: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, candidatePhone: e.target.value })
+            }
           />
         </div>
         <div className="field">
@@ -967,7 +1018,11 @@ function NewCandidateForm({
         )}
       </div>
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Add candidate
         </button>
       </div>

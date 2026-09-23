@@ -70,7 +70,10 @@ export class DocumentService {
 
   // --- HR views.
 
-  list(filter: { employeeId?: string; category?: string }): Promise<DocumentView[]> {
+  list(filter: {
+    employeeId?: string;
+    category?: string;
+  }): Promise<DocumentView[]> {
     return this.db.withTenant(async (m) => {
       await this.syncReminders(m);
       const params: unknown[] = [];
@@ -84,7 +87,10 @@ export class DocumentService {
         clauses.push(`d.category = $${params.length}`);
       }
       const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-      return (await m.query(this.selectDocuments(where), params)) as DocumentView[];
+      return (await m.query(
+        this.selectDocuments(where),
+        params,
+      )) as DocumentView[];
     });
   }
 
@@ -94,9 +100,10 @@ export class DocumentService {
     acknowledgements: unknown[];
   }> {
     return this.db.withTenant(async (m) => {
-      const [document] = (await m.query(this.selectDocuments('WHERE d.id = $1'), [
-        id,
-      ])) as DocumentView[];
+      const [document] = (await m.query(
+        this.selectDocuments('WHERE d.id = $1'),
+        [id],
+      )) as DocumentView[];
       if (!document) {
         throw new NotFoundException('Document not found.');
       }
@@ -117,7 +124,10 @@ export class DocumentService {
     });
   }
 
-  async create(user: AuthUser, input: CreateDocumentInput): Promise<DocumentView> {
+  async create(
+    user: AuthUser,
+    input: CreateDocumentInput,
+  ): Promise<DocumentView> {
     const name = input.name?.trim();
     const sha256 = input.sha256?.trim();
     if (!name) {
@@ -132,9 +142,10 @@ export class DocumentService {
     }
     const id = await this.db.withTenant(async (m) => {
       if (input.employeeId) {
-        const employee = await m.query(`SELECT 1 FROM employees WHERE id = $1`, [
-          input.employeeId,
-        ]);
+        const employee = await m.query(
+          `SELECT 1 FROM employees WHERE id = $1`,
+          [input.employeeId],
+        );
         if (!employee.length) {
           throw new BadRequestException('Unknown employee.');
         }
@@ -279,12 +290,16 @@ export class DocumentService {
         throw new NotFoundException('Document not found.');
       }
       if (!doc.requiresAcknowledgement) {
-        throw new BadRequestException('This document does not require acknowledgement.');
+        throw new BadRequestException(
+          'This document does not require acknowledgement.',
+        );
       }
       const employeeId = await this.resolveEmployeeId(m, user);
       const visible =
         doc.visibility === 'all' ||
-        (doc.visibility === 'employee' && !!employeeId && doc.employeeId === employeeId);
+        (doc.visibility === 'employee' &&
+          !!employeeId &&
+          doc.employeeId === employeeId);
       if (!visible) {
         throw new ForbiddenException('This document is not shared with you.');
       }
@@ -401,12 +416,24 @@ export class DocumentService {
       const body = `${doc.name} ${verb} ${doc.expiresOn}.`;
       const data = { documentId: doc.id, expiresOn: doc.expiresOn };
       await this.notifications.notify(
-        { recipientRole: 'hr_admin', type: 'document.expiry', title, body, data },
+        {
+          recipientRole: 'hr_admin',
+          type: 'document.expiry',
+          title,
+          body,
+          data,
+        },
         m,
       );
       if (doc.keycloakSub) {
         await this.notifications.notify(
-          { recipientSub: doc.keycloakSub, type: 'document.expiry', title, body, data },
+          {
+            recipientSub: doc.keycloakSub,
+            type: 'document.expiry',
+            title,
+            body,
+            data,
+          },
           m,
         );
       }

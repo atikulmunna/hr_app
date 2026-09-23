@@ -55,7 +55,10 @@ export class NotificationService {
   }
 
   // Notifications addressed to the caller directly or via one of their roles.
-  listForUser(sub: string | undefined, roles: string[]): Promise<Notification[]> {
+  listForUser(
+    sub: string | undefined,
+    roles: string[],
+  ): Promise<Notification[]> {
     return this.db.withTenant((m) =>
       m
         .createQueryBuilder(Notification, 'n')

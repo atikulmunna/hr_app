@@ -50,13 +50,17 @@ export class StageService {
     const outcome = input.outcome ?? null;
     const isTerminal = input.isTerminal ?? outcome != null;
     if (outcome != null && !isTerminal) {
-      throw new BadRequestException('Only a terminal stage can carry an outcome.');
+      throw new BadRequestException(
+        'Only a terminal stage can carry an outcome.',
+      );
     }
     return this.db.withTenant(async (m) => {
       await this.ensureDefaults(m);
       const duplicate = await m.findOne(PipelineStage, { where: { name } });
       if (duplicate) {
-        throw new BadRequestException(`A stage named "${name}" already exists.`);
+        throw new BadRequestException(
+          `A stage named "${name}" already exists.`,
+        );
       }
       const [{ max }] = (await m.query(
         `SELECT COALESCE(MAX(sort_order), 0) AS max FROM pipeline_stages`,
@@ -86,7 +90,9 @@ export class StageService {
         }
         const duplicate = await m.findOne(PipelineStage, { where: { name } });
         if (duplicate && duplicate.id !== id) {
-          throw new BadRequestException(`A stage named "${name}" already exists.`);
+          throw new BadRequestException(
+            `A stage named "${name}" already exists.`,
+          );
         }
         stage.name = name;
       }
@@ -97,7 +103,9 @@ export class StageService {
         stage.outcome = input.outcome;
       }
       if (stage.outcome != null && !stage.isTerminal) {
-        throw new BadRequestException('Only a terminal stage can carry an outcome.');
+        throw new BadRequestException(
+          'Only a terminal stage can carry an outcome.',
+        );
       }
       return m.save(stage);
     });

@@ -169,7 +169,8 @@ export class EnrichmentService {
     // server_ts arrives as a Date from the driver; new Date(...).getTime()
     // preserves milliseconds, whereas Date.parse on a Date drops them.
     const hours =
-      (new Date(row.serverTs).getTime() - new Date(prev[0].serverTs).getTime()) /
+      (new Date(row.serverTs).getTime() -
+        new Date(prev[0].serverTs).getTime()) /
       3_600_000;
     if (hours <= 0) {
       return false;

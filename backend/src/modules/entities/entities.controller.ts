@@ -1,9 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { RequirePermissions } from '../auth/permissions.decorator';
-import {
-  CreateLegalEntityInput,
-  EntitiesService,
-} from './entities.service';
+import { CreateLegalEntityInput, EntitiesService } from './entities.service';
 
 // Tenant is resolved from the caller's token by the auth guard.
 @Controller('entities')

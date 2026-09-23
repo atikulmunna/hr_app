@@ -54,7 +54,9 @@ export class Lifecycle1721000041000 implements MigrationInterface {
       `CREATE UNIQUE INDEX idx_checklists_open_per_kind
          ON checklists(employee_id, kind) WHERE status = 'open'`,
     );
-    await q.query(`CREATE INDEX idx_checklists_status ON checklists(tenant_id, status)`);
+    await q.query(
+      `CREATE INDEX idx_checklists_status ON checklists(tenant_id, status)`,
+    );
 
     await q.query(`
       CREATE TABLE checklist_items (
@@ -81,7 +83,11 @@ export class Lifecycle1721000041000 implements MigrationInterface {
          ON checklist_items(tenant_id, assignee_role) WHERE status = 'pending'`,
     );
 
-    for (const table of ['checklist_template_items', 'checklists', 'checklist_items']) {
+    for (const table of [
+      'checklist_template_items',
+      'checklists',
+      'checklist_items',
+    ]) {
       await q.query(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
       await q.query(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
       await q.query(`

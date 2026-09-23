@@ -9,9 +9,7 @@ export class OfflineSync1721000024000 implements MigrationInterface {
   name = 'OfflineSync1721000024000';
 
   public async up(q: QueryRunner): Promise<void> {
-    await q.query(
-      `ALTER TABLE attendance_events ADD COLUMN client_id text`,
-    );
+    await q.query(`ALTER TABLE attendance_events ADD COLUMN client_id text`);
     await q.query(
       `ALTER TABLE attendance_events ADD COLUMN synced_at timestamptz`,
     );
@@ -25,7 +23,11 @@ export class OfflineSync1721000024000 implements MigrationInterface {
 
   public async down(q: QueryRunner): Promise<void> {
     await q.query(`DROP INDEX IF EXISTS idx_attendance_events_client_id`);
-    await q.query(`ALTER TABLE attendance_events DROP COLUMN IF EXISTS synced_at`);
-    await q.query(`ALTER TABLE attendance_events DROP COLUMN IF EXISTS client_id`);
+    await q.query(
+      `ALTER TABLE attendance_events DROP COLUMN IF EXISTS synced_at`,
+    );
+    await q.query(
+      `ALTER TABLE attendance_events DROP COLUMN IF EXISTS client_id`,
+    );
   }
 }

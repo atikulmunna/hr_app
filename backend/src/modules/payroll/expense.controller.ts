@@ -138,7 +138,11 @@ export class ExpenseController {
     @Body() body: { method?: ExpenseSettlementMethod },
     @CurrentUser() user: AuthUser,
   ) {
-    return this.claims.settle(id, body?.method as ExpenseSettlementMethod, user);
+    return this.claims.settle(
+      id,
+      body?.method as ExpenseSettlementMethod,
+      user,
+    );
   }
 
   @RequirePermissions('payroll:read')

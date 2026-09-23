@@ -11,12 +11,7 @@ import {
 // shared workflow to the COO for approval, and once approved accepts
 // applications until it is filled or closed.
 export type RequisitionStatus =
-  | 'draft'
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'closed'
-  | 'filled';
+  'draft' | 'pending' | 'approved' | 'rejected' | 'closed' | 'filled';
 
 @Entity('job_requisitions')
 export class JobRequisition {

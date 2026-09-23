@@ -90,10 +90,14 @@ export class CertificationService {
   ): Promise<CertificationView> {
     const name = input.name?.trim();
     if (!input.employeeId || !name) {
-      throw new BadRequestException('An employee and certification name are required.');
+      throw new BadRequestException(
+        'An employee and certification name are required.',
+      );
     }
     if (input.issuedOn && input.expiresOn && input.issuedOn > input.expiresOn) {
-      throw new BadRequestException('The issue date must be on or before the expiry date.');
+      throw new BadRequestException(
+        'The issue date must be on or before the expiry date.',
+      );
     }
     const id = await this.db.withTenant(async (m) => {
       const employee = await m.query(`SELECT 1 FROM employees WHERE id = $1`, [
@@ -119,13 +123,19 @@ export class CertificationService {
           action: 'certification.create',
           resourceType: 'certification',
           resourceId: cert.id,
-          after: { name, employeeId: input.employeeId, expiresOn: input.expiresOn ?? null },
+          after: {
+            name,
+            employeeId: input.employeeId,
+            expiresOn: input.expiresOn ?? null,
+          },
         },
         m,
       );
       return cert.id;
     });
-    const [view] = await this.list().then((rows) => rows.filter((r) => r.id === id));
+    const [view] = await this.list().then((rows) =>
+      rows.filter((r) => r.id === id),
+    );
     return view;
   }
 
@@ -161,17 +171,31 @@ export class CertificationService {
     }[];
 
     for (const cert of due) {
-      const title = cert.expired ? 'Certification expired' : 'Certification expiring soon';
+      const title = cert.expired
+        ? 'Certification expired'
+        : 'Certification expiring soon';
       const verb = cert.expired ? 'expired on' : 'expires on';
       const body = `${cert.name} for ${cert.employeeName} ${verb} ${cert.expiresOn}.`;
       const data = { certificationId: cert.id, expiresOn: cert.expiresOn };
       await this.notifications.notify(
-        { recipientRole: 'hr_admin', type: 'certification.expiry', title, body, data },
+        {
+          recipientRole: 'hr_admin',
+          type: 'certification.expiry',
+          title,
+          body,
+          data,
+        },
         m,
       );
       if (cert.keycloakSub) {
         await this.notifications.notify(
-          { recipientSub: cert.keycloakSub, type: 'certification.expiry', title, body, data },
+          {
+            recipientSub: cert.keycloakSub,
+            type: 'certification.expiry',
+            title,
+            body,
+            data,
+          },
           m,
         );
       }

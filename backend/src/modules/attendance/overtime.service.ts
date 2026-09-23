@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { TenantDbService } from '../../database/tenant-db.service';
-import { OvertimeRequest, OvertimeSource } from '../../entities/overtime-request.entity';
+import {
+  OvertimeRequest,
+  OvertimeSource,
+} from '../../entities/overtime-request.entity';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../auth/current-user.decorator';
 import { EmployeeService } from '../employees/employee.service';
@@ -118,7 +121,9 @@ export class OvertimeService {
       throw new BadRequestException('source must be derived or declared.');
     }
     if (workDate > today()) {
-      throw new BadRequestException('Overtime cannot be claimed for a future date.');
+      throw new BadRequestException(
+        'Overtime cannot be claimed for a future date.',
+      );
     }
 
     // A derived claim must match what the marks actually support; anything more
@@ -178,7 +183,11 @@ export class OvertimeService {
     employeeId: string,
     workDate: string,
   ): Promise<number> {
-    const summary = await this.summaries.summary(employeeId, workDate, workDate);
+    const summary = await this.summaries.summary(
+      employeeId,
+      workDate,
+      workDate,
+    );
     return summary.days[0]?.overtimeHours ?? 0;
   }
 
@@ -205,7 +214,11 @@ export class OvertimeService {
 }
 
 function requireDate(value: string | undefined): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+  if (
+    !value ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    Number.isNaN(Date.parse(value))
+  ) {
     throw new BadRequestException('workDate must be a YYYY-MM-DD date.');
   }
   return value;

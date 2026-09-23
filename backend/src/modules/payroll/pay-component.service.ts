@@ -62,7 +62,10 @@ export class PayComponentService {
     if (!code || !name) {
       throw new BadRequestException('A pay component needs a code and a name.');
     }
-    if (!input.componentType || !COMPONENT_TYPES.includes(input.componentType)) {
+    if (
+      !input.componentType ||
+      !COMPONENT_TYPES.includes(input.componentType)
+    ) {
       throw new BadRequestException(
         `componentType must be one of: ${COMPONENT_TYPES.join(', ')}.`,
       );

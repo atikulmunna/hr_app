@@ -36,7 +36,9 @@ export class AbsenceService {
       throw new BadRequestException('A valid date is required.');
     }
     if (date > todayIso()) {
-      throw new BadRequestException('Cannot run the absence job for a future date.');
+      throw new BadRequestException(
+        'Cannot run the absence job for a future date.',
+      );
     }
     return this.db.withTenant(async (m) => {
       const weekend = isWeekend(date);
@@ -193,7 +195,9 @@ export class AbsenceService {
   }
 
   private async idSet(
-    m: { query: (sql: string, params: unknown[]) => Promise<Array<{ id: string }>> },
+    m: {
+      query: (sql: string, params: unknown[]) => Promise<Array<{ id: string }>>;
+    },
     sql: string,
     date: string,
   ): Promise<Set<string>> {

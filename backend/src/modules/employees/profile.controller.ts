@@ -34,7 +34,10 @@ export class ProfileController {
   }
 
   @Post('profile/change-requests')
-  requestChange(@CurrentUser() user: AuthUser, @Body() body: ProfileChangeInput) {
+  requestChange(
+    @CurrentUser() user: AuthUser,
+    @Body() body: ProfileChangeInput,
+  ) {
     return this.profileChanges.request(user, body);
   }
 

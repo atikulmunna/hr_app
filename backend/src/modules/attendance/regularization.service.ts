@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { TenantDbService } from '../../database/tenant-db.service';
 import { AttendanceEvent } from '../../entities/attendance-event.entity';
@@ -116,10 +120,9 @@ export class RegularizationService {
   ) {
     const valid = validate(input);
     return this.db.withTenant(async (m) => {
-      const exists = await m.query(
-        `SELECT 1 FROM employees WHERE id = $1`,
-        [employeeId],
-      );
+      const exists = await m.query(`SELECT 1 FROM employees WHERE id = $1`, [
+        employeeId,
+      ]);
       if (exists.length === 0) {
         throw new NotFoundException('Employee not found.');
       }
@@ -296,7 +299,10 @@ function validate(input: RegularizationInput): ValidatedInput {
   if (targetDate > todayIso()) {
     throw new BadRequestException('The target date cannot be in the future.');
   }
-  if (!input.correctionType || !CORRECTION_TYPES.includes(input.correctionType)) {
+  if (
+    !input.correctionType ||
+    !CORRECTION_TYPES.includes(input.correctionType)
+  ) {
     throw new BadRequestException(
       `correctionType must be one of: ${CORRECTION_TYPES.join(', ')}.`,
     );
@@ -308,21 +314,37 @@ function validate(input: RegularizationInput): ValidatedInput {
 
   const needsIn = input.correctionType !== 'missing_check_out';
   const needsOut = input.correctionType !== 'missing_check_in';
-  const checkIn = needsIn ? parseMark(input.requestedCheckIn, 'check-in', targetDate) : null;
-  const checkOut = needsOut ? parseMark(input.requestedCheckOut, 'check-out', targetDate) : null;
+  const checkIn = needsIn
+    ? parseMark(input.requestedCheckIn, 'check-in', targetDate)
+    : null;
+  const checkOut = needsOut
+    ? parseMark(input.requestedCheckOut, 'check-out', targetDate)
+    : null;
   if (checkIn && checkOut && checkOut <= checkIn) {
     throw new BadRequestException('The check-out must be after the check-in.');
   }
-  return { targetDate, correctionType: input.correctionType, checkIn, checkOut, reason };
+  return {
+    targetDate,
+    correctionType: input.correctionType,
+    checkIn,
+    checkOut,
+    reason,
+  };
 }
 
-function parseMark(value: string | undefined, label: string, targetDate: string): Date {
+function parseMark(
+  value: string | undefined,
+  label: string,
+  targetDate: string,
+): Date {
   if (!value || Number.isNaN(Date.parse(value))) {
     throw new BadRequestException(`A valid ${label} time is required.`);
   }
   const ts = new Date(value);
   if (ts.toISOString().slice(0, 10) !== targetDate) {
-    throw new BadRequestException(`The ${label} time must fall on the target date.`);
+    throw new BadRequestException(
+      `The ${label} time must fall on the target date.`,
+    );
   }
   return ts;
 }

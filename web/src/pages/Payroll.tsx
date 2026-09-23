@@ -297,7 +297,9 @@ function PayRulesCard({
                 }
               >
                 <option value="fixed_hours">Fixed hours per month</option>
-                <option value="expected_hours">Shift hours x working days</option>
+                <option value="expected_hours">
+                  Shift hours x working days
+                </option>
               </select>
             </div>
             {form.overtimeDivisor === 'fixed_hours' && (
@@ -327,7 +329,11 @@ function PayRulesCard({
             run you recompute, not runs already computed.
           </p>
           <div className="actions">
-            <button className="btn primary" disabled={busy} onClick={() => void save()}>
+            <button
+              className="btn primary"
+              disabled={busy}
+              onClick={() => void save()}
+            >
               Save pay rules
             </button>
           </div>

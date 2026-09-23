@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ApiError,
-  ReviewCase,
-  ReviewDecision,
-  RiskRow,
-  api,
-} from '../api';
+import { ApiError, ReviewCase, ReviewDecision, RiskRow, api } from '../api';
 
 const STATUSES = ['open', 'accepted', 'rejected', 'adjusted', 'all'];
 const SIGNAL_LABELS: Record<string, string> = {
@@ -167,7 +161,11 @@ function CaseCard({
           ` · enrichment: ${signalList(data.enrichmentSignals)}`}
       </div>
       <div className="muted small case-meta">
-        {data.remote ? 'remote' : data.geofencePass ? 'inside geofence' : 'outside geofence'}
+        {data.remote
+          ? 'remote'
+          : data.geofencePass
+            ? 'inside geofence'
+            : 'outside geofence'}
         {data.lat != null &&
           data.lng != null &&
           ` · ${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}`}
@@ -208,7 +206,8 @@ function CaseCard({
       ) : (
         <div className="muted small case-meta">
           {data.status}
-          {data.resolvedAt && ` · ${new Date(data.resolvedAt).toLocaleString()}`}
+          {data.resolvedAt &&
+            ` · ${new Date(data.resolvedAt).toLocaleString()}`}
           {data.resolutionNote && ` · "${data.resolutionNote}"`}
         </div>
       )}

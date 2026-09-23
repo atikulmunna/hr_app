@@ -178,7 +178,9 @@ export function PayrollRuns({
               <div className="grow">
                 <div className="row-title">
                   <span className="tag">{r.currencyCode}</span>
-                  <span className="notif-title">{entityName(r.legalEntityId)}</span>
+                  <span className="notif-title">
+                    {entityName(r.legalEntityId)}
+                  </span>
                   <span className="muted small">
                     {r.periodStart} to {r.periodEnd}
                   </span>
@@ -211,7 +213,11 @@ export function PayrollRuns({
                 <IssueSummary issues={r.issues} />
               </div>
               <div className="actions">
-                <button className="btn" disabled={busy} onClick={() => void open(r.id)}>
+                <button
+                  className="btn"
+                  disabled={busy}
+                  onClick={() => void open(r.id)}
+                >
                   {openId === r.id ? 'Hide' : 'View'}
                 </button>
                 {r.status === 'draft' && (
@@ -240,7 +246,11 @@ export function PayrollRuns({
                   </>
                 )}
                 {r.status === 'locked' && (
-                  <button className="btn" disabled={busy} onClick={() => void load()}>
+                  <button
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => void load()}
+                  >
                     Refresh
                   </button>
                 )}
@@ -278,7 +288,8 @@ function IssueSummary({ issues }: { issues: RunIssue[] }) {
     <div className="row-title">
       {blocking.length > 0 && (
         <span className="pill retired">
-          {blocking.length} blocking {blocking.length === 1 ? 'issue' : 'issues'}
+          {blocking.length} blocking{' '}
+          {blocking.length === 1 ? 'issue' : 'issues'}
         </span>
       )}
       {warnings.length > 0 && (
@@ -314,8 +325,11 @@ function RunDetail({
   const payslip = async (employeeId: string, employeeCode: string) => {
     try {
       const blob = await api.payslipPdf(token, detail.id, employeeId);
-      save(blob, `payslip-${detail.periodStart.slice(0, 7)}-${employeeCode}.pdf`,
-        'application/pdf');
+      save(
+        blob,
+        `payslip-${detail.periodStart.slice(0, 7)}-${employeeCode}.pdf`,
+        'application/pdf',
+      );
     } catch (e) {
       onError(e instanceof ApiError ? e.message : String(e));
     }
@@ -324,8 +338,8 @@ function RunDetail({
   return (
     <div className="stack">
       <div className="muted small case-meta">
-        {detail.totals.employees} employees · gross {money(detail.totals.gross)} ·
-        deductions {money(detail.totals.deductions)} · net{' '}
+        {detail.totals.employees} employees · gross {money(detail.totals.gross)}{' '}
+        · deductions {money(detail.totals.deductions)} · net{' '}
         {money(detail.totals.net)} · employer contributions{' '}
         {money(detail.totals.employerContributions)}
       </div>
@@ -478,7 +492,9 @@ function NewRunForm({
           <label>Legal entity</label>
           <select
             value={form.legalEntityId}
-            onChange={(e) => setForm({ ...form, legalEntityId: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, legalEntityId: e.target.value })
+            }
           >
             <option value="">Select an entity</option>
             {entities.map((ent) => (
@@ -534,7 +550,11 @@ function NewRunForm({
         Pay is valued as of the cut-off. Leave it blank to use the period end.
       </p>
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Create and compute run
         </button>
       </div>

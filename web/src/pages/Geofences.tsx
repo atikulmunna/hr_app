@@ -41,10 +41,7 @@ export function Geofences({ token }: { token: string }) {
     <section>
       <div className="section-head">
         <h2>Geofences</h2>
-        <button
-          className="btn primary"
-          onClick={() => setCreating((v) => !v)}
-        >
+        <button className="btn primary" onClick={() => setCreating((v) => !v)}>
           {creating ? 'Cancel' : 'New geofence'}
         </button>
       </div>
@@ -166,10 +163,7 @@ function NewGeofenceForm({
         </div>
         <div className="field">
           <label>Radius (m)</label>
-          <input
-            value={radiusM}
-            onChange={(e) => setRadiusM(e.target.value)}
-          />
+          <input value={radiusM} onChange={(e) => setRadiusM(e.target.value)} />
         </div>
       </div>
       <div className="actions">

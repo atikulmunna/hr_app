@@ -1,5 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import { addDays, assertKind, validateTemplateItems } from './checklist.service';
+import {
+  addDays,
+  assertKind,
+  validateTemplateItems,
+} from './checklist.service';
 import { buildOrgTree, OrgNodeRow } from './org-chart.service';
 
 function row(id: string, managerId: string | null = null): OrgNodeRow {
@@ -16,7 +20,12 @@ function row(id: string, managerId: string | null = null): OrgNodeRow {
 
 describe('buildOrgTree', () => {
   it('nests reports under their manager and counts the span', () => {
-    const tree = buildOrgTree([row('ceo'), row('cto', 'ceo'), row('dev', 'cto'), row('ops', 'ceo')]);
+    const tree = buildOrgTree([
+      row('ceo'),
+      row('cto', 'ceo'),
+      row('dev', 'cto'),
+      row('ops', 'ceo'),
+    ]);
     expect(tree).toHaveLength(1);
     const ceo = tree[0];
     expect(ceo.id).toBe('ceo');
@@ -28,7 +37,11 @@ describe('buildOrgTree', () => {
   });
 
   it('keeps the input order among siblings', () => {
-    const tree = buildOrgTree([row('boss'), row('b', 'boss'), row('a', 'boss')]);
+    const tree = buildOrgTree([
+      row('boss'),
+      row('b', 'boss'),
+      row('a', 'boss'),
+    ]);
     expect(tree[0].reports.map((r) => r.id)).toEqual(['b', 'a']);
   });
 
@@ -98,13 +111,19 @@ describe('validateTemplateItems', () => {
 
   it('rejects a non-integer or out-of-range offset', () => {
     expect(() =>
-      validateTemplateItems([{ title: 'x', assigneeRole: 'employee', dueOffsetDays: 1.5 }]),
+      validateTemplateItems([
+        { title: 'x', assigneeRole: 'employee', dueOffsetDays: 1.5 },
+      ]),
     ).toThrow(BadRequestException);
     expect(() =>
-      validateTemplateItems([{ title: 'x', assigneeRole: 'employee', dueOffsetDays: 400 }]),
+      validateTemplateItems([
+        { title: 'x', assigneeRole: 'employee', dueOffsetDays: 400 },
+      ]),
     ).toThrow(BadRequestException);
     expect(
-      validateTemplateItems([{ title: 'x', assigneeRole: 'employee', dueOffsetDays: -5 }]),
+      validateTemplateItems([
+        { title: 'x', assigneeRole: 'employee', dueOffsetDays: -5 },
+      ]),
     ).toEqual([{ title: 'x', assigneeRole: 'employee', dueOffsetDays: -5 }]);
   });
 });

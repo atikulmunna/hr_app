@@ -6,10 +6,7 @@ import {
 } from 'typeorm';
 
 export type EmploymentChangeType =
-  | 'hired'
-  | 'transfer'
-  | 'role_change'
-  | 'status_change';
+  'hired' | 'transfer' | 'role_change' | 'status_change';
 
 // One entry in an employee's employment timeline (FR-M1-03). Captures the
 // employment state as of the change so the timeline is self-contained.

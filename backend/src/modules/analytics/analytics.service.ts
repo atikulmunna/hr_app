@@ -254,12 +254,10 @@ export class AnalyticsService {
           GROUP BY COALESCE(d.name, 'Unassigned')
           ORDER BY flagged DESC, marks DESC`,
       );
-      const byTeam = teams.map(
-        (t: { marks: number; flagged: number }) => ({
-          ...t,
-          rate: t.marks > 0 ? Math.round((t.flagged / t.marks) * 1000) / 10 : 0,
-        }),
-      );
+      const byTeam = teams.map((t: { marks: number; flagged: number }) => ({
+        ...t,
+        rate: t.marks > 0 ? Math.round((t.flagged / t.marks) * 1000) / 10 : 0,
+      }));
       const marks = byTeam.reduce(
         (s: number, t: { marks: number }) => s + t.marks,
         0,

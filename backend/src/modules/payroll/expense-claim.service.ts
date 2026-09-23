@@ -91,7 +91,9 @@ export class ExpenseClaimService {
     private readonly notifications: NotificationService,
     private readonly adjustments: AdjustmentService,
   ) {
-    this.workflow.onDecided('expense_claim', (view, m) => this.onDecided(view, m));
+    this.workflow.onDecided('expense_claim', (view, m) =>
+      this.onDecided(view, m),
+    );
   }
 
   // --- Employee self-service.
@@ -172,7 +174,8 @@ export class ExpenseClaimService {
       }
       // Policy limit enforced at entry (FR-M8-02): a line over its category cap
       // is refused, so a claim cannot be built past policy.
-      const cap = category.limitAmount == null ? null : Number(category.limitAmount);
+      const cap =
+        category.limitAmount == null ? null : Number(category.limitAmount);
       if (cap != null && amount > cap) {
         throw new BadRequestException(
           `This exceeds the ${category.name} limit of ${cap.toFixed(2)} ${claim.currencyCode}.`,
@@ -222,7 +225,9 @@ export class ExpenseClaimService {
         where: { claimId: claim.id },
       });
       if (lines.length === 0) {
-        throw new BadRequestException('Add at least one line before submitting.');
+        throw new BadRequestException(
+          'Add at least one line before submitting.',
+        );
       }
       // Re-check every line against the current cap: a limit could have been
       // lowered after a line was added.
@@ -231,7 +236,8 @@ export class ExpenseClaimService {
         const category = await m.findOne(ExpenseCategory, {
           where: { id: line.categoryId },
         });
-        const cap = category?.limitAmount == null ? null : Number(category.limitAmount);
+        const cap =
+          category?.limitAmount == null ? null : Number(category.limitAmount);
         if (cap != null && Number(line.amount) > cap) {
           throw new BadRequestException(
             `"${line.description}" exceeds the ${category?.name} limit of ${cap.toFixed(2)}. ` +

@@ -30,7 +30,9 @@ export class ProfileChangeService {
     private readonly employees: EmployeeService,
     private readonly workflow: WorkflowService,
   ) {
-    this.workflow.onDecided('profile_change', (view, m) => this.onDecided(view, m));
+    this.workflow.onDecided('profile_change', (view, m) =>
+      this.onDecided(view, m),
+    );
   }
 
   // Submits a sensitive profile change for HR approval. Nothing changes on the

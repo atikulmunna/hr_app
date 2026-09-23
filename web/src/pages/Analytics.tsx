@@ -264,9 +264,9 @@ export function Analytics({ token }: { token: string }) {
       <div>
         <h3>Cost to company</h3>
         <p className="muted small">
-          Gross pay plus employer contributions and settled adjustments, per legal
-          entity in its own currency. Figures are not converted or summed across
-          currencies.
+          Gross pay plus employer contributions and settled adjustments, per
+          legal entity in its own currency. Figures are not converted or summed
+          across currencies.
         </p>
         {(ctc?.entities.length ?? 0) === 0 && (
           <p className="muted">No payroll runs in this window yet.</p>
@@ -317,9 +317,10 @@ export function Analytics({ token }: { token: string }) {
         <div>
           <h3>Fraud signals</h3>
           <p className="muted small">
-            Attendance integrity, so a team or person gaming the marks stands out.
-            A mark is "flagged" when its risk band is not clean. Regularizations
-            and re-binds are surfaced here so neither becomes a routine bypass.
+            Attendance integrity, so a team or person gaming the marks stands
+            out. A mark is "flagged" when its risk band is not clean.
+            Regularizations and re-binds are surfaced here so neither becomes a
+            routine bypass.
           </p>
         </div>
 
@@ -329,7 +330,11 @@ export function Analytics({ token }: { token: string }) {
             value={`${flagRate?.rate ?? 0}%`}
             hint={`${flagRate?.flagged ?? 0} of ${flagRate?.marks ?? 0} marks`}
           />
-          <Tile label="Red marks" value={flagRate?.red ?? 0} hint="highest risk band" />
+          <Tile
+            label="Red marks"
+            value={flagRate?.red ?? 0}
+            hint="highest risk band"
+          />
           <Tile label="Device re-binds" value={rebinds?.total ?? 0} />
           <Tile label="Regularizations" value={regs?.total ?? 0} />
         </div>

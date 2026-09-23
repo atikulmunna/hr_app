@@ -45,12 +45,7 @@ const EMPLOYMENT_TYPES = [
 const STATUSES = ['active', 'on_leave', 'terminated'];
 
 type DetailTab =
-  | 'devices'
-  | 'geofences'
-  | 'leave'
-  | 'attendance'
-  | 'pay'
-  | 'privacy';
+  'devices' | 'geofences' | 'leave' | 'attendance' | 'pay' | 'privacy';
 const DETAIL_TABS: { key: DetailTab; label: string }[] = [
   { key: 'devices', label: 'Devices' },
   { key: 'geofences', label: 'Geofences' },
@@ -137,7 +132,11 @@ export function Employees({ token }: { token: string }) {
         <div className="section-head">
           <h2>Employees</h2>
           <div className="head-actions">
-            <button className="btn small-btn" disabled={busy} onClick={() => void exportAll()}>
+            <button
+              className="btn small-btn"
+              disabled={busy}
+              onClick={() => void exportAll()}
+            >
               Export
             </button>
             <label className="btn small-btn">
@@ -333,7 +332,10 @@ function NewEmployeeForm({
       </div>
       <div className="field">
         <label>Email</label>
-        <input value={form.email} onChange={(e) => set('email', e.target.value)} />
+        <input
+          value={form.email}
+          onChange={(e) => set('email', e.target.value)}
+        />
       </div>
       <div className="field-row">
         <div className="field">
@@ -389,7 +391,9 @@ function EmployeeDetail({
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
-  const [regularizations, setRegularizations] = useState<RegularizationRow[]>([]);
+  const [regularizations, setRegularizations] = useState<RegularizationRow[]>(
+    [],
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -567,214 +571,225 @@ function EmployeeDetail({
 
       {detailTab === 'devices' && (
         <>
-      <div className="card">
-        <h3>Devices</h3>
-        {devices.length === 0 && <p className="muted small">No devices bound.</p>}
-        {devices.map((d) => (
-          <div className="line" key={d.id}>
-            <span className={`pill ${d.status}`}>{d.status}</span>
-            <span className="grow">
-              {d.platform ?? 'device'} - {d.deviceFingerprint.slice(0, 12)}
-            </span>
-            <span className="muted small">
-              {new Date(d.boundAt).toLocaleDateString()}
-            </span>
+          <div className="card">
+            <h3>Devices</h3>
+            {devices.length === 0 && (
+              <p className="muted small">No devices bound.</p>
+            )}
+            {devices.map((d) => (
+              <div className="line" key={d.id}>
+                <span className={`pill ${d.status}`}>{d.status}</span>
+                <span className="grow">
+                  {d.platform ?? 'device'} - {d.deviceFingerprint.slice(0, 12)}
+                </span>
+                <span className="muted small">
+                  {new Date(d.boundAt).toLocaleDateString()}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <div className="card">
-        <h3>Binding history</h3>
-        {history.length === 0 && <p className="muted small">No history.</p>}
-        {history.map((h) => (
-          <div className="line" key={h.id}>
-            <span className="tag">{h.action}</span>
-            <span className="grow muted small">{h.reasonCode ?? ''}</span>
-            <span className="muted small">
-              {new Date(h.createdAt).toLocaleString()}
-            </span>
+          <div className="card">
+            <h3>Binding history</h3>
+            {history.length === 0 && <p className="muted small">No history.</p>}
+            {history.map((h) => (
+              <div className="line" key={h.id}>
+                <span className="tag">{h.action}</span>
+                <span className="grow muted small">{h.reasonCode ?? ''}</span>
+                <span className="muted small">
+                  {new Date(h.createdAt).toLocaleString()}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
         </>
       )}
 
       {detailTab === 'geofences' && (
-      <div className="card">
-        <h3>Geofences</h3>
-        {assigned.length === 0 && (
-          <p className="muted small">
-            No specific assignment (all tenant fences apply).
-          </p>
-        )}
-        {assigned.map((g) => (
-          <div className="line" key={g.id}>
-            <span className="grow">
-              {g.name} {!g.active && <span className="muted small">(inactive)</span>}
-            </span>
-            <button
-              className="btn small-btn"
-              disabled={busy}
-              onClick={() => void unassign(g.id)}
-            >
-              Unassign
-            </button>
-          </div>
-        ))}
-        {assignable.length > 0 && (
-          <div className="assign-row">
-            <select
-              disabled={busy}
-              defaultValue=""
-              onChange={(e) => {
-                void assign(e.target.value);
-                e.target.value = '';
-              }}
-            >
-              <option value="" disabled>
-                Assign a geofence...
-              </option>
-              {assignable.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-      )}
-
-      {detailTab === 'leave' && (
-      <div className="card">
-        <h3>Leave requests</h3>
-        {leave.length === 0 && <p className="muted small">No requests.</p>}
-        {leave.map((l) => (
-          <div className="line" key={l.id}>
-            <span className={`pill status-${l.status ?? 'pending'}`}>
-              {l.status ?? 'pending'}
-            </span>
-            <span className="grow">
-              {l.typeName}{' '}
-              <span className="muted small">
-                {l.startDate} to {l.endDate}
-              </span>
-            </span>
-            <span className="muted small">{l.workingDays} d</span>
-          </div>
-        ))}
-      </div>
-      )}
-
-      {detailTab === 'attendance' && (
-        <>
-      <div className="card">
-        <h3>Shift</h3>
-        {shift ? (
-          <div className="line">
-            <span className="grow">
-              {shift.name}{' '}
-              <span className="muted small">
-                {shift.startTime.slice(0, 5)} to {shift.endTime.slice(0, 5)}
-              </span>
-            </span>
-            <button
-              className="btn small-btn"
-              disabled={busy}
-              onClick={() => void unassignShift()}
-            >
-              Unassign
-            </button>
-          </div>
-        ) : (
-          <p className="muted small">No shift assigned.</p>
-        )}
-        {activeShifts.length > 0 && (
-          <div className="assign-row">
-            <select
-              disabled={busy}
-              value=""
-              onChange={(e) => void assignShift(e.target.value)}
-            >
-              <option value="" disabled>
-                {shift ? 'Change shift...' : 'Assign a shift...'}
-              </option>
-              {activeShifts.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-
-      <RosterCard
-        token={token}
-        employeeId={employee.id}
-        shifts={activeShifts}
-        onError={setError}
-      />
-
-      {summary && summary.shift && (
         <div className="card">
-          <h3>Attendance (last 14 days)</h3>
-          <div className="muted small case-meta">
-            present {summary.totals.presentDays} · late{' '}
-            {summary.totals.lateDays} · absent {summary.totals.absentDays} ·
-            leave {summary.totals.leaveDays} · worked{' '}
-            {summary.totals.workedHours} h · overtime{' '}
-            {summary.totals.overtimeHours} h
-          </div>
-          {summary.days
-            .filter((d) => d.status !== 'off')
-            .map((d) => (
-              <div className="line" key={d.day}>
-                <span className={`pill day-${d.status}`}>{d.status}</span>
-                <span className="grow muted small">{d.day}</span>
-                <span className="muted small">
-                  {d.workedHours != null ? `${d.workedHours} h` : ''}
-                  {d.overtimeHours > 0 ? ` (+${d.overtimeHours} OT)` : ''}
-                </span>
-              </div>
-            ))}
+          <h3>Geofences</h3>
+          {assigned.length === 0 && (
+            <p className="muted small">
+              No specific assignment (all tenant fences apply).
+            </p>
+          )}
+          {assigned.map((g) => (
+            <div className="line" key={g.id}>
+              <span className="grow">
+                {g.name}{' '}
+                {!g.active && <span className="muted small">(inactive)</span>}
+              </span>
+              <button
+                className="btn small-btn"
+                disabled={busy}
+                onClick={() => void unassign(g.id)}
+              >
+                Unassign
+              </button>
+            </div>
+          ))}
+          {assignable.length > 0 && (
+            <div className="assign-row">
+              <select
+                disabled={busy}
+                defaultValue=""
+                onChange={(e) => {
+                  void assign(e.target.value);
+                  e.target.value = '';
+                }}
+              >
+                <option value="" disabled>
+                  Assign a geofence...
+                </option>
+                {assignable.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
 
-      {absences.length > 0 && (
+      {detailTab === 'leave' && (
         <div className="card">
-          <h3>Absences</h3>
-          {absences.map((a) => (
-            <div className="line" key={a.id}>
-              <span className={`pill day-${a.reversedAt ? 'leave' : 'absent'}`}>
-                {a.reversedAt ? 'reversed' : 'absent'}
+          <h3>Leave requests</h3>
+          {leave.length === 0 && <p className="muted small">No requests.</p>}
+          {leave.map((l) => (
+            <div className="line" key={l.id}>
+              <span className={`pill status-${l.status ?? 'pending'}`}>
+                {l.status ?? 'pending'}
               </span>
-              <span className="grow">{a.absenceDate}</span>
-              {a.reversedAt ? (
-                <span className="muted small">{a.reversalReason ?? ''}</span>
-              ) : (
-                <button
-                  className="btn small-btn"
-                  disabled={busy}
-                  onClick={() => void reverseAbsence(a.id)}
-                >
-                  Reverse
-                </button>
-              )}
+              <span className="grow">
+                {l.typeName}{' '}
+                <span className="muted small">
+                  {l.startDate} to {l.endDate}
+                </span>
+              </span>
+              <span className="muted small">{l.workingDays} d</span>
             </div>
           ))}
         </div>
       )}
 
-      <RegularizationsCard
-        token={token}
-        employeeId={employee.id}
-        rows={regularizations}
-        onError={setError}
-        onChanged={load}
-      />
+      {detailTab === 'attendance' && (
+        <>
+          <div className="card">
+            <h3>Shift</h3>
+            {shift ? (
+              <div className="line">
+                <span className="grow">
+                  {shift.name}{' '}
+                  <span className="muted small">
+                    {shift.startTime.slice(0, 5)} to {shift.endTime.slice(0, 5)}
+                  </span>
+                </span>
+                <button
+                  className="btn small-btn"
+                  disabled={busy}
+                  onClick={() => void unassignShift()}
+                >
+                  Unassign
+                </button>
+              </div>
+            ) : (
+              <p className="muted small">No shift assigned.</p>
+            )}
+            {activeShifts.length > 0 && (
+              <div className="assign-row">
+                <select
+                  disabled={busy}
+                  value=""
+                  onChange={(e) => void assignShift(e.target.value)}
+                >
+                  <option value="" disabled>
+                    {shift ? 'Change shift...' : 'Assign a shift...'}
+                  </option>
+                  {activeShifts.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
 
-      <OvertimeCard token={token} employeeId={employee.id} onError={setError} />
+          <RosterCard
+            token={token}
+            employeeId={employee.id}
+            shifts={activeShifts}
+            onError={setError}
+          />
+
+          {summary && summary.shift && (
+            <div className="card">
+              <h3>Attendance (last 14 days)</h3>
+              <div className="muted small case-meta">
+                present {summary.totals.presentDays} · late{' '}
+                {summary.totals.lateDays} · absent {summary.totals.absentDays} ·
+                leave {summary.totals.leaveDays} · worked{' '}
+                {summary.totals.workedHours} h · overtime{' '}
+                {summary.totals.overtimeHours} h
+              </div>
+              {summary.days
+                .filter((d) => d.status !== 'off')
+                .map((d) => (
+                  <div className="line" key={d.day}>
+                    <span className={`pill day-${d.status}`}>{d.status}</span>
+                    <span className="grow muted small">{d.day}</span>
+                    <span className="muted small">
+                      {d.workedHours != null ? `${d.workedHours} h` : ''}
+                      {d.overtimeHours > 0 ? ` (+${d.overtimeHours} OT)` : ''}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {absences.length > 0 && (
+            <div className="card">
+              <h3>Absences</h3>
+              {absences.map((a) => (
+                <div className="line" key={a.id}>
+                  <span
+                    className={`pill day-${a.reversedAt ? 'leave' : 'absent'}`}
+                  >
+                    {a.reversedAt ? 'reversed' : 'absent'}
+                  </span>
+                  <span className="grow">{a.absenceDate}</span>
+                  {a.reversedAt ? (
+                    <span className="muted small">
+                      {a.reversalReason ?? ''}
+                    </span>
+                  ) : (
+                    <button
+                      className="btn small-btn"
+                      disabled={busy}
+                      onClick={() => void reverseAbsence(a.id)}
+                    >
+                      Reverse
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <RegularizationsCard
+            token={token}
+            employeeId={employee.id}
+            rows={regularizations}
+            onError={setError}
+            onChanged={load}
+          />
+
+          <OvertimeCard
+            token={token}
+            employeeId={employee.id}
+            onError={setError}
+          />
         </>
       )}
 
@@ -864,7 +879,11 @@ function PrivacyCard({
       </p>
       <div className="line">
         <span className="grow">Data export (JSON)</span>
-        <button className="btn small-btn" disabled={busy} onClick={() => void download()}>
+        <button
+          className="btn small-btn"
+          disabled={busy}
+          onClick={() => void download()}
+        >
           Download
         </button>
       </div>
@@ -932,7 +951,9 @@ function RegularizationsCard({
           <span className={`pill status-${r.status}`}>{r.status}</span>
           <span className="grow">
             {r.targetDate}{' '}
-            <span className="muted small">{CORRECTION_LABELS[r.correctionType]}</span>
+            <span className="muted small">
+              {CORRECTION_LABELS[r.correctionType]}
+            </span>
           </span>
           <span className="tag">{r.origin}</span>
         </div>
@@ -1073,7 +1094,11 @@ function OvertimeCard({
         </div>
         <div className="field">
           <label>&nbsp;</label>
-          <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => void submit()}
+          >
             Submit for approval
           </button>
         </div>
@@ -1213,9 +1238,7 @@ function CompensationCard({
         </div>
       ))}
       {summary.lines.length === 0 && (
-        <p className="muted small">
-          Nothing in force on {summary.asOf}.
-        </p>
+        <p className="muted small">Nothing in force on {summary.asOf}.</p>
       )}
 
       <div className="field-row">
@@ -1264,9 +1287,9 @@ function CompensationCard({
         </div>
       </div>
       <p className="muted small">
-        A new effective date adds a revision and leaves earlier ones in place, so
-        a raise never changes what a past period was paid. Setting the same date
-        again corrects that revision.
+        A new effective date adds a revision and leaves earlier ones in place,
+        so a raise never changes what a past period was paid. Setting the same
+        date again corrects that revision.
       </p>
 
       {revisions.length > 0 && (
@@ -1278,7 +1301,11 @@ function CompensationCard({
             return (
               <div className="line" key={r.id}>
                 <span className={`pill ${inForce ? 'active' : 'retired'}`}>
-                  {inForce ? 'in force' : scheduled ? 'scheduled' : 'superseded'}
+                  {inForce
+                    ? 'in force'
+                    : scheduled
+                      ? 'scheduled'
+                      : 'superseded'}
                 </span>
                 <span className="grow">{r.name}</span>
                 <span className="muted small">from {r.effectiveFrom}</span>
@@ -1444,7 +1471,8 @@ function RosterCard({
             <span className="grow">
               {r.workDate}{' '}
               <span className="muted small">
-                {r.shiftName} {r.startTime.slice(0, 5)} to {r.endTime.slice(0, 5)}
+                {r.shiftName} {r.startTime.slice(0, 5)} to{' '}
+                {r.endTime.slice(0, 5)}
               </span>
             </span>
             {r.source === 'swap' && <span className="tag">swap</span>}

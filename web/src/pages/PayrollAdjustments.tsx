@@ -200,11 +200,15 @@ function NewAdjustmentForm({
         />
       </div>
       <p className="muted small">
-        The amount is in the employee's entity currency. It needs approval before
-        it settles into a run.
+        The amount is in the employee's entity currency. It needs approval
+        before it settles into a run.
       </p>
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Raise adjustment
         </button>
       </div>

@@ -55,7 +55,8 @@ export class AttendanceConfigService {
       const existing = await m.findOne(AttendanceConfig, {
         where: { tenantId: this.db.tenantId },
       });
-      const row = existing ?? m.create(AttendanceConfig, defaultsRow(this.db.tenantId));
+      const row =
+        existing ?? m.create(AttendanceConfig, defaultsRow(this.db.tenantId));
       applyPatch(row, patch);
       validate(row);
       row.updatedBy = actorSub;
@@ -114,10 +115,12 @@ function applyPatch(row: AttendanceConfig, patch: UpdateConfigInput): void {
   if (patch.weights) {
     row.weights = { ...(row.weights ?? {}), ...patch.weights };
   }
-  if (patch.yellowThreshold !== undefined) row.yellowThreshold = patch.yellowThreshold;
+  if (patch.yellowThreshold !== undefined)
+    row.yellowThreshold = patch.yellowThreshold;
   if (patch.redThreshold !== undefined) row.redThreshold = patch.redThreshold;
   if (patch.scoreCeiling !== undefined) row.scoreCeiling = patch.scoreCeiling;
-  if (patch.accuracyLimitM !== undefined) row.accuracyLimitM = patch.accuracyLimitM;
+  if (patch.accuracyLimitM !== undefined)
+    row.accuracyLimitM = patch.accuracyLimitM;
   if (patch.criticalSignals) row.criticalSignals = patch.criticalSignals;
   if (patch.cooccurrenceThreshold !== undefined) {
     row.cooccurrenceThreshold = patch.cooccurrenceThreshold;
@@ -154,7 +157,8 @@ function validate(row: AttendanceConfig): void {
     }
   }
   for (const s of row.criticalSignals ?? []) assertSignal(s, 'criticalSignals');
-  for (const s of row.hardBlockSignals ?? []) assertSignal(s, 'hardBlockSignals');
+  for (const s of row.hardBlockSignals ?? [])
+    assertSignal(s, 'hardBlockSignals');
   validateMarkingWindow(row.markingStart, row.markingEnd);
 }
 
@@ -180,7 +184,9 @@ function validateMarkingWindow(
 
 function assertInt(value: number, name: string, min: number): void {
   if (!Number.isInteger(value) || value < min) {
-    throw new BadRequestException(`${name} must be an integer of at least ${min}.`);
+    throw new BadRequestException(
+      `${name} must be an integer of at least ${min}.`,
+    );
   }
 }
 

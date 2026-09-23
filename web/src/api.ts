@@ -481,11 +481,7 @@ export interface Regularizations {
 }
 
 export type ReportFilterType =
-  | 'entity'
-  | 'department'
-  | 'select'
-  | 'dateFrom'
-  | 'dateTo';
+  'entity' | 'department' | 'select' | 'dateFrom' | 'dateTo';
 
 export interface ReportFilterDef {
   key: string;
@@ -806,12 +802,7 @@ export interface PipelineStage {
 }
 
 export type RequisitionStatus =
-  | 'draft'
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'closed'
-  | 'filled';
+  'draft' | 'pending' | 'approved' | 'rejected' | 'closed' | 'filled';
 export interface Requisition {
   id: string;
   legalEntityId: string;
@@ -837,12 +828,7 @@ export interface CreateRequisitionInput {
 }
 
 export type ApplicationSource =
-  | 'referral'
-  | 'job_board'
-  | 'agency'
-  | 'campus'
-  | 'direct'
-  | 'other';
+  'referral' | 'job_board' | 'agency' | 'campus' | 'direct' | 'other';
 export type ApplicationStatus = 'active' | 'hired' | 'rejected' | 'withdrawn';
 export type Recommendation = 'strong_yes' | 'yes' | 'no' | 'strong_no';
 export interface Scorecard {
@@ -956,11 +942,7 @@ export interface AppraisalOutcome {
   appliedAt: string | null;
 }
 export type AppraisalStatus =
-  | 'pending'
-  | 'self_review'
-  | 'manager_review'
-  | 'calibrated'
-  | 'closed';
+  'pending' | 'self_review' | 'manager_review' | 'calibrated' | 'closed';
 export interface Appraisal {
   id: string;
   cycleId: string;
@@ -1265,10 +1247,7 @@ export const api = {
     }),
   attendanceConfig: (token: string) =>
     request<AttendanceConfig>(token, '/attendance/config'),
-  updateAttendanceConfig: (
-    token: string,
-    patch: Partial<AttendanceConfig>,
-  ) =>
+  updateAttendanceConfig: (token: string, patch: Partial<AttendanceConfig>) =>
     request<AttendanceConfig>(token, '/attendance/config', {
       method: 'PATCH',
       body: JSON.stringify(patch),
@@ -1363,7 +1342,11 @@ export const api = {
       token,
       `/employees/${id}/attendance/regularizations`,
     ),
-  adminRegularization: (token: string, id: string, body: AdminRegularizationBody) =>
+  adminRegularization: (
+    token: string,
+    id: string,
+    body: AdminRegularizationBody,
+  ) =>
     request<RegularizationRow>(
       token,
       `/employees/${id}/attendance/regularizations`,
@@ -1465,7 +1448,12 @@ export const api = {
   createOvertime: (
     token: string,
     id: string,
-    body: { workDate: string; hours: number; source: OvertimeSource; reason: string },
+    body: {
+      workDate: string;
+      hours: number;
+      source: OvertimeSource;
+      reason: string;
+    },
   ) =>
     request<unknown>(token, `/employees/${id}/attendance/overtime`, {
       method: 'POST',
@@ -1553,14 +1541,17 @@ export const api = {
     spec: ReportSpec,
     format: ReportExportFormat,
   ) => {
-    const res = await fetch(`${config.apiBase}/reports/export?format=${format}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const res = await fetch(
+      `${config.apiBase}/reports/export?format=${format}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(spec),
       },
-      body: JSON.stringify(spec),
-    });
+    );
     if (!res.ok) {
       throw new ApiError(res.status, await errorMessage(res));
     }
@@ -1620,9 +1611,12 @@ export const api = {
     return res.blob();
   },
   bankFileCsv: async (token: string, runId: string): Promise<string> => {
-    const res = await fetch(`${config.apiBase}/payroll/runs/${runId}/bank-file`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(
+      `${config.apiBase}/payroll/runs/${runId}/bank-file`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
     if (!res.ok) {
       throw new ApiError(res.status, await errorMessage(res));
     }
@@ -1728,11 +1722,10 @@ export const api = {
     applicationId: string,
     body: { salaryAmount: number; currencyCode?: string; startDate: string },
   ) =>
-    request<Offer>(
-      token,
-      `/recruitment/applications/${applicationId}/offer`,
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
+    request<Offer>(token, `/recruitment/applications/${applicationId}/offer`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   signOffer: (token: string, id: string, signerName: string) =>
     request<Offer>(token, `/recruitment/offers/${id}/sign`, {
       method: 'POST',
@@ -1819,8 +1812,7 @@ export const api = {
   // --- Learning and development (T-3.3).
   proficiencyLevels: (token: string) =>
     request<ProficiencyLevel[]>(token, '/learning/levels'),
-  learningRoles: (token: string) =>
-    request<string[]>(token, '/learning/roles'),
+  learningRoles: (token: string) => request<string[]>(token, '/learning/roles'),
   skills: (token: string) => request<Skill[]>(token, '/learning/skills'),
   createSkill: (
     token: string,
@@ -1844,7 +1836,9 @@ export const api = {
       body: JSON.stringify(body),
     }),
   removeRoleSkill: (token: string, id: string) =>
-    request<unknown>(token, `/learning/role-skills/${id}`, { method: 'DELETE' }),
+    request<unknown>(token, `/learning/role-skills/${id}`, {
+      method: 'DELETE',
+    }),
   employeeSkills: (token: string, employeeId: string) =>
     request<EmployeeSkillRow[]>(
       token,
@@ -1907,10 +1901,7 @@ export const api = {
     if (filter?.employeeId) params.set('employeeId', filter.employeeId);
     if (filter?.category) params.set('category', filter.category);
     const q = params.toString();
-    return request<DocumentSummary[]>(
-      token,
-      `/documents${q ? `?${q}` : ''}`,
-    );
+    return request<DocumentSummary[]>(token, `/documents${q ? `?${q}` : ''}`);
   },
   document: (token: string, id: string) =>
     request<DocumentDetail>(token, `/documents/${id}`),
@@ -1943,8 +1934,7 @@ export const api = {
     }),
   removeDocument: (token: string, id: string) =>
     request<unknown>(token, `/documents/${id}`, { method: 'DELETE' }),
-  myDocuments: (token: string) =>
-    request<MyDocument[]>(token, '/me/documents'),
+  myDocuments: (token: string) => request<MyDocument[]>(token, '/me/documents'),
   acknowledgeDocument: (token: string, id: string, signerName: string) =>
     request<{ documentId: string; version: number; signedAt: string }>(
       token,

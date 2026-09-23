@@ -323,4 +323,3 @@ function totals(lines: CompensationLine[]): {
 function sum(lines: CompensationLine[]): number {
   return lines.reduce((total, line) => total + line.amount, 0);
 }
-

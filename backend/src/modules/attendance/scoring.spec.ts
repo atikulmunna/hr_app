@@ -47,15 +47,24 @@ describe('presentSignals', () => {
   });
 
   it('treats an absent signature check as not flagged (null-not-false)', () => {
-    expect(presentSignals({ appSignatureValid: undefined }, false, config)).toEqual([]);
-    expect(presentSignals({ appSignatureValid: true }, false, config)).toEqual([]);
+    expect(
+      presentSignals({ appSignatureValid: undefined }, false, config),
+    ).toEqual([]);
+    expect(presentSignals({ appSignatureValid: true }, false, config)).toEqual(
+      [],
+    );
   });
 
   it('flags low accuracy only above the tenant limit', () => {
     expect(presentSignals({ accuracyM: 100 }, false, config)).toEqual([]);
-    expect(presentSignals({ accuracyM: 100.1 }, false, config)).toEqual(['low_accuracy']);
+    expect(presentSignals({ accuracyM: 100.1 }, false, config)).toEqual([
+      'low_accuracy',
+    ]);
     expect(
-      presentSignals({ accuracyM: 100.1 }, false, { ...config, accuracyLimitM: 200 }),
+      presentSignals({ accuracyM: 100.1 }, false, {
+        ...config,
+        accuracyLimitM: 200,
+      }),
     ).toEqual([]);
   });
 
@@ -73,7 +82,10 @@ describe('scoreSignals', () => {
 
   it('caps at the ceiling', () => {
     expect(
-      scoreSignals(['signature_mismatch', 'hooking_framework', 'emulator'], config),
+      scoreSignals(
+        ['signature_mismatch', 'hooking_framework', 'emulator'],
+        config,
+      ),
     ).toBe(100);
     expect(
       scoreSignals(['rooted', 'emulator'], { ...config, scoreCeiling: 40 }),
@@ -86,7 +98,10 @@ describe('scoreSignals', () => {
   });
 
   it('scores an unknown weight as zero', () => {
-    const tuned = { ...config, weights: { rooted: undefined as unknown as number } };
+    const tuned = {
+      ...config,
+      weights: { rooted: undefined as unknown as number },
+    };
     expect(scoreSignals(['rooted'], tuned)).toBe(0);
   });
 });
@@ -115,7 +130,9 @@ describe('critical, co-occurrence, and hard-block rules', () => {
 
   it('opens a review case when enough high-confidence signals co-occur', () => {
     expect(hasCoOccurrence(['emulator'], config)).toBe(false);
-    expect(hasCoOccurrence(['emulator', 'recently_rebound'], config)).toBe(true);
+    expect(hasCoOccurrence(['emulator', 'recently_rebound'], config)).toBe(
+      true,
+    );
     // rooted is not high-confidence, so it never counts toward the threshold.
     expect(hasCoOccurrence(['emulator', 'rooted'], config)).toBe(false);
     expect(
@@ -132,7 +149,12 @@ describe('critical, co-occurrence, and hard-block rules', () => {
 });
 
 describe('geofencing', () => {
-  const office = { id: 'hq', latitude: 23.7275, longitude: 90.39, radiusM: 150 };
+  const office = {
+    id: 'hq',
+    latitude: 23.7275,
+    longitude: 90.39,
+    radiusM: 150,
+  };
 
   it('measures distance with the haversine formula', () => {
     expect(haversineMeters(0, 0, 0, 0)).toBe(0);

@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ApiError,
-  CreateShiftBody,
-  LegalEntity,
-  Shift,
-  api,
-} from '../api';
+import { ApiError, CreateShiftBody, LegalEntity, Shift, api } from '../api';
 
 export function Shifts({ token }: { token: string }) {
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -55,10 +49,7 @@ export function Shifts({ token }: { token: string }) {
     <section>
       <div className="section-head">
         <h2>Shifts</h2>
-        <button
-          className="btn primary"
-          onClick={() => setCreating((v) => !v)}
-        >
+        <button className="btn primary" onClick={() => setCreating((v) => !v)}>
           {creating ? 'Cancel' : 'New shift'}
         </button>
       </div>
@@ -191,18 +182,14 @@ function NewShiftForm({
           <label>Break (min)</label>
           <input
             value={form.breakMinutes}
-            onChange={(e) =>
-              setForm({ ...form, breakMinutes: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, breakMinutes: e.target.value })}
           />
         </div>
         <div className="field">
           <label>Grace (min)</label>
           <input
             value={form.graceMinutes}
-            onChange={(e) =>
-              setForm({ ...form, graceMinutes: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, graceMinutes: e.target.value })}
           />
         </div>
         <div className="field">

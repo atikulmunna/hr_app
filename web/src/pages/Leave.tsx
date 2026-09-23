@@ -111,8 +111,8 @@ export function Leave({ token }: { token: string }) {
                   <span className="muted small">{t.code}</span>
                 </div>
                 <div className="muted small">
-                  {entityName(t.legalEntityId)} · quota {Number(t.annualQuota)} d
-                  · carry-forward {Number(t.carryForwardCap)} d · notice{' '}
+                  {entityName(t.legalEntityId)} · quota {Number(t.annualQuota)}{' '}
+                  d · carry-forward {Number(t.carryForwardCap)} d · notice{' '}
                   {t.noticeDays} d · {t.paid ? 'paid' : 'unpaid'}
                   {t.encashable ? ' · encashable' : ''}
                 </div>

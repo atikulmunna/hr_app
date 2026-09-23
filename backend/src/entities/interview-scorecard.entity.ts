@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 // One reviewer's scorecard for an interview (T-3.1, FR-M5-05). A unique
 // constraint on (interview, reviewer) keeps it to one card per reviewer, so

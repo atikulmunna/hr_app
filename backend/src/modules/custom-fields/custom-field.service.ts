@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { TenantDbService } from '../../database/tenant-db.service';
 import {
@@ -118,9 +122,7 @@ export class CustomFieldService {
       }
       if (patch.options !== undefined) {
         if (before.fieldType !== 'select') {
-          throw new BadRequestException(
-            'Only select fields have options.',
-          );
+          throw new BadRequestException('Only select fields have options.');
         }
         changes.options = this.requireOptions(patch.options);
       }
@@ -169,7 +171,9 @@ export class CustomFieldService {
     m: EntityManager,
     id: string,
   ): Promise<CustomFieldDefinition> {
-    const definition = await m.findOne(CustomFieldDefinition, { where: { id } });
+    const definition = await m.findOne(CustomFieldDefinition, {
+      where: { id },
+    });
     if (!definition) {
       throw new NotFoundException('Custom field definition not found.');
     }

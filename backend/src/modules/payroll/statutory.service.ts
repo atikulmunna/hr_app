@@ -107,7 +107,9 @@ export class StatutoryService {
     const code = input.code?.trim();
     const name = input.name?.trim();
     if (!code || !name) {
-      throw new BadRequestException('A statutory rule needs a code and a name.');
+      throw new BadRequestException(
+        'A statutory rule needs a code and a name.',
+      );
     }
     if (!input.legalEntityId) {
       throw new BadRequestException('legalEntityId is required.');
@@ -119,7 +121,9 @@ export class StatutoryService {
     }
     const base = input.base ?? 'gross';
     if (!BASES.includes(base)) {
-      throw new BadRequestException(`base must be one of: ${BASES.join(', ')}.`);
+      throw new BadRequestException(
+        `base must be one of: ${BASES.join(', ')}.`,
+      );
     }
     const basis = input.basis ?? 'monthly';
     if (!PERIOD_BASES.includes(basis)) {
@@ -335,15 +339,26 @@ function bracketAmount(
 }
 
 function requireDate(value: string | undefined, field: string): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+  if (
+    !value ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    Number.isNaN(Date.parse(value))
+  ) {
     throw new BadRequestException(`${field} must be a YYYY-MM-DD date.`);
   }
   return value;
 }
 
 function rate(value: number, field: string): number {
-  if (typeof value !== 'number' || Number.isNaN(value) || value < 0 || value > 100) {
-    throw new BadRequestException(`${field} must be a percentage between 0 and 100.`);
+  if (
+    typeof value !== 'number' ||
+    Number.isNaN(value) ||
+    value < 0 ||
+    value > 100
+  ) {
+    throw new BadRequestException(
+      `${field} must be a percentage between 0 and 100.`,
+    );
   }
   return value;
 }
@@ -356,9 +371,7 @@ function validateBrackets(input: BracketInput[] | undefined): {
   rate: number;
 }[] {
   if (!input || input.length === 0) {
-    throw new BadRequestException(
-      'A bracket rule needs at least one bracket.',
-    );
+    throw new BadRequestException('A bracket rule needs at least one bracket.');
   }
   const brackets = input
     .map((b) => ({
@@ -391,4 +404,3 @@ function validateBrackets(input: BracketInput[] | undefined): {
   }
   return brackets;
 }
-

@@ -10,12 +10,7 @@ import {
 // the configurable pipeline stage by stage. source and referralEmployeeId tag
 // the channel it came through for yield analysis (FR-M5-06).
 export type ApplicationSource =
-  | 'referral'
-  | 'job_board'
-  | 'agency'
-  | 'campus'
-  | 'direct'
-  | 'other';
+  'referral' | 'job_board' | 'agency' | 'campus' | 'direct' | 'other';
 
 export type ApplicationStatus = 'active' | 'hired' | 'rejected' | 'withdrawn';
 

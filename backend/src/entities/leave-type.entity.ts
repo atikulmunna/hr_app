@@ -25,10 +25,22 @@ export class LeaveType {
   name: string;
 
   // Days granted per year. Accrual automation is deferred (FR-M3-06).
-  @Column({ name: 'annual_quota', type: 'numeric', precision: 5, scale: 1, default: 0 })
+  @Column({
+    name: 'annual_quota',
+    type: 'numeric',
+    precision: 5,
+    scale: 1,
+    default: 0,
+  })
   annualQuota: number;
 
-  @Column({ name: 'carry_forward_cap', type: 'numeric', precision: 5, scale: 1, default: 0 })
+  @Column({
+    name: 'carry_forward_cap',
+    type: 'numeric',
+    precision: 5,
+    scale: 1,
+    default: 0,
+  })
   carryForwardCap: number;
 
   @Column({ name: 'notice_days', default: 0 })

@@ -49,7 +49,11 @@ export class PayRulesService {
         entity.overtimeBase = input.overtimeBase;
       }
       if (input.overtimeDivisor !== undefined) {
-        assertOneOf(input.overtimeDivisor, OVERTIME_DIVISORS, 'overtimeDivisor');
+        assertOneOf(
+          input.overtimeDivisor,
+          OVERTIME_DIVISORS,
+          'overtimeDivisor',
+        );
         entity.overtimeDivisor = input.overtimeDivisor;
       }
       if (input.overtimeMultiplier !== undefined) {

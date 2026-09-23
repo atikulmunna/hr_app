@@ -10,11 +10,7 @@ import {
 // final (calibrated) ratings are kept separately so calibration adjusts the
 // outcome without losing the inputs.
 export type AppraisalStatus =
-  | 'pending'
-  | 'self_review'
-  | 'manager_review'
-  | 'calibrated'
-  | 'closed';
+  'pending' | 'self_review' | 'manager_review' | 'calibrated' | 'closed';
 
 @Entity('appraisals')
 export class Appraisal {

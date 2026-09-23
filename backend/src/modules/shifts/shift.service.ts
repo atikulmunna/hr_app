@@ -41,9 +41,7 @@ export class ShiftService {
   ) {}
 
   list(): Promise<Shift[]> {
-    return this.db.withTenant((m) =>
-      m.find(Shift, { order: { name: 'ASC' } }),
-    );
+    return this.db.withTenant((m) => m.find(Shift, { order: { name: 'ASC' } }));
   }
 
   async create(input: CreateShiftInput): Promise<Shift> {

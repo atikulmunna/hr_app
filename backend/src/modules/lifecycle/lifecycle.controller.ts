@@ -36,7 +36,10 @@ export class LifecycleController {
 
   @RequirePermissions('org:manage')
   @Put('lifecycle/templates/:kind')
-  replaceTemplate(@Param('kind') kind: string, @Body() body: { items?: unknown }) {
+  replaceTemplate(
+    @Param('kind') kind: string,
+    @Body() body: { items?: unknown },
+  ) {
     return this.checklists.replaceTemplate(assertKind(kind), body?.items);
   }
 

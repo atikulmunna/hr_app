@@ -21,7 +21,9 @@ describe('requireDate', () => {
   it.each([undefined, '', '2026-7-1', '01/07/2026', '2026-13-45', 'yesterday'])(
     'rejects %p with the field name in the message',
     (value) => {
-      expect(() => requireDate(value, 'cutoffDate')).toThrow(BadRequestException);
+      expect(() => requireDate(value, 'cutoffDate')).toThrow(
+        BadRequestException,
+      );
       expect(() => requireDate(value, 'cutoffDate')).toThrow(
         'cutoffDate must be a YYYY-MM-DD date.',
       );
@@ -56,7 +58,10 @@ describe('countDays', () => {
   it('excludes holidays that fall on weekdays but not those on weekends', () => {
     // 2026-07-06 is a Monday, 2026-07-04 is a Saturday.
     expect(
-      countDays('2026-07-01', '2026-07-31', 'working_days', ['2026-07-06', '2026-07-04']),
+      countDays('2026-07-01', '2026-07-31', 'working_days', [
+        '2026-07-06',
+        '2026-07-04',
+      ]),
     ).toBe(22);
   });
 
@@ -132,9 +137,15 @@ describe('overtimePay', () => {
     expect(
       overtimePay(5, lines, { ...singapore, overtimeFixedHours: null }, period),
     ).toBe(0);
-    const shiftless: OvertimeRule = { ...singapore, overtimeDivisor: 'expected_hours' };
+    const shiftless: OvertimeRule = {
+      ...singapore,
+      overtimeDivisor: 'expected_hours',
+    };
     expect(
-      overtimePay(5, lines, shiftless, { expectedHoursPerDay: 0, workingDays: 22 }),
+      overtimePay(5, lines, shiftless, {
+        expectedHoursPerDay: 0,
+        workingDays: 22,
+      }),
     ).toBe(0);
   });
 });
@@ -211,7 +222,11 @@ describe('previewIssues', () => {
 
   it('blocks a zero net when components exist', () => {
     expect(previewIssues([{ ...clean, net: 0 }])).toEqual([
-      { severity: 'blocking', employeeCode: 'EMP-001', message: 'nets zero for the period' },
+      {
+        severity: 'blocking',
+        employeeCode: 'EMP-001',
+        message: 'nets zero for the period',
+      },
     ]);
   });
 
@@ -226,14 +241,18 @@ describe('previewIssues', () => {
   });
 
   it('blocks approved overtime that could not be rated', () => {
-    expect(previewIssues([{ ...clean, overtimeHours: 3, overtimeAmount: 0 }])).toEqual([
+    expect(
+      previewIssues([{ ...clean, overtimeHours: 3, overtimeAmount: 0 }]),
+    ).toEqual([
       {
         severity: 'blocking',
         employeeCode: 'EMP-001',
         message: '3 h of approved overtime could not be rated',
       },
     ]);
-    expect(previewIssues([{ ...clean, overtimeHours: 3, overtimeAmount: 50 }])).toEqual([]);
+    expect(
+      previewIssues([{ ...clean, overtimeHours: 3, overtimeAmount: 50 }]),
+    ).toEqual([]);
   });
 
   it('warns, but does not block, on unreversed absences', () => {

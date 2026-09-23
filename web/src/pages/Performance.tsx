@@ -87,67 +87,77 @@ export function Performance({ token }: { token: string }) {
         </p>
 
         <div className="stack">
-        {showForm && (
-          <NewCycleForm
-            token={token}
-            onError={setError}
-            onCreated={() => {
-              setShowForm(false);
-              void loadCycles();
-            }}
-          />
-        )}
+          {showForm && (
+            <NewCycleForm
+              token={token}
+              onError={setError}
+              onCreated={() => {
+                setShowForm(false);
+                void loadCycles();
+              }}
+            />
+          )}
 
-        <div className="list">
-          {cycles.map((c) => (
-            <article
-              className={`card row clickable ${c.id === selectedCycleId ? 'selected' : ''}`}
-              key={c.id}
-              onClick={() => setSelectedCycleId(c.id)}
-            >
-              <div className="grow">
-                <div className="row-title">
-                  <span className={cyclePill(c.status)}>{c.status}</span>
-                  <span className="notif-title">{c.name}</span>
-                  <span className="tag">{c.cycleType}</span>
-                  <span className="muted small">
-                    {c.periodStart} to {c.periodEnd}
-                  </span>
-                  <span className="muted small">{c.appraisals} appraisals</span>
+          <div className="list">
+            {cycles.map((c) => (
+              <article
+                className={`card row clickable ${c.id === selectedCycleId ? 'selected' : ''}`}
+                key={c.id}
+                onClick={() => setSelectedCycleId(c.id)}
+              >
+                <div className="grow">
+                  <div className="row-title">
+                    <span className={cyclePill(c.status)}>{c.status}</span>
+                    <span className="notif-title">{c.name}</span>
+                    <span className="tag">{c.cycleType}</span>
+                    <span className="muted small">
+                      {c.periodStart} to {c.periodEnd}
+                    </span>
+                    <span className="muted small">
+                      {c.appraisals} appraisals
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="actions" onClick={(e) => e.stopPropagation()}>
-                {c.status === 'draft' && (
-                  <button
-                    className="btn primary"
-                    onClick={() => void lifecycle(() => api.activateCycle(token, c.id))}
-                  >
-                    Activate
-                  </button>
-                )}
-                {c.status === 'active' && (
-                  <button
-                    className="btn primary"
-                    onClick={() =>
-                      void lifecycle(() => api.moveCycleToCalibration(token, c.id))
-                    }
-                  >
-                    Start calibration
-                  </button>
-                )}
-                {c.status === 'calibration' && (
-                  <button
-                    className="btn"
-                    onClick={() => void lifecycle(() => api.closeCycle(token, c.id))}
-                  >
-                    Close cycle
-                  </button>
-                )}
-              </div>
-            </article>
-          ))}
-          {cycles.length === 0 && <p className="muted">No review cycles yet.</p>}
-        </div>
+                <div className="actions" onClick={(e) => e.stopPropagation()}>
+                  {c.status === 'draft' && (
+                    <button
+                      className="btn primary"
+                      onClick={() =>
+                        void lifecycle(() => api.activateCycle(token, c.id))
+                      }
+                    >
+                      Activate
+                    </button>
+                  )}
+                  {c.status === 'active' && (
+                    <button
+                      className="btn primary"
+                      onClick={() =>
+                        void lifecycle(() =>
+                          api.moveCycleToCalibration(token, c.id),
+                        )
+                      }
+                    >
+                      Start calibration
+                    </button>
+                  )}
+                  {c.status === 'calibration' && (
+                    <button
+                      className="btn"
+                      onClick={() =>
+                        void lifecycle(() => api.closeCycle(token, c.id))
+                      }
+                    >
+                      Close cycle
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+            {cycles.length === 0 && (
+              <p className="muted">No review cycles yet.</p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -223,42 +233,42 @@ function CalibrationBoard({
     <div>
       <h2>{cycle.name} · calibration</h2>
       <p className="muted small">
-        The rating distribution (final rating, or the manager rating until a final
-        one is set) so ratings can be normalized before the cycle closes.
+        The rating distribution (final rating, or the manager rating until a
+        final one is set) so ratings can be normalized before the cycle closes.
       </p>
 
       <div className="stack">
-      <div className="card">
-        <div className="dist">
-          {board.distribution.map((d) => (
-            <div className="dist-row" key={d.value}>
-              <span className="dist-label">
-                {d.value} · {d.label}
-              </span>
-              <div className="dist-track">
-                <div
-                  className="dist-bar"
-                  style={{ width: `${(d.count / maxCount) * 100}%` }}
-                />
+        <div className="card">
+          <div className="dist">
+            {board.distribution.map((d) => (
+              <div className="dist-row" key={d.value}>
+                <span className="dist-label">
+                  {d.value} · {d.label}
+                </span>
+                <div className="dist-track">
+                  <div
+                    className="dist-bar"
+                    style={{ width: `${(d.count / maxCount) * 100}%` }}
+                  />
+                </div>
+                <span className="dist-count">{d.count}</span>
               </div>
-              <span className="dist-count">{d.count}</span>
-            </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="list">
+          {rows.map((a) => (
+            <AppraisalRow
+              key={a.id}
+              appraisal={a}
+              scale={board.scale}
+              cycleStatus={cycle.status}
+              token={token}
+              onAct={act}
+            />
           ))}
         </div>
-      </div>
-
-      <div className="list">
-        {rows.map((a) => (
-          <AppraisalRow
-            key={a.id}
-            appraisal={a}
-            scale={board.scale}
-            cycleStatus={cycle.status}
-            token={token}
-            onAct={act}
-          />
-        ))}
-      </div>
       </div>
     </div>
   );
@@ -278,7 +288,9 @@ function AppraisalRow({
   onAct: (fn: () => Promise<unknown>) => Promise<void>;
 }) {
   const [finalRating, setFinalRating] = useState(
-    String(appraisal.finalRating ?? appraisal.managerRating ?? scale[0]?.value ?? 1),
+    String(
+      appraisal.finalRating ?? appraisal.managerRating ?? scale[0]?.value ?? 1,
+    ),
   );
 
   const rating = (v: number | null) => (v == null ? '-' : String(v));
@@ -288,7 +300,9 @@ function AppraisalRow({
       <div className="row top">
         <div className="grow">
           <div className="row-title">
-            <span className={pillFor(appraisal.status)}>{appraisal.status}</span>
+            <span className={pillFor(appraisal.status)}>
+              {appraisal.status}
+            </span>
             <span className="notif-title">{appraisal.employeeName}</span>
             <span className="muted small">{appraisal.employeeCode}</span>
           </div>
@@ -298,12 +312,17 @@ function AppraisalRow({
             <strong>{rating(appraisal.finalRating)}</strong>
           </div>
           {appraisal.managerComments && (
-            <div className="muted small">manager: {appraisal.managerComments}</div>
+            <div className="muted small">
+              manager: {appraisal.managerComments}
+            </div>
           )}
         </div>
         {cycleStatus === 'calibration' && (
           <div className="actions">
-            <select value={finalRating} onChange={(e) => setFinalRating(e.target.value)}>
+            <select
+              value={finalRating}
+              onChange={(e) => setFinalRating(e.target.value)}
+            >
               {scale.map((p) => (
                 <option key={p.value} value={String(p.value)}>
                   {p.value} · {p.label}
@@ -314,7 +333,11 @@ function AppraisalRow({
               className="btn primary"
               onClick={() =>
                 void onAct(() =>
-                  api.calibrateAppraisal(token, appraisal.id, Number(finalRating)),
+                  api.calibrateAppraisal(
+                    token,
+                    appraisal.id,
+                    Number(finalRating),
+                  ),
                 )
               }
             >
@@ -332,7 +355,8 @@ function AppraisalRow({
 }
 
 function pillFor(status: string): string {
-  if (status === 'calibrated' || status === 'closed') return 'pill status-approved';
+  if (status === 'calibrated' || status === 'closed')
+    return 'pill status-approved';
   if (status === 'pending') return 'pill retired';
   return 'pill status-pending';
 }
@@ -347,7 +371,9 @@ function OutcomeEditor({
   onAct: (fn: () => Promise<unknown>) => Promise<void>;
 }) {
   const existing = appraisal.outcome;
-  const [type, setType] = useState<OutcomeType>(existing?.outcomeType ?? 'none');
+  const [type, setType] = useState<OutcomeType>(
+    existing?.outcomeType ?? 'none',
+  );
   const [incrementAmount, setIncrementAmount] = useState(
     existing?.incrementAmount != null ? String(existing.incrementAmount) : '',
   );
@@ -376,13 +402,17 @@ function OutcomeEditor({
     return (
       <div className="sub-card">
         <div className="row-title">
-          <span className="pill status-approved">{OUTCOME_LABELS[existing!.outcomeType]}</span>
+          <span className="pill status-approved">
+            {OUTCOME_LABELS[existing!.outcomeType]}
+          </span>
           <span className="muted small">
             applied {existing!.appliedAt?.replace('T', ' ')}
           </span>
         </div>
         {existing!.developmentAreas && (
-          <div className="muted small">development: {existing!.developmentAreas}</div>
+          <div className="muted small">
+            development: {existing!.developmentAreas}
+          </div>
         )}
       </div>
     );
@@ -393,7 +423,10 @@ function OutcomeEditor({
       <div className="field-row">
         <div className="field">
           <label>Outcome</label>
-          <select value={type} onChange={(e) => setType(e.target.value as OutcomeType)}>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as OutcomeType)}
+          >
             {(Object.keys(OUTCOME_LABELS) as OutcomeType[]).map((t) => (
               <option key={t} value={t}>
                 {OUTCOME_LABELS[t]}
@@ -447,7 +480,9 @@ function OutcomeEditor({
           <div className="field align-end">
             <button
               className="btn primary"
-              onClick={() => void onAct(() => api.applyOutcome(token, appraisal.id))}
+              onClick={() =>
+                void onAct(() => api.applyOutcome(token, appraisal.id))
+              }
             >
               Apply to pay
             </button>
@@ -524,67 +559,77 @@ function GoalsPanel({
         )}
       </div>
       <div className="stack">
-      <div className="field" style={{ maxWidth: 320 }}>
-        <label>Employee</label>
-        <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
-          <option value="">Select employee</option>
-          {employees.map((emp) => (
-            <option key={emp.id} value={emp.id}>
-              {emp.firstName} {emp.lastName} ({emp.employeeCode})
-            </option>
-          ))}
-        </select>
-      </div>
+        <div className="field" style={{ maxWidth: 320 }}>
+          <label>Employee</label>
+          <select
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
+          >
+            <option value="">Select employee</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.firstName} {emp.lastName} ({emp.employeeCode})
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {showForm && employeeId && (
-        <NewGoalForm
-          token={token}
-          employeeId={employeeId}
-          goals={goals}
-          onError={onError}
-          onCreated={() => {
-            setShowForm(false);
-            void load(employeeId);
-          }}
-        />
-      )}
+        {showForm && employeeId && (
+          <NewGoalForm
+            token={token}
+            employeeId={employeeId}
+            goals={goals}
+            onError={onError}
+            onCreated={() => {
+              setShowForm(false);
+              void load(employeeId);
+            }}
+          />
+        )}
 
-      <div className="list">
-        {goals.map((g) => (
-          <article className="card row top" key={g.id}>
-            <div className="grow">
-              <div className="row-title">
-                <span className={goalPill(g.status)}>{g.status}</span>
-                <span className="notif-title">{g.title}</span>
-                {g.weight != null && <span className="tag">weight {g.weight}</span>}
-                {g.parentTitle && (
-                  <span className="muted small">under: {g.parentTitle}</span>
+        <div className="list">
+          {goals.map((g) => (
+            <article className="card row top" key={g.id}>
+              <div className="grow">
+                <div className="row-title">
+                  <span className={goalPill(g.status)}>{g.status}</span>
+                  <span className="notif-title">{g.title}</span>
+                  {g.weight != null && (
+                    <span className="tag">weight {g.weight}</span>
+                  )}
+                  {g.parentTitle && (
+                    <span className="muted small">under: {g.parentTitle}</span>
+                  )}
+                </div>
+                <div className="progress-line">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={g.progress}
+                    onChange={(e) =>
+                      void setProgress(g, Number(e.target.value))
+                    }
+                  />
+                  <span className="muted small">{g.progress}%</span>
+                </div>
+              </div>
+              <div className="actions">
+                {g.status !== 'cancelled' && g.status !== 'achieved' && (
+                  <button
+                    className="btn small-btn"
+                    onClick={() => void setStatus(g, 'cancelled')}
+                  >
+                    Cancel
+                  </button>
                 )}
               </div>
-              <div className="progress-line">
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={g.progress}
-                  onChange={(e) => void setProgress(g, Number(e.target.value))}
-                />
-                <span className="muted small">{g.progress}%</span>
-              </div>
-            </div>
-            <div className="actions">
-              {g.status !== 'cancelled' && g.status !== 'achieved' && (
-                <button className="btn small-btn" onClick={() => void setStatus(g, 'cancelled')}>
-                  Cancel
-                </button>
-              )}
-            </div>
-          </article>
-        ))}
-        {employeeId && goals.length === 0 && (
-          <p className="muted">No goals for this employee.</p>
-        )}
-      </div>
+            </article>
+          ))}
+          {employeeId && goals.length === 0 && (
+            <p className="muted">No goals for this employee.</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -680,7 +725,11 @@ function NewGoalForm({
           />
         </div>
         <div className="field align-end">
-          <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => void submit()}
+          >
             Create goal
           </button>
         </div>
@@ -742,7 +791,9 @@ function NewCycleForm({
           <label>Type</label>
           <select
             value={form.cycleType}
-            onChange={(e) => setForm({ ...form, cycleType: e.target.value as CycleType })}
+            onChange={(e) =>
+              setForm({ ...form, cycleType: e.target.value as CycleType })
+            }
           >
             <option value="annual">Annual</option>
             <option value="quarterly">Quarterly</option>
@@ -767,7 +818,11 @@ function NewCycleForm({
         </div>
       </div>
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Create draft cycle
         </button>
       </div>

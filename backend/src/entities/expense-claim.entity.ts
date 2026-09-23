@@ -10,12 +10,7 @@ import {
 // as a draft of lines, submits it through the shared workflow to their manager,
 // and once approved HR settles it via payroll or disbursement.
 export type ExpenseClaimStatus =
-  | 'draft'
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'settled'
-  | 'cancelled';
+  'draft' | 'pending' | 'approved' | 'rejected' | 'settled' | 'cancelled';
 
 export type ExpenseSettlementMethod = 'payroll' | 'disbursement';
 

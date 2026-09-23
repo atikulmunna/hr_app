@@ -6,12 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-export type CustomFieldType =
-  | 'text'
-  | 'number'
-  | 'date'
-  | 'boolean'
-  | 'select';
+export type CustomFieldType = 'text' | 'number' | 'date' | 'boolean' | 'select';
 
 export const CUSTOM_FIELD_TYPES: CustomFieldType[] = [
   'text',

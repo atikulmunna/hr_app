@@ -159,7 +159,9 @@ export class AttendanceService {
     item: OfflineMarkInput,
   ): Promise<SyncResult> {
     if (!item.clientId) {
-      throw new BadRequestException('clientId is required for an offline mark.');
+      throw new BadRequestException(
+        'clientId is required for an offline mark.',
+      );
     }
     if (!item.eventType) {
       throw new BadRequestException('eventType is required.');
@@ -174,7 +176,11 @@ export class AttendanceService {
         where: { clientId: item.clientId },
       });
       if (existing) {
-        return { clientId: item.clientId!, status: 'duplicate', eventId: existing.id };
+        return {
+          clientId: item.clientId!,
+          status: 'duplicate',
+          eventId: existing.id,
+        };
       }
 
       const config = await this.config.effective(m);
@@ -230,7 +236,9 @@ export class AttendanceService {
     const events = await this.eventsOnDay(m, employee.id, ctx.at);
     const state = computeState(events);
     if (!isAllowed(state, input.eventType)) {
-      throw new BadRequestException(this.sequenceReason(state, input.eventType));
+      throw new BadRequestException(
+        this.sequenceReason(state, input.eventType),
+      );
     }
 
     // Optional tenant marking window (T-1C.12), checked against the mark time.
@@ -262,7 +270,9 @@ export class AttendanceService {
       fences.length > 0 ? matchGeofence(input.lat, input.lng, fences) : null;
     const geofencePass = fences.length === 0 ? true : matched != null;
     if (!geofencePass && !employee.remoteAllowed) {
-      throw new BadRequestException('You are outside a permitted work location.');
+      throw new BadRequestException(
+        'You are outside a permitted work location.',
+      );
     }
     // Recorded outside all fences under the remote-allowed policy (FR-AT-29).
     const remote = !geofencePass && employee.remoteAllowed;

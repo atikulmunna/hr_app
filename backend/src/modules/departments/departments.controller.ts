@@ -1,9 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { RequirePermissions } from '../auth/permissions.decorator';
-import {
-  CreateDepartmentInput,
-  DepartmentService,
-} from './department.service';
+import { CreateDepartmentInput, DepartmentService } from './department.service';
 
 @Controller('departments')
 export class DepartmentsController {

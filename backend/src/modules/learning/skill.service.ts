@@ -103,7 +103,10 @@ export class SkillService {
     );
   }
 
-  async createSkill(user: AuthUser, input: CreateSkillInput): Promise<SkillView> {
+  async createSkill(
+    user: AuthUser,
+    input: CreateSkillInput,
+  ): Promise<SkillView> {
     const name = input.name?.trim();
     if (!name) {
       throw new BadRequestException('A skill needs a name.');
@@ -116,7 +119,9 @@ export class SkillService {
         [name],
       );
       if (duplicate.length) {
-        throw new BadRequestException(`A skill named "${name}" already exists.`);
+        throw new BadRequestException(
+          `A skill named "${name}" already exists.`,
+        );
       }
       const skill = await m.save(
         m.create(Skill, {
@@ -127,7 +132,12 @@ export class SkillService {
         }),
       );
       await this.audit.record(
-        { action: 'skill.create', resourceType: 'skill', resourceId: skill.id, after: { name } },
+        {
+          action: 'skill.create',
+          resourceType: 'skill',
+          resourceId: skill.id,
+          after: { name },
+        },
         m,
       );
       return { id: skill.id, name, category, description };
@@ -269,7 +279,12 @@ export class SkillService {
            FROM role_skills rs JOIN skills s ON s.id = rs.skill_id
           WHERE lower(rs.role) = lower($1)`,
         [role],
-      )) as { skillId: string; name: string; category: string | null; requiredLevel: number }[];
+      )) as {
+        skillId: string;
+        name: string;
+        category: string | null;
+        requiredLevel: number;
+      }[];
 
       const employees = (await m.query(
         `SELECT id AS "employeeId",
@@ -279,7 +294,11 @@ export class SkillService {
           WHERE lower(job_title) = lower($1) AND status <> 'terminated'
           ORDER BY employee_code ASC`,
         [role],
-      )) as { employeeId: string; employeeName: string; employeeCode: string }[];
+      )) as {
+        employeeId: string;
+        employeeName: string;
+        employeeCode: string;
+      }[];
 
       const held = (await m.query(
         `SELECT es.employee_id AS "employeeId", es.skill_id AS "skillId",
@@ -318,8 +337,10 @@ export class SkillService {
           });
         }
       }
-      const columnList = Array.from(columns.values()).sort((a, b) =>
-        (a.category ?? '').localeCompare(b.category ?? '') || a.name.localeCompare(b.name),
+      const columnList = Array.from(columns.values()).sort(
+        (a, b) =>
+          (a.category ?? '').localeCompare(b.category ?? '') ||
+          a.name.localeCompare(b.name),
       );
 
       const levelOf = new Map<string, number>();
@@ -334,7 +355,9 @@ export class SkillService {
         cells: columnList.map((col): MatrixCell => {
           const level = levelOf.get(`${e.employeeId}:${col.skillId}`) ?? null;
           const meetsRequirement =
-            col.requiredLevel == null ? true : level != null && level >= col.requiredLevel;
+            col.requiredLevel == null
+              ? true
+              : level != null && level >= col.requiredLevel;
           return { skillId: col.skillId, level, meetsRequirement };
         }),
       }));
@@ -352,7 +375,9 @@ export class SkillService {
       level < MIN_LEVEL ||
       level > MAX_LEVEL
     ) {
-      throw new BadRequestException(`A level must be an integer from ${MIN_LEVEL} to ${MAX_LEVEL}.`);
+      throw new BadRequestException(
+        `A level must be an integer from ${MIN_LEVEL} to ${MAX_LEVEL}.`,
+      );
     }
   }
 

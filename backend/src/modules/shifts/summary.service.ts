@@ -7,13 +7,7 @@ import { RosterService } from './roster.service';
 import { ShiftService } from './shift.service';
 
 export type DayStatus =
-  | 'present'
-  | 'late'
-  | 'absent'
-  | 'leave'
-  | 'holiday'
-  | 'off'
-  | 'scheduled';
+  'present' | 'late' | 'absent' | 'leave' | 'holiday' | 'off' | 'scheduled';
 
 export interface DaySummary {
   day: string;
@@ -166,7 +160,8 @@ export class SummaryService {
     }
 
     const expectedHours = shiftExpectedHours(ctx.shift);
-    const graceLimit = timeToMinutes(ctx.shift.startTime) + ctx.shift.graceMinutes;
+    const graceLimit =
+      timeToMinutes(ctx.shift.startTime) + ctx.shift.graceMinutes;
     const late = utcMinutesOfDay(ev.firstIn) > graceLimit ? 'late' : 'present';
     let workedHours: number | null = null;
     let overtimeHours = 0;
@@ -224,17 +219,20 @@ export class SummaryService {
     from: string,
     to: string,
   ): Promise<Map<string, DayEvents>> {
-    const rows: Array<{ day: string; firstIn: string | null; lastOut: string | null }> =
-      await m.query(
-        `SELECT to_char((server_ts AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS day,
+    const rows: Array<{
+      day: string;
+      firstIn: string | null;
+      lastOut: string | null;
+    }> = await m.query(
+      `SELECT to_char((server_ts AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS day,
                 min(server_ts) FILTER (WHERE event_type = 'check_in') AS "firstIn",
                 max(server_ts) FILTER (WHERE event_type = 'check_out') AS "lastOut"
          FROM attendance_events
          WHERE employee_id = $1
            AND (server_ts AT TIME ZONE 'UTC')::date BETWEEN $2 AND $3
          GROUP BY 1`,
-        [employeeId, from, to],
-      );
+      [employeeId, from, to],
+    );
     const map = new Map<string, DayEvents>();
     for (const r of rows) {
       map.set(r.day, {

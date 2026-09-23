@@ -51,6 +51,8 @@ describe('TenantDbService.withTenant', () => {
   it('joins an existing manager even when the context has no tenant', async () => {
     const { service } = build(undefined);
     const outer = {} as EntityManager;
-    await expect(service.withTenant(async () => 'ok', outer)).resolves.toBe('ok');
+    await expect(service.withTenant(async () => 'ok', outer)).resolves.toBe(
+      'ok',
+    );
   });
 });

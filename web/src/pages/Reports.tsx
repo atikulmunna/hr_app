@@ -113,10 +113,10 @@ export function Reports({ token }: { token: string }) {
       <div>
         <h2>Report builder</h2>
         <p className="muted small">
-          Pick a dataset, narrow it with filters, optionally group it, then export
-          to CSV, Excel, or PDF. Grouping collapses the rows to a count per group
-          (plus sums for payroll); leave it ungrouped for the full detail columns.
-          Payroll sums stay within each currency.
+          Pick a dataset, narrow it with filters, optionally group it, then
+          export to CSV, Excel, or PDF. Grouping collapses the rows to a count
+          per group (plus sums for payroll); leave it ungrouped for the full
+          detail columns. Payroll sums stay within each currency.
         </p>
       </div>
 
@@ -139,7 +139,10 @@ export function Reports({ token }: { token: string }) {
           </div>
           <div className="field">
             <label>Group by</label>
-            <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
+            <select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value)}
+            >
               <option value="">No grouping (detail rows)</option>
               {dataset?.dimensions.map((d) => (
                 <option key={d.key} value={d.key}>
@@ -166,16 +169,32 @@ export function Reports({ token }: { token: string }) {
         )}
 
         <div className="actions">
-          <button className="btn primary" disabled={busy} onClick={() => void run()}>
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => void run()}
+          >
             Run report
           </button>
-          <button className="btn" disabled={!result} onClick={() => void download('csv')}>
+          <button
+            className="btn"
+            disabled={!result}
+            onClick={() => void download('csv')}
+          >
             CSV
           </button>
-          <button className="btn" disabled={!result} onClick={() => void download('xlsx')}>
+          <button
+            className="btn"
+            disabled={!result}
+            onClick={() => void download('xlsx')}
+          >
             Excel
           </button>
-          <button className="btn" disabled={!result} onClick={() => void download('pdf')}>
+          <button
+            className="btn"
+            disabled={!result}
+            onClick={() => void download('pdf')}
+          >
             PDF
           </button>
         </div>
@@ -186,7 +205,8 @@ export function Reports({ token }: { token: string }) {
           <div className="chart-title">
             {result.label}{' '}
             <span className="muted small">
-              {result.grouped ? 'grouped' : 'detail'} · {result.rows.length} rows
+              {result.grouped ? 'grouped' : 'detail'} · {result.rows.length}{' '}
+              rows
             </span>
           </div>
           {result.rows.length === 0 ? (

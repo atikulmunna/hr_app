@@ -76,7 +76,9 @@ export default function App() {
     return <div className="center muted">Loading...</div>;
   }
   if (auth.error) {
-    return <div className="center error">Sign-in error: {auth.error.message}</div>;
+    return (
+      <div className="center error">Sign-in error: {auth.error.message}</div>
+    );
   }
 
   if (!auth.isAuthenticated) {
@@ -85,7 +87,10 @@ export default function App() {
         <div className="card login">
           <h1>HR Console</h1>
           <p className="muted">Sign in to review approvals and attendance.</p>
-          <button className="btn primary" onClick={() => void auth.signinRedirect()}>
+          <button
+            className="btn primary"
+            onClick={() => void auth.signinRedirect()}
+          >
             Sign in with Keycloak
           </button>
         </div>

@@ -85,12 +85,18 @@ export class CycleService {
       throw new BadRequestException('A rating scale needs a name.');
     }
     if (!Array.isArray(points) || points.length < 2) {
-      throw new BadRequestException('A rating scale needs at least two points.');
+      throw new BadRequestException(
+        'A rating scale needs at least two points.',
+      );
     }
     return this.db.withTenant(async (m) => {
-      const duplicate = await m.findOne(RatingScale, { where: { name: trimmed } });
+      const duplicate = await m.findOne(RatingScale, {
+        where: { name: trimmed },
+      });
       if (duplicate) {
-        throw new BadRequestException(`A scale named "${trimmed}" already exists.`);
+        throw new BadRequestException(
+          `A scale named "${trimmed}" already exists.`,
+        );
       }
       return m.save(
         m.create(RatingScale, {
@@ -125,13 +131,17 @@ export class CycleService {
     }
     const cycleType = input.cycleType ?? 'annual';
     if (!CYCLE_TYPES.includes(cycleType)) {
-      throw new BadRequestException('Cycle type must be annual, quarterly, or probation.');
+      throw new BadRequestException(
+        'Cycle type must be annual, quarterly, or probation.',
+      );
     }
     if (!input.periodStart || !input.periodEnd) {
       throw new BadRequestException('A cycle needs a start and end date.');
     }
     if (input.periodStart > input.periodEnd) {
-      throw new BadRequestException('The start date must be on or before the end date.');
+      throw new BadRequestException(
+        'The start date must be on or before the end date.',
+      );
     }
     const id = await this.db.withTenant(async (m) => {
       const scale = input.ratingScaleId
@@ -229,7 +239,11 @@ export class CycleService {
         [id],
       );
       await this.audit.record(
-        { action: 'review_cycle.close', resourceType: 'review_cycle', resourceId: id },
+        {
+          action: 'review_cycle.close',
+          resourceType: 'review_cycle',
+          resourceId: id,
+        },
         m,
       );
     });
@@ -300,14 +314,21 @@ export class CycleService {
       cycle.status = to;
       await m.save(cycle);
       await this.audit.record(
-        { action: `review_cycle.${action}`, resourceType: 'review_cycle', resourceId: id },
+        {
+          action: `review_cycle.${action}`,
+          resourceType: 'review_cycle',
+          resourceId: id,
+        },
         m,
       );
     });
     return this.get(id);
   }
 
-  private async cycleOrThrow(m: EntityManager, id: string): Promise<ReviewCycle> {
+  private async cycleOrThrow(
+    m: EntityManager,
+    id: string,
+  ): Promise<ReviewCycle> {
     const cycle = await m.findOne(ReviewCycle, { where: { id } });
     if (!cycle) {
       throw new NotFoundException('Cycle not found.');

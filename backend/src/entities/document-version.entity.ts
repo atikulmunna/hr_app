@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 // One version of a document (T-3.4, FR-M1-07): immutable metadata plus the file's
 // SHA-256. The parent document points at its current version.

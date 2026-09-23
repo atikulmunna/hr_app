@@ -31,7 +31,11 @@ export interface OvertimeRule {
 }
 
 export function requireDate(value: string | undefined, field: string): string {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+  if (
+    !value ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    Number.isNaN(Date.parse(value))
+  ) {
     throw new BadRequestException(`${field} must be a YYYY-MM-DD date.`);
   }
   return value;
@@ -41,7 +45,10 @@ export function laterOf(periodStart: string, hireDate: string | null): string {
   return hireDate && hireDate > periodStart ? hireDate : periodStart;
 }
 
-export function earlierOf(periodEnd: string, terminatedOn: string | null): string {
+export function earlierOf(
+  periodEnd: string,
+  terminatedOn: string | null,
+): string {
   return terminatedOn && terminatedOn < periodEnd ? terminatedOn : periodEnd;
 }
 
@@ -79,7 +86,10 @@ export function countDays(
 
 // Guarded against a period with no countable days, which would otherwise divide
 // by zero; nothing to prorate against means nothing to reduce.
-export function prorationFactor(payableDays: number, periodDays: number): number {
+export function prorationFactor(
+  payableDays: number,
+  periodDays: number,
+): number {
   if (periodDays <= 0) {
     return 1;
   }

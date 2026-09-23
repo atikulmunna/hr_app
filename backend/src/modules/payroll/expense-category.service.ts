@@ -83,7 +83,10 @@ export class ExpenseCategoryService {
         );
         return this.view(category);
       } catch (e) {
-        if (e instanceof QueryFailedError && /idx_expense_categories_code/.test(e.message)) {
+        if (
+          e instanceof QueryFailedError &&
+          /idx_expense_categories_code/.test(e.message)
+        ) {
           throw new BadRequestException(
             `An expense category with code "${code}" already exists.`,
           );
@@ -164,7 +167,9 @@ export class ExpenseCategoryService {
       return null;
     }
     if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) {
-      throw new BadRequestException('A category limit must be a positive number.');
+      throw new BadRequestException(
+        'A category limit must be a positive number.',
+      );
     }
     return value;
   }

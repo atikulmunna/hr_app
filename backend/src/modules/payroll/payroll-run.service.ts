@@ -15,7 +15,11 @@ import { OvertimeService } from '../attendance/overtime.service';
 import { SummaryService } from '../shifts/summary.service';
 import { AdjustmentService } from './adjustment.service';
 import { CompensationService } from './compensation.service';
-import { StatutoryCharge, StatutoryService, chargesFor } from './statutory.service';
+import {
+  StatutoryCharge,
+  StatutoryService,
+  chargesFor,
+} from './statutory.service';
 import { ApprovalView, WorkflowService } from '../workflow/workflow.service';
 import {
   assertDraft,
@@ -134,7 +138,9 @@ export class PayrollRunService {
     private readonly workflow: WorkflowService,
     private readonly adjustments: AdjustmentService,
   ) {
-    this.workflow.onDecided('payroll_run', (view, m) => this.onDecided(view, m));
+    this.workflow.onDecided('payroll_run', (view, m) =>
+      this.onDecided(view, m),
+    );
   }
 
   // Lists runs with their preview issues attached, because the lock action sits
@@ -171,7 +177,12 @@ export class PayrollRunService {
         [drafts],
       )) as (Pick<
         RunEmployeeView,
-        'employeeId' | 'employeeCode' | 'net' | 'absentDays' | 'overtimeHours' | 'overtimeAmount'
+        | 'employeeId'
+        | 'employeeCode'
+        | 'net'
+        | 'absentDays'
+        | 'overtimeHours'
+        | 'overtimeAmount'
       > & { runId: string })[];
 
       const lineCounts = (await m.query(
@@ -353,10 +364,15 @@ export class PayrollRunService {
         run.periodStart,
         run.periodEnd,
       );
-      const overtimeAmount = overtimePay(overtimeHours, compensation.lines, entity, {
-        expectedHoursPerDay: summary.shift?.expectedHours ?? 0,
-        workingDays,
-      });
+      const overtimeAmount = overtimePay(
+        overtimeHours,
+        compensation.lines,
+        entity,
+        {
+          expectedHoursPerDay: summary.shift?.expectedHours ?? 0,
+          workingDays,
+        },
+      );
 
       // Statutory rates apply to what is actually earned this period, so the
       // base is the prorated pay plus approved overtime, not the full salary.
@@ -408,7 +424,8 @@ export class PayrollRunService {
             payComponentId: line.payComponentId,
             code: line.code,
             name: line.name,
-            componentType: line.componentType as PayrollRunLine['componentType'],
+            componentType:
+              line.componentType as PayrollRunLine['componentType'],
             source: 'component' as const,
             baseAmount: line.amount.toFixed(2),
             prorationFactor: row.factor.toFixed(4),
@@ -582,7 +599,9 @@ export class PayrollRunService {
       )) as (RunEmployeeView['lines'][number] & { employeeId: string })[];
 
       for (const employee of employees) {
-        employee.lines = lines.filter((l) => l.employeeId === employee.employeeId);
+        employee.lines = lines.filter(
+          (l) => l.employeeId === employee.employeeId,
+        );
         employee.adjustmentLines = settled.filter(
           (a) => a.employeeId === employee.employeeId,
         );
@@ -616,7 +635,9 @@ export class PayrollRunService {
     if (blocking.length > 0) {
       throw new BadRequestException(
         `This run cannot be locked yet: ${blocking
-          .map((b) => (b.employeeCode ? `${b.employeeCode}, ${b.message}` : b.message))
+          .map((b) =>
+            b.employeeCode ? `${b.employeeCode}, ${b.message}` : b.message,
+          )
           .join('; ')}`,
       );
     }
@@ -665,9 +686,15 @@ export class PayrollRunService {
   // disbursement, and a rejection returns it to draft so it can be corrected
   // and locked again.
   private async onDecided(view: ApprovalView, m: EntityManager): Promise<void> {
-    const where = { approvalRequestId: view.request.id, status: 'locked' as const };
+    const where = {
+      approvalRequestId: view.request.id,
+      status: 'locked' as const,
+    };
     if (view.request.status === 'approved') {
-      await m.update(PayrollRun, where, { status: 'approved', approvedAt: new Date() });
+      await m.update(PayrollRun, where, {
+        status: 'approved',
+        approvedAt: new Date(),
+      });
       return;
     }
     await m.update(PayrollRun, where, {

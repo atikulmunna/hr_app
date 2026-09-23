@@ -27,7 +27,13 @@ export class ExpenseCategory {
   name: string;
 
   // The pg driver returns numeric as a string; null means no cap.
-  @Column({ name: 'limit_amount', type: 'numeric', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'limit_amount',
+    type: 'numeric',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   limitAmount?: string | null;
 
   @Column({ default: true })

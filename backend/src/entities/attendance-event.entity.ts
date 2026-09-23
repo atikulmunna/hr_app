@@ -6,10 +6,7 @@ import {
 } from 'typeorm';
 
 export type AttendanceEventType =
-  | 'check_in'
-  | 'check_out'
-  | 'break_start'
-  | 'break_end';
+  'check_in' | 'check_out' | 'break_start' | 'break_end';
 
 export type AttendanceOrigin = 'live' | 'regularized' | 'admin' | 'offline';
 export type RiskBand = 'clean' | 'yellow' | 'red';
@@ -100,7 +97,12 @@ export class AttendanceEvent {
   @Column({ name: 'enrichment_status', default: 'pending' })
   enrichmentStatus: 'pending' | 'done';
 
-  @Column({ name: 'enrichment_signals', type: 'text', array: true, default: {} })
+  @Column({
+    name: 'enrichment_signals',
+    type: 'text',
+    array: true,
+    default: {},
+  })
   enrichmentSignals: string[];
 
   @Column({ name: 'app_version', nullable: true })

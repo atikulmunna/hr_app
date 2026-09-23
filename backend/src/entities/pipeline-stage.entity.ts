@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 // A stage in the tenant-configurable recruitment pipeline (T-3.1, FR-M5-03). A
 // terminal stage ends the funnel; its outcome marks an application hired or

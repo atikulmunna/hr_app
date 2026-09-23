@@ -12,7 +12,9 @@ loadEnv({ quiet: true });
 async function seed(): Promise<void> {
   await AppDataSource.initialize();
   await AppDataSource.transaction(async (m) => {
-    const existing = await m.query(`SELECT id FROM tenants WHERE slug = 'oasis'`);
+    const existing = await m.query(
+      `SELECT id FROM tenants WHERE slug = 'oasis'`,
+    );
     let tenantId: string;
     if (existing.length > 0) {
       tenantId = existing[0].id;

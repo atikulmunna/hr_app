@@ -10,11 +10,7 @@ import {
 // cannot absorb, settled into a later run instead (FR-M4-11, D-09). Positive
 // pays more; negative claws back.
 export type PayrollAdjustmentStatus =
-  | 'pending'
-  | 'approved'
-  | 'settled'
-  | 'rejected'
-  | 'cancelled';
+  'pending' | 'approved' | 'settled' | 'rejected' | 'cancelled';
 
 @Entity('payroll_adjustments')
 export class PayrollAdjustment {

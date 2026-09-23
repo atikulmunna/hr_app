@@ -223,7 +223,10 @@ function MatrixTable({
   );
 }
 
-function cellClass(cell: { level: number | null; meetsRequirement: boolean }): string {
+function cellClass(cell: {
+  level: number | null;
+  meetsRequirement: boolean;
+}): string {
   if (cell.level == null) return '';
   return cell.meetsRequirement ? 'cell-met' : 'cell-gap';
 }
@@ -468,7 +471,11 @@ function NewSkillForm({
         </div>
       </div>
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Add skill
         </button>
       </div>
@@ -563,7 +570,10 @@ function CertificationsPanel({
                 </div>
               </div>
               <div className="actions">
-                <button className="btn small-btn" onClick={() => void remove(c.id)}>
+                <button
+                  className="btn small-btn"
+                  onClick={() => void remove(c.id)}
+                >
                   Remove
                 </button>
               </div>
@@ -691,7 +701,11 @@ function NewCertificationForm({
           />
         </div>
         <div className="field align-end">
-          <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => void submit()}
+          >
             Add certification
           </button>
         </div>

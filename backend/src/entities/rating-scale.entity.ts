@@ -1,4 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 // A configurable rating scale (T-3.2, FR-M6-05): the ordered points a rating is
 // chosen from. A default 5-point scale is seeded lazily.

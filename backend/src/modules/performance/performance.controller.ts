@@ -54,7 +54,12 @@ export class PerformanceController {
     @Param('id') id: string,
     @Body() body: { rating?: number; comments?: string },
   ) {
-    return this.appraisals.selfReview(user, id, body?.rating as number, body?.comments);
+    return this.appraisals.selfReview(
+      user,
+      id,
+      body?.rating as number,
+      body?.comments,
+    );
   }
 
   // --- Rating scales.
@@ -161,7 +166,12 @@ export class PerformanceController {
     @Param('id') id: string,
     @Body() body: { rating?: number; comments?: string },
   ) {
-    return this.appraisals.managerReview(user, id, body?.rating as number, body?.comments);
+    return this.appraisals.managerReview(
+      user,
+      id,
+      body?.rating as number,
+      body?.comments,
+    );
   }
 
   @RequirePermissions('performance:manage')

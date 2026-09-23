@@ -25,7 +25,13 @@ export class AppraisalOutcome {
   @Column({ name: 'outcome_type', default: 'none' })
   outcomeType: OutcomeType;
 
-  @Column({ name: 'increment_amount', type: 'numeric', precision: 14, scale: 2, nullable: true })
+  @Column({
+    name: 'increment_amount',
+    type: 'numeric',
+    precision: 14,
+    scale: 2,
+    nullable: true,
+  })
   incrementAmount?: string | null;
 
   @Column({ name: 'increment_effective_date', type: 'date', nullable: true })

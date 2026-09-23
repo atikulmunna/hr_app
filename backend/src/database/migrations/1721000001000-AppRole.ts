@@ -41,9 +41,7 @@ export class AppRole1721000001000 implements MigrationInterface {
     await q.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE USAGE, SELECT ON SEQUENCES FROM hris_app`,
     );
-    await q.query(
-      `REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM hris_app`,
-    );
+    await q.query(`REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM hris_app`);
     await q.query(`REVOKE ALL ON ALL TABLES IN SCHEMA public FROM hris_app`);
     await q.query(`REVOKE USAGE ON SCHEMA public FROM hris_app`);
     await q.query(`DROP ROLE IF EXISTS hris_app`);

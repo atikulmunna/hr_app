@@ -230,7 +230,11 @@ export class DeviceService {
         status: 'active',
       }),
     );
-    await this.recordHistory(m, { employeeId, deviceId: device.id, action: 'enroll' });
+    await this.recordHistory(m, {
+      employeeId,
+      deviceId: device.id,
+      action: 'enroll',
+    });
     await this.audit.record(
       {
         action: 'device.enroll',

@@ -109,7 +109,12 @@ function pdfText(buffer: Buffer): string {
 
 describe('payslip render', () => {
   it('produces a well-formed PDF', async () => {
-    const pdf = await render(run(), row(), 'Oasis Corp Bangladesh', 'Operations Lead');
+    const pdf = await render(
+      run(),
+      row(),
+      'Oasis Corp Bangladesh',
+      'Operations Lead',
+    );
     expect(Buffer.isBuffer(pdf)).toBe(true);
     expect(pdf.length).toBeGreaterThan(800);
     expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
@@ -130,7 +135,9 @@ describe('payslip render', () => {
   it('marks an unapproved run as provisional', async () => {
     const approved = pdfText(await render(run(), row(), 'Entity', ''));
     expect(approved).not.toContain('Provisional');
-    const locked = pdfText(await render(run({ status: 'locked' }), row(), 'Entity', ''));
+    const locked = pdfText(
+      await render(run({ status: 'locked' }), row(), 'Entity', ''),
+    );
     expect(locked).toContain('Provisional');
   });
 
@@ -138,7 +145,12 @@ describe('payslip render', () => {
     const full = pdfText(await render(run(), row(), 'Entity', ''));
     expect(full).not.toContain('Prorated');
     const partial = pdfText(
-      await render(run(), row({ prorationFactor: 0.5, payableDays: 15 }), 'Entity', ''),
+      await render(
+        run(),
+        row({ prorationFactor: 0.5, payableDays: 15 }),
+        'Entity',
+        '',
+      ),
     );
     expect(partial).toContain('Prorated for 15 of 31 days');
   });

@@ -52,7 +52,9 @@ export class RequisitionService {
     private readonly audit: AuditService,
     private readonly workflow: WorkflowService,
   ) {
-    this.workflow.onDecided('requisition', (view, m) => this.onDecided(view, m));
+    this.workflow.onDecided('requisition', (view, m) =>
+      this.onDecided(view, m),
+    );
   }
 
   list(): Promise<RequisitionView[]> {
@@ -82,7 +84,9 @@ export class RequisitionService {
     }
     const headcount = input.headcount ?? 1;
     if (!Number.isInteger(headcount) || headcount < 1) {
-      throw new BadRequestException('Headcount must be a positive whole number.');
+      throw new BadRequestException(
+        'Headcount must be a positive whole number.',
+      );
     }
     const id = await this.db.withTenant(async (m) => {
       const entity = await m.findOne(LegalEntity, {
@@ -166,7 +170,9 @@ export class RequisitionService {
         throw new NotFoundException('Requisition not found.');
       }
       if (req.status === 'filled' || req.status === 'closed') {
-        throw new BadRequestException(`This requisition is already ${req.status}.`);
+        throw new BadRequestException(
+          `This requisition is already ${req.status}.`,
+        );
       }
       req.status = 'closed';
       await m.save(req);
@@ -184,8 +190,13 @@ export class RequisitionService {
 
   // Marks a requisition filled once its approved headcount is met. Called by the
   // offer flow after a hire converts.
-  async markFilledIfComplete(m: EntityManager, requisitionId: string): Promise<void> {
-    const req = await m.findOne(JobRequisition, { where: { id: requisitionId } });
+  async markFilledIfComplete(
+    m: EntityManager,
+    requisitionId: string,
+  ): Promise<void> {
+    const req = await m.findOne(JobRequisition, {
+      where: { id: requisitionId },
+    });
     if (!req || req.status !== 'approved') {
       return;
     }

@@ -95,7 +95,12 @@ export class AppraisalService {
       }
       await m.save(appraisal);
       await this.audit.record(
-        { action: 'appraisal.self_review', resourceType: 'appraisal', resourceId: id, after: { rating } },
+        {
+          action: 'appraisal.self_review',
+          resourceType: 'appraisal',
+          resourceId: id,
+          after: { rating },
+        },
         m,
       );
     });
@@ -133,7 +138,12 @@ export class AppraisalService {
       appraisal.status = 'manager_review';
       await m.save(appraisal);
       await this.audit.record(
-        { action: 'appraisal.manager_review', resourceType: 'appraisal', resourceId: id, after: { rating } },
+        {
+          action: 'appraisal.manager_review',
+          resourceType: 'appraisal',
+          resourceId: id,
+          after: { rating },
+        },
         m,
       );
     });
@@ -147,7 +157,9 @@ export class AppraisalService {
       if (!appraisal) {
         throw new NotFoundException('Appraisal not found.');
       }
-      const cycle = await m.findOne(ReviewCycle, { where: { id: appraisal.cycleId } });
+      const cycle = await m.findOne(ReviewCycle, {
+        where: { id: appraisal.cycleId },
+      });
       if (cycle?.status !== 'calibration') {
         throw new BadRequestException(
           'Final ratings are set while the cycle is in calibration.',
@@ -158,7 +170,12 @@ export class AppraisalService {
       appraisal.status = 'calibrated';
       await m.save(appraisal);
       await this.audit.record(
-        { action: 'appraisal.calibrate', resourceType: 'appraisal', resourceId: id, after: { finalRating } },
+        {
+          action: 'appraisal.calibrate',
+          resourceType: 'appraisal',
+          resourceId: id,
+          after: { finalRating },
+        },
         m,
       );
     });
@@ -177,7 +194,10 @@ export class AppraisalService {
       throw new BadRequestException('Unknown outcome type.');
     }
     if (outcomeType === 'increment') {
-      if (typeof input.incrementAmount !== 'number' || input.incrementAmount <= 0) {
+      if (
+        typeof input.incrementAmount !== 'number' ||
+        input.incrementAmount <= 0
+      ) {
         throw new BadRequestException('An increment needs a positive amount.');
       }
       if (!input.incrementEffectiveDate) {
@@ -213,16 +233,27 @@ export class AppraisalService {
         });
       outcome.outcomeType = outcomeType;
       outcome.incrementAmount =
-        outcomeType === 'increment' ? (input.incrementAmount as number).toFixed(2) : null;
+        outcomeType === 'increment'
+          ? (input.incrementAmount as number).toFixed(2)
+          : null;
       outcome.incrementEffectiveDate =
-        outcomeType === 'increment' ? (input.incrementEffectiveDate as string) : null;
+        outcomeType === 'increment'
+          ? (input.incrementEffectiveDate as string)
+          : null;
       outcome.newJobTitle =
-        outcomeType === 'promotion' ? (input.newJobTitle as string).trim() : input.newJobTitle?.trim() || null;
+        outcomeType === 'promotion'
+          ? (input.newJobTitle as string).trim()
+          : input.newJobTitle?.trim() || null;
       outcome.developmentAreas = input.developmentAreas?.trim() || null;
       outcome.createdBySub = user.sub;
       await m.save(outcome);
       await this.audit.record(
-        { action: 'appraisal.outcome', resourceType: 'appraisal', resourceId: id, after: { outcomeType } },
+        {
+          action: 'appraisal.outcome',
+          resourceType: 'appraisal',
+          resourceId: id,
+          after: { outcomeType },
+        },
         m,
       );
     });
@@ -242,7 +273,9 @@ export class AppraisalService {
         where: { appraisalId: id },
       });
       if (!outcome || outcome.outcomeType === 'none') {
-        throw new BadRequestException('This appraisal has no actionable outcome.');
+        throw new BadRequestException(
+          'This appraisal has no actionable outcome.',
+        );
       }
       if (outcome.compensationApplied) {
         throw new BadRequestException('This outcome has already been applied.');
@@ -298,12 +331,17 @@ export class AppraisalService {
 
   // --- Internals.
 
-  private async openAppraisal(m: EntityManager, id: string): Promise<Appraisal> {
+  private async openAppraisal(
+    m: EntityManager,
+    id: string,
+  ): Promise<Appraisal> {
     const appraisal = await m.findOne(Appraisal, { where: { id } });
     if (!appraisal) {
       throw new NotFoundException('Appraisal not found.');
     }
-    const cycle = await m.findOne(ReviewCycle, { where: { id: appraisal.cycleId } });
+    const cycle = await m.findOne(ReviewCycle, {
+      where: { id: appraisal.cycleId },
+    });
     if (cycle?.status !== 'active') {
       throw new BadRequestException(
         'Reviews can be entered only while the cycle is active.',
@@ -328,7 +366,7 @@ export class AppraisalService {
     )) as { managerId: string | null }[];
     if (!row || row.managerId !== me.id) {
       throw new ForbiddenException(
-        'Only the employee\'s manager or HR can enter a manager review.',
+        "Only the employee's manager or HR can enter a manager review.",
       );
     }
   }

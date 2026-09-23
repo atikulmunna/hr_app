@@ -80,7 +80,9 @@ export class KeycloakService {
     return set;
   }
 
-  async verify(token: string): Promise<{ realm: string; claims: KeycloakClaims }> {
+  async verify(
+    token: string,
+  ): Promise<{ realm: string; claims: KeycloakClaims }> {
     let iss: string;
     try {
       iss = decodeJwt(token).iss ?? '';
@@ -90,7 +92,9 @@ export class KeycloakService {
     const realm = this.realmFromIssuer(iss);
     let claims: KeycloakClaims;
     try {
-      const { payload } = await jwtVerify(token, this.jwks(realm), { issuer: iss });
+      const { payload } = await jwtVerify(token, this.jwks(realm), {
+        issuer: iss,
+      });
       claims = payload as KeycloakClaims;
     } catch {
       throw new UnauthorizedException('Invalid or expired token.');

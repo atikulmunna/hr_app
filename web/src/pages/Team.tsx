@@ -111,7 +111,9 @@ export function Team({ token }: { token: string }) {
 
       <div className="card">
         <h3>Team leave (next 60 days)</h3>
-        {leave.length === 0 && <p className="muted small">No upcoming leave.</p>}
+        {leave.length === 0 && (
+          <p className="muted small">No upcoming leave.</p>
+        )}
         {leave.map((l) => (
           <div className="line" key={l.id}>
             <span className={`pill status-${l.status}`}>{l.status}</span>

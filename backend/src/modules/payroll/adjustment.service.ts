@@ -185,9 +185,7 @@ export class AdjustmentService {
     });
 
     void employeeSub;
-    const [created] = await this.db.withTenant((m) =>
-      this.rows(m, { id }),
-    );
+    const [created] = await this.db.withTenant((m) => this.rows(m, { id }));
     return created;
   }
 

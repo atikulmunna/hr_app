@@ -92,7 +92,11 @@ export function Config({ token }: { token: string }) {
     <section className="stack">
       <div className="section-head">
         <h2>Attendance configuration</h2>
-        <button className="btn primary" disabled={busy} onClick={() => void save()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void save()}
+        >
           Save changes
         </button>
       </div>
@@ -300,9 +304,9 @@ function ConsentStatements({ token }: { token: string }) {
     <div className="card">
       <h3>Consent purpose statement</h3>
       <p className="muted small">
-        The plain-language statement an employee accepts before their first mark.
-        Publishing a new version supersedes the current one and requires everyone
-        to re-consent.
+        The plain-language statement an employee accepts before their first
+        mark. Publishing a new version supersedes the current one and requires
+        everyone to re-consent.
       </p>
       {error && <div className="banner error">{error}</div>}
 
@@ -323,7 +327,10 @@ function ConsentStatements({ token }: { token: string }) {
         <div className="field-row">
           <div className="field">
             <label>Platform</label>
-            <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+            >
               <option value="android">android</option>
               <option value="ios">ios</option>
             </select>
@@ -355,7 +362,11 @@ function ConsentStatements({ token }: { token: string }) {
           />
         </div>
         <div className="actions">
-          <button className="btn primary" disabled={busy} onClick={() => void publish()}>
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => void publish()}
+          >
             Publish new version
           </button>
         </div>

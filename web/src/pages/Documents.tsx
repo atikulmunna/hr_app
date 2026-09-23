@@ -103,8 +103,8 @@ function VaultPanel({
       <p className="muted small">
         Versioned documents with access control. Only the file hash is stored,
         not the file. A document within 30 days of expiry (or expired) raises a
-        one-time reminder for HR and the employee. Select one to see its versions
-        and signatures.
+        one-time reminder for HR and the employee. Select one to see its
+        versions and signatures.
       </p>
 
       <div className="stack">
@@ -137,7 +137,10 @@ function VaultPanel({
           </div>
           <div className="field">
             <label>Filter by category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
               <option value="">All categories</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -153,18 +156,20 @@ function VaultPanel({
             <div key={d.id}>
               <article
                 className={`card row top clickable ${d.id === selectedId ? 'selected' : ''}`}
-                onClick={() =>
-                  setSelectedId(d.id === selectedId ? null : d.id)
-                }
+                onClick={() => setSelectedId(d.id === selectedId ? null : d.id)}
               >
                 <div className="grow">
                   <div className="row-title">
-                    <span className={statusPill(d.status)}>{statusLabel(d)}</span>
+                    <span className={statusPill(d.status)}>
+                      {statusLabel(d)}
+                    </span>
                     <span className="notif-title">{d.name}</span>
                     <span className="tag">{d.category}</span>
                     <span className="tag">{visibilityLabel(d.visibility)}</span>
                     {d.requiresAcknowledgement && (
-                      <span className="pill status-pending">needs signature</span>
+                      <span className="pill status-pending">
+                        needs signature
+                      </span>
                     )}
                   </div>
                   <div className="muted small">
@@ -453,7 +458,10 @@ function NewDocumentForm({
           <select
             value={form.visibility}
             onChange={(e) =>
-              setForm({ ...form, visibility: e.target.value as DocumentVisibility })
+              setForm({
+                ...form,
+                visibility: e.target.value as DocumentVisibility,
+              })
             }
           >
             {VISIBILITIES.map((v) => (
@@ -511,7 +519,11 @@ function NewDocumentForm({
         </label>
       </div>
       <div className="actions">
-        <button className="btn primary" disabled={busy} onClick={() => void submit()}>
+        <button
+          className="btn primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
           Add document
         </button>
       </div>
@@ -611,7 +623,9 @@ function MyDocumentCard({
           {doc.requiresAcknowledgement && (
             <span
               className={
-                doc.acknowledged ? 'pill status-approved' : 'pill status-pending'
+                doc.acknowledged
+                  ? 'pill status-approved'
+                  : 'pill status-pending'
               }
             >
               {doc.acknowledged ? 'signed' : 'needs signature'}
@@ -625,8 +639,8 @@ function MyDocumentCard({
         </div>
         {doc.acknowledged && doc.signedAt && (
           <div className="muted small">
-            Signed on {doc.signedAt.replace('T', ' ')}. The signature is recorded
-            against this document in the vault.
+            Signed on {doc.signedAt.replace('T', ' ')}. The signature is
+            recorded against this document in the vault.
           </div>
         )}
         {needsSignature && (
@@ -664,7 +678,9 @@ function statusLabel(d: DocumentSummary): string {
   if (!d.expiresOn) return 'no expiry';
   if (d.status === 'expired') return 'expired';
   if (d.status === 'expiring') {
-    return d.daysToExpiry != null ? `expires in ${d.daysToExpiry}d` : 'expiring';
+    return d.daysToExpiry != null
+      ? `expires in ${d.daysToExpiry}d`
+      : 'expiring';
   }
   return 'valid';
 }

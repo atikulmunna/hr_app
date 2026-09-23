@@ -88,7 +88,9 @@ export class OfferService {
       throw new BadRequestException('A valid start date is required.');
     }
     const id = await this.db.withTenant(async (m) => {
-      const app = await m.findOne(Application, { where: { id: applicationId } });
+      const app = await m.findOne(Application, {
+        where: { id: applicationId },
+      });
       if (!app) {
         throw new NotFoundException('Application not found.');
       }
@@ -119,7 +121,9 @@ export class OfferService {
         currency,
         startDate: input.startDate as string,
       });
-      const documentHash = createHash('sha256').update(letterBody).digest('hex');
+      const documentHash = createHash('sha256')
+        .update(letterBody)
+        .digest('hex');
       const offer = await m.save(
         m.create(Offer, {
           tenantId: this.db.tenantId,
@@ -205,7 +209,11 @@ export class OfferService {
       offer.status = 'declined';
       await m.save(offer);
       await this.audit.record(
-        { action: 'offer.decline', resourceType: 'offer', resourceId: offer.id },
+        {
+          action: 'offer.decline',
+          resourceType: 'offer',
+          resourceId: offer.id,
+        },
         m,
       );
     });
@@ -236,7 +244,9 @@ export class OfferService {
         where: { id: app?.requisitionId },
       });
       if (!app || !req) {
-        throw new BadRequestException('The application or requisition is missing.');
+        throw new BadRequestException(
+          'The application or requisition is missing.',
+        );
       }
       const [{ max }] = (await m.query(
         `SELECT COALESCE(MAX(CAST(substring(employee_code from 'EMP-([0-9]+)$') AS integer)), 0) AS max

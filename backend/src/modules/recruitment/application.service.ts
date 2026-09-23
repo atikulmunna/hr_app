@@ -30,7 +30,12 @@ const SOURCES: ApplicationSource[] = [
   'other',
 ];
 const MODES: InterviewMode[] = ['onsite', 'phone', 'video'];
-const RECOMMENDATIONS: Recommendation[] = ['strong_yes', 'yes', 'no', 'strong_no'];
+const RECOMMENDATIONS: Recommendation[] = [
+  'strong_yes',
+  'yes',
+  'no',
+  'strong_no',
+];
 
 export interface CreateApplicationInput {
   requisitionId?: string;
@@ -245,11 +250,15 @@ export class ApplicationService {
     input: ScheduleInterviewInput,
   ): Promise<ApplicationView> {
     if (!input.scheduledAt || Number.isNaN(Date.parse(input.scheduledAt))) {
-      throw new BadRequestException('A valid interview date and time is required.');
+      throw new BadRequestException(
+        'A valid interview date and time is required.',
+      );
     }
     const mode = input.mode ?? 'video';
     if (!MODES.includes(mode)) {
-      throw new BadRequestException('Interview mode must be onsite, phone, or video.');
+      throw new BadRequestException(
+        'Interview mode must be onsite, phone, or video.',
+      );
     }
     await this.db.withTenant(async (m) => {
       const app = await this.activeOrThrow(m, applicationId);
@@ -285,16 +294,28 @@ export class ApplicationService {
     input: ScorecardInput,
   ): Promise<ApplicationView> {
     const rating = input.rating;
-    if (typeof rating !== 'number' || !Number.isInteger(rating) || rating < 1 || rating > 5) {
-      throw new BadRequestException('Rating must be a whole number from 1 to 5.');
+    if (
+      typeof rating !== 'number' ||
+      !Number.isInteger(rating) ||
+      rating < 1 ||
+      rating > 5
+    ) {
+      throw new BadRequestException(
+        'Rating must be a whole number from 1 to 5.',
+      );
     }
-    if (!input.recommendation || !RECOMMENDATIONS.includes(input.recommendation)) {
+    if (
+      !input.recommendation ||
+      !RECOMMENDATIONS.includes(input.recommendation)
+    ) {
       throw new BadRequestException(
         'Recommendation must be strong_yes, yes, no, or strong_no.',
       );
     }
     const applicationId = await this.db.withTenant(async (m) => {
-      const interview = await m.findOne(Interview, { where: { id: interviewId } });
+      const interview = await m.findOne(Interview, {
+        where: { id: interviewId },
+      });
       if (!interview) {
         throw new NotFoundException('Interview not found.');
       }

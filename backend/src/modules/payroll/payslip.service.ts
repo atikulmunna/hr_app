@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { stringify } from 'csv-stringify/sync';
 import { TenantDbService } from '../../database/tenant-db.service';
@@ -6,7 +10,11 @@ import { Employee } from '../../entities/employee.entity';
 import { LegalEntity } from '../../entities/legal-entity.entity';
 import { AuthUser } from '../auth/current-user.decorator';
 import { EmployeeService } from '../employees/employee.service';
-import { PayrollRunService, RunEmployeeView, RunView } from './payroll-run.service';
+import {
+  PayrollRunService,
+  RunEmployeeView,
+  RunView,
+} from './payroll-run.service';
 
 export interface PayslipSummary {
   runId: string;
@@ -166,7 +174,10 @@ export function render(
   doc.moveDown().fillColor('#000');
 
   doc.fontSize(12).text(row.name);
-  doc.fontSize(10).fillColor('#555').text(`${row.employeeCode}${jobTitle ? ` · ${jobTitle}` : ''}`);
+  doc
+    .fontSize(10)
+    .fillColor('#555')
+    .text(`${row.employeeCode}${jobTitle ? ` · ${jobTitle}` : ''}`);
   if (row.prorationFactor < 1) {
     doc.text(
       `Prorated for ${row.payableDays} of ${row.periodDays} days (${run.prorationBasis === 'working_days' ? 'working days' : 'calendar days'})`,
@@ -184,7 +195,9 @@ export function render(
     doc.text(money(line.amount), { align: 'right' });
   }
   if (row.overtimeAmount > 0) {
-    doc.text(`Overtime (${row.overtimeHours} h, approved)`, { continued: true });
+    doc.text(`Overtime (${row.overtimeHours} h, approved)`, {
+      continued: true,
+    });
     doc.text(money(row.overtimeAmount), { align: 'right' });
   }
   doc.fillColor('#000').text('Gross', { continued: true });
@@ -194,7 +207,8 @@ export function render(
   doc.fontSize(11).text('Deductions');
   doc.fontSize(10).fillColor('#333');
   for (const line of deductions) {
-    const label = line.source === 'statutory' ? `${line.name} (statutory)` : line.name;
+    const label =
+      line.source === 'statutory' ? `${line.name} (statutory)` : line.name;
     doc.text(label, { continued: true });
     doc.text(`-${money(line.amount)}`, { align: 'right' });
   }
@@ -211,10 +225,9 @@ export function render(
     doc.fontSize(10).fillColor('#333');
     for (const adj of row.adjustmentLines) {
       doc.text(adj.reason, { continued: true });
-      doc.text(
-        `${adj.amount < 0 ? '-' : '+'}${money(Math.abs(adj.amount))}`,
-        { align: 'right' },
-      );
+      doc.text(`${adj.amount < 0 ? '-' : '+'}${money(Math.abs(adj.amount))}`, {
+        align: 'right',
+      });
     }
     doc.fillColor('#000').moveDown();
   }

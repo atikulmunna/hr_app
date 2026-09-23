@@ -101,7 +101,14 @@ export class RosterService {
       throw new BadRequestException('A shiftId is required.');
     }
     return this.db.withTenant((m) =>
-      this.upsert(m, employeeId, workDate, input.shiftId!, input.note, actorSub),
+      this.upsert(
+        m,
+        employeeId,
+        workDate,
+        input.shiftId!,
+        input.note,
+        actorSub,
+      ),
     );
   }
 

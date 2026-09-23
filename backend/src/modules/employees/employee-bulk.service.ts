@@ -62,7 +62,10 @@ export class EmployeeBulkService {
          ORDER BY e.employee_code`,
       ),
     );
-    return stringify(rows, { header: true, columns: COLUMNS as unknown as string[] });
+    return stringify(rows, {
+      header: true,
+      columns: COLUMNS as unknown as string[],
+    });
   }
 
   // Imports a CSV. Each data row is independent: an existing employeeCode
@@ -161,7 +164,9 @@ export class EmployeeBulkService {
     const name = row.legalEntity?.trim();
     if (!name) {
       if (required) {
-        throw new BadRequestException('legalEntity is required for a new employee.');
+        throw new BadRequestException(
+          'legalEntity is required for a new employee.',
+        );
       }
       return undefined;
     }

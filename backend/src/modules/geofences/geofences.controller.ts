@@ -55,10 +55,7 @@ export class GeofencesController {
 
   @RequirePermissions('employee:manage')
   @Delete('employees/:id/geofences/:geofenceId')
-  unassign(
-    @Param('id') id: string,
-    @Param('geofenceId') geofenceId: string,
-  ) {
+  unassign(@Param('id') id: string, @Param('geofenceId') geofenceId: string) {
     return this.geofences.unassign(id, geofenceId);
   }
 }

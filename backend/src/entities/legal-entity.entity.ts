@@ -50,7 +50,12 @@ export class LegalEntity {
   // The overtime rate is base / divisor x multiplier. Company and jurisdiction
   // policy, so all three are configurable per entity (O-08). Singapore's MOM
   // formula is basic / 190.67 x 1.5; Bangladesh is basic / 208 x 2.0.
-  @Column({ name: 'overtime_multiplier', type: 'numeric', precision: 4, scale: 2 })
+  @Column({
+    name: 'overtime_multiplier',
+    type: 'numeric',
+    precision: 4,
+    scale: 2,
+  })
   overtimeMultiplier: string;
 
   @Column({ name: 'overtime_base', default: 'basic' })

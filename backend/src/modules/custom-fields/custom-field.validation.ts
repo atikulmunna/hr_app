@@ -32,9 +32,7 @@ export function validateCustomFields(
 
   for (const def of definitions) {
     if (def.active && def.required && merged[def.fieldKey] === undefined) {
-      throw new BadRequestException(
-        `Custom field "${def.label}" is required.`,
-      );
+      throw new BadRequestException(`Custom field "${def.label}" is required.`);
     }
   }
 
@@ -84,7 +82,10 @@ function asString(def: CustomFieldDefinition, raw: unknown): string {
   return raw;
 }
 
-function invalid(def: CustomFieldDefinition, expected: string): BadRequestException {
+function invalid(
+  def: CustomFieldDefinition,
+  expected: string,
+): BadRequestException {
   return new BadRequestException(
     `Custom field "${def.label}" must be ${expected}.`,
   );

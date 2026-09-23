@@ -1,4 +1,7 @@
-import { AttendanceEventType, RiskBand } from '../../entities/attendance-event.entity';
+import {
+  AttendanceEventType,
+  RiskBand,
+} from '../../entities/attendance-event.entity';
 
 // Canonical soft-flag signal keys. This one vocabulary is shared by weights,
 // the critical set, the co-occurrence set, and the hard-block set, so tenant
@@ -201,10 +204,7 @@ export function matchGeofence(
 
 // Event-sequence state machine (SRS 5.1.1).
 export type AttendanceState =
-  | 'not_checked_in'
-  | 'checked_in'
-  | 'on_break'
-  | 'checked_out';
+  'not_checked_in' | 'checked_in' | 'on_break' | 'checked_out';
 
 export function computeState(
   events: { eventType: AttendanceEventType }[],
