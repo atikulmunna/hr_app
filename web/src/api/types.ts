@@ -1179,3 +1179,13 @@ export interface Page<T> {
   limit: number;
   offset: number;
 }
+
+export interface Me {
+  sub?: string;
+  username?: string;
+  email?: string;
+  roles: string[];
+  permissions: string[];
+  tenantId: string;
+  realm: string;
+}

@@ -1,76 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useAuth } from 'react-oidc-context';
-import { Approvals } from './pages/Approvals';
-import { Config } from './pages/Config';
-import { Documents } from './pages/Documents';
-import { Employees } from './pages/Employees';
-import { Geofences } from './pages/Geofences';
-import { Inbox } from './pages/Inbox';
-import { Leave } from './pages/Leave';
-import { Learning } from './pages/Learning';
-import { Lifecycle } from './pages/Lifecycle';
-import { Analytics } from './pages/Analytics';
-import { Payroll } from './pages/Payroll';
-import { Performance } from './pages/Performance';
-import { Recruitment } from './pages/Recruitment';
-import { Reports } from './pages/Reports';
-import { Review } from './pages/Review';
-import { Shifts } from './pages/Shifts';
-import { Team } from './pages/Team';
-
-type Tab =
-  | 'approvals'
-  | 'review'
-  | 'inbox'
-  | 'team'
-  | 'employees'
-  | 'lifecycle'
-  | 'geofences'
-  | 'leave'
-  | 'shifts'
-  | 'payroll'
-  | 'recruitment'
-  | 'performance'
-  | 'learning'
-  | 'documents'
-  | 'analytics'
-  | 'reports'
-  | 'config';
-
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'approvals', label: 'Approvals' },
-  { key: 'review', label: 'Review' },
-  { key: 'inbox', label: 'Inbox' },
-  { key: 'team', label: 'Team' },
-  { key: 'employees', label: 'Employees' },
-  { key: 'lifecycle', label: 'Lifecycle' },
-  { key: 'geofences', label: 'Geofences' },
-  { key: 'leave', label: 'Leave' },
-  { key: 'shifts', label: 'Shifts' },
-  { key: 'payroll', label: 'Payroll' },
-  { key: 'recruitment', label: 'Recruitment' },
-  { key: 'performance', label: 'Performance' },
-  { key: 'learning', label: 'Learning' },
-  { key: 'documents', label: 'Documents' },
-  { key: 'analytics', label: 'Analytics' },
-  { key: 'reports', label: 'Reports' },
-  { key: 'config', label: 'Config' },
-];
-
-const TAB_STORAGE_KEY = 'hris.console.tab';
-
-function initialTab(): Tab {
-  const saved = localStorage.getItem(TAB_STORAGE_KEY);
-  return TABS.some((t) => t.key === saved) ? (saved as Tab) : 'approvals';
-}
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { api } from './api';
+import { hasPermission } from './lib/permissions';
+import { useRequest } from './lib/useRequest';
+import { NAV } from './nav';
 
 export default function App() {
   const auth = useAuth();
-  const [tab, setTab] = useState<Tab>(initialTab);
-
-  useEffect(() => {
-    localStorage.setItem(TAB_STORAGE_KEY, tab);
-  }, [tab]);
 
   if (auth.isLoading) {
     return <div className="center muted">Loading...</div>;
@@ -80,7 +17,6 @@ export default function App() {
       <div className="center error">Sign-in error: {auth.error.message}</div>
     );
   }
-
   if (!auth.isAuthenticated) {
     return (
       <div className="center">
@@ -99,53 +35,112 @@ export default function App() {
   }
 
   const profile = auth.user?.profile;
-  const name = profile?.preferred_username ?? profile?.name ?? 'HR user';
+  return (
+    <Console
+      token={auth.user!.access_token}
+      name={profile?.preferred_username ?? profile?.name ?? 'HR user'}
+      onSignOut={() => void auth.signoutRedirect()}
+    />
+  );
+}
 
-  const token = auth.user!.access_token;
+function Console({
+  token,
+  name,
+  onSignOut,
+}: {
+  token: string;
+  name: string;
+  onSignOut: () => void;
+}) {
+  const fetchMe = useCallback(() => api.me(token), [token]);
+  const { data: me, error, loading } = useRequest(fetchMe);
+
+  if (loading) {
+    return <div className="center muted">Loading...</div>;
+  }
+  // Without the caller's permissions there is no honest way to decide which
+  // pages to offer, so the console says so instead of showing all of them.
+  if (error || !me) {
+    return (
+      <div className="center error">
+        Could not load your profile: {error ?? 'the API returned nothing'}
+      </div>
+    );
+  }
+
+  const pages = NAV.filter(
+    (entry) =>
+      !entry.permission || hasPermission(me.permissions, entry.permission),
+  );
+  const denied = NAV.filter((entry) => !pages.includes(entry));
+
+  if (pages.length === 0) {
+    return (
+      <div className="center muted">
+        This account has no console pages. Ask an administrator for access.
+      </div>
+    );
+  }
 
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">HR Console</div>
         <nav className="nav">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              className={`nav-item ${tab === t.key ? 'active' : ''}`}
-              onClick={() => setTab(t.key)}
+          {pages.map(({ path, label }) => (
+            <NavLink
+              key={path}
+              to={`/${path}`}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? 'active' : ''}`
+              }
             >
-              {t.label}
-            </button>
+              {label}
+            </NavLink>
           ))}
         </nav>
         <div className="sidebar-foot">
           <span className="muted small">{name}</span>
-          <button className="btn" onClick={() => void auth.signoutRedirect()}>
+          <button className="btn" onClick={onSignOut}>
             Sign out
           </button>
         </div>
       </aside>
       <main className="main">
         <div className="main-inner">
-          {tab === 'approvals' && <Approvals token={token} />}
-          {tab === 'review' && <Review token={token} />}
-          {tab === 'inbox' && <Inbox token={token} />}
-          {tab === 'team' && <Team token={token} />}
-          {tab === 'employees' && <Employees token={token} />}
-          {tab === 'lifecycle' && <Lifecycle token={token} />}
-          {tab === 'geofences' && <Geofences token={token} />}
-          {tab === 'leave' && <Leave token={token} />}
-          {tab === 'shifts' && <Shifts token={token} />}
-          {tab === 'payroll' && <Payroll token={token} />}
-          {tab === 'recruitment' && <Recruitment token={token} />}
-          {tab === 'performance' && <Performance token={token} />}
-          {tab === 'learning' && <Learning token={token} />}
-          {tab === 'documents' && <Documents token={token} />}
-          {tab === 'analytics' && <Analytics token={token} />}
-          {tab === 'reports' && <Reports token={token} />}
-          {tab === 'config' && <Config token={token} />}
+          <Routes>
+            {pages.map(({ path, page: Page }) => (
+              <Route key={path} path={path} element={<Page token={token} />} />
+            ))}
+            {/* A link to a real page this account cannot open explains itself,
+                rather than looking like a broken console. */}
+            {denied.map(({ path, label }) => (
+              <Route
+                key={path}
+                path={path}
+                element={<NoAccess label={label} />}
+              />
+            ))}
+            <Route
+              path="*"
+              element={<Navigate to={`/${pages[0].path}`} replace />}
+            />
+          </Routes>
         </div>
       </main>
+    </div>
+  );
+}
+
+function NoAccess({ label }: { label: string }) {
+  return (
+    <div className="card">
+      <h2>{label}</h2>
+      <p className="muted">
+        Your account does not have access to this page. Ask an administrator if
+        you need it.
+      </p>
     </div>
   );
 }

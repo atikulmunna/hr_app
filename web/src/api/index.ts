@@ -3,6 +3,7 @@
 export * from './types';
 export { ApiError } from './client';
 
+import { auth } from './auth';
 import { workflow } from './workflow';
 import { team } from './team';
 import { employees } from './employees';
@@ -17,6 +18,7 @@ import { documents } from './documents';
 import { lifecycle } from './lifecycle';
 
 export const api = {
+  ...auth,
   ...workflow,
   ...team,
   ...employees,
