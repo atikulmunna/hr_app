@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, CreateShiftBody, LegalEntity, Shift, api } from '../api';
+import { CreateShiftBody, LegalEntity, Shift, api } from '../api';
+import { errorMessage } from '../lib/errors';
 
 export function Shifts({ token }: { token: string }) {
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -19,7 +20,7 @@ export function Shifts({ token }: { token: string }) {
       setShifts(s);
       setEntities(e);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -39,7 +40,7 @@ export function Shifts({ token }: { token: string }) {
       await api.updateShift(token, s.id, { active: !s.active });
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -144,7 +145,7 @@ function NewShiftForm({
       await api.createShift(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

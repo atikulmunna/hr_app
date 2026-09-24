@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError,
   ChecklistKind,
   ChecklistSummary,
   ChecklistTemplateItem,
@@ -11,6 +10,7 @@ import {
   TemplateItemInput,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Employee lifecycle (T-3.4b, FR-M1-06, FR-M1-10): the org chart derived from
 // the reporting hierarchy, the caller's own lifecycle tasks, every open
@@ -43,7 +43,7 @@ export function Lifecycle({ token }: { token: string }) {
 }
 
 function fail(onError: (m: string) => void, e: unknown) {
-  onError(e instanceof ApiError ? e.message : String(e));
+  onError(errorMessage(e));
 }
 
 const ROLE_LABELS: Record<string, string> = {

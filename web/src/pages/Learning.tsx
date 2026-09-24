@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ApiError,
   Certification,
   Employee,
   ProficiencyLevel,
@@ -9,6 +8,7 @@ import {
   SkillMatrix,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Learning and development (T-3.3, FR-M7-03, FR-M7-04). HR maintains a skill
 // catalog, sets the proficiency each role requires, records employee
@@ -27,7 +27,7 @@ export function Learning({ token }: { token: string }) {
 }
 
 function fail(onError: (m: string) => void, e: unknown) {
-  onError(e instanceof ApiError ? e.message : String(e));
+  onError(errorMessage(e));
 }
 
 function SkillMatrixPanel({

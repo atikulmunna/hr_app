@@ -1,11 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ApiError,
-  TeamAttendanceRow,
-  TeamLeaveRow,
-  TeamMember,
-  api,
-} from '../api';
+import { useCallback } from 'react';
+import { TeamAttendanceRow, TeamLeaveRow, TeamMember, api } from '../api';
+import { useRequest } from '../lib/useRequest';
 
 function daysAgo(n: number): string {
   const d = new Date();
@@ -27,33 +22,18 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 export function Team({ token }: { token: string }) {
-  const [reports, setReports] = useState<TeamMember[]>([]);
-  const [attendance, setAttendance] = useState<TeamAttendanceRow[]>([]);
-  const [leave, setLeave] = useState<TeamLeaveRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const [r, a, l] = await Promise.all([
-        api.team(token),
-        api.teamAttendance(token, daysAgo(13), daysAgo(0)),
-        api.teamLeave(token, daysAgo(0), daysAhead(60)),
-      ]);
-      setReports(r);
-      setAttendance(a);
-      setLeave(l);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
+  const fetchTeam = useCallback(async () => {
+    const [reports, attendance, leave] = await Promise.all([
+      api.team(token),
+      api.teamAttendance(token, daysAgo(13), daysAgo(0)),
+      api.teamLeave(token, daysAgo(0), daysAhead(60)),
+    ]);
+    return { reports, attendance, leave };
   }, [token]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data, error, loading } = useRequest(fetchTeam);
+  const reports: TeamMember[] = data?.reports ?? [];
+  const attendance: TeamAttendanceRow[] = data?.attendance ?? [];
+  const leave: TeamLeaveRow[] = data?.leave ?? [];
 
   return (
     <section className="stack">

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError,
   CreateHolidayBody,
   CreateLeaveTypeBody,
   Holiday,
@@ -8,6 +7,7 @@ import {
   LegalEntity,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 export function Leave({ token }: { token: string }) {
   const [types, setTypes] = useState<LeaveType[]>([]);
@@ -31,7 +31,7 @@ export function Leave({ token }: { token: string }) {
       setHolidays(h);
       setEntities(e);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export function Leave({ token }: { token: string }) {
       await api.updateLeaveType(token, t.id, { active: !t.active });
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -64,7 +64,7 @@ export function Leave({ token }: { token: string }) {
       await api.deleteHoliday(token, id);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -220,7 +220,7 @@ function NewLeaveTypeForm({
       await api.createLeaveType(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -345,7 +345,7 @@ function NewHolidayForm({
       await api.createHoliday(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError,
   CreatePayrollRunBody,
   LegalEntity,
   PayrollRun,
@@ -9,6 +8,7 @@ import {
   RunIssue,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Saves a fetched blob or text under a filename, since both downloads need the
 // bearer token and cannot be a plain link.
@@ -58,7 +58,7 @@ export function PayrollRuns({
     try {
       setRuns(await api.payrollRuns(token));
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, onError]);
 
@@ -77,7 +77,7 @@ export function PayrollRuns({
       setDetail(await api.payrollRun(token, id));
       setOpenId(id);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -89,7 +89,7 @@ export function PayrollRuns({
       setDetail(await api.recomputePayrollRun(token, id));
       setOpenId(id);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -102,7 +102,7 @@ export function PayrollRuns({
       setOpenId(id);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -117,7 +117,7 @@ export function PayrollRuns({
         'text/csv',
       );
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -131,7 +131,7 @@ export function PayrollRuns({
       setDetail(null);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -331,7 +331,7 @@ function RunDetail({
         'application/pdf',
       );
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   };
 
@@ -479,7 +479,7 @@ function NewRunForm({
         }),
       );
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

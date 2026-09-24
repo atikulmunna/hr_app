@@ -13,7 +13,6 @@ import {
 } from 'recharts';
 import {
   AbsenceAnalytics,
-  ApiError,
   AttritionAnalytics,
   CostToCompanyAnalytics,
   DeviceRebinds,
@@ -24,6 +23,7 @@ import {
   RepeatSignals,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Standard HR dashboards (T-2.7, FR-M10-01). Read-only aggregates over payroll,
 // attendance, and employee data. Cost is shown per legal entity in its own
@@ -81,7 +81,7 @@ export function Analytics({ token }: { token: string }) {
       setRebinds(rb);
       setRegs(rg);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }

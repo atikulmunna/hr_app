@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError,
   CreatePayComponentBody,
   LegalEntity,
   PayComponent,
   PayComponentType,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 import { Expenses } from './Expenses';
 import { PayrollAdjustments } from './PayrollAdjustments';
 import { PayrollRuns } from './PayrollRuns';
@@ -39,7 +39,7 @@ export function Payroll({ token }: { token: string }) {
       setComponents(c);
       setEntities(e);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export function Payroll({ token }: { token: string }) {
       await api.updatePayComponent(token, c.id, { active: !c.active });
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -217,7 +217,7 @@ function PayRulesCard({
       setOpen(false);
       onSaved();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -380,7 +380,7 @@ function NewPayComponentForm({
       await api.createPayComponent(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError,
   CreateExpenseCategoryBody,
   ExpenseCategory,
   ExpenseClaim,
@@ -8,6 +7,7 @@ import {
   LegalEntity,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Expense claims (T-2.6, FR-M8-01 to FR-M8-03). Employees build and submit
 // claims from the mobile app; HR maintains the policy categories here and
@@ -35,7 +35,7 @@ export function Expenses({
       setCategories(c);
       setClaims(cl);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, onError]);
 
@@ -52,7 +52,7 @@ export function Expenses({
       await api.updateExpenseCategory(token, c.id, { active: !c.active });
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -64,7 +64,7 @@ export function Expenses({
       await api.settleExpenseClaim(token, id, method);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -289,7 +289,7 @@ function NewCategoryForm({
       await api.createExpenseCategory(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ApiError,
   Appraisal,
   CalibrationView,
   CreateCycleInput,
@@ -13,6 +12,7 @@ import {
   ReviewCycle,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 const OUTCOME_LABELS: Record<OutcomeType, string> = {
   none: 'No action',
@@ -36,7 +36,7 @@ export function Performance({ token }: { token: string }) {
     try {
       setCycles(await api.reviewCycles(token));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [token]);
 
@@ -45,7 +45,7 @@ export function Performance({ token }: { token: string }) {
       try {
         setEmployees(await api.employees(token));
       } catch (e) {
-        setError(e instanceof ApiError ? e.message : String(e));
+        setError(errorMessage(e));
       }
     })();
     void loadCycles();
@@ -62,7 +62,7 @@ export function Performance({ token }: { token: string }) {
       await fn();
       await loadCycles();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   };
 
@@ -204,7 +204,7 @@ function CalibrationBoard({
       setBoard(b);
       setRows(a);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, cycle.id, onError]);
 
@@ -219,7 +219,7 @@ function CalibrationBoard({
       await load();
       await onChanged();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   };
 
@@ -515,7 +515,7 @@ function GoalsPanel({
       try {
         setGoals(await api.employeeGoals(token, id));
       } catch (e) {
-        onError(e instanceof ApiError ? e.message : String(e));
+        onError(errorMessage(e));
       }
     },
     [token, onError],
@@ -531,7 +531,7 @@ function GoalsPanel({
       await api.updateGoal(token, goal.id, { progress });
       await load(employeeId);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   };
 
@@ -541,7 +541,7 @@ function GoalsPanel({
       await api.updateGoal(token, goal.id, { status });
       await load(employeeId);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   };
 
@@ -678,7 +678,7 @@ function NewGoalForm({
       });
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -771,7 +771,7 @@ function NewCycleForm({
       await api.createCycle(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

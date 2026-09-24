@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ApiError,
   Application,
   ApplicationSource,
   CreateRequisitionInput,
@@ -13,6 +12,7 @@ import {
   Requisition,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 const SOURCES: { value: ApplicationSource; label: string }[] = [
   { value: 'referral', label: 'Referral' },
@@ -50,7 +50,7 @@ export function Recruitment({ token }: { token: string }) {
     try {
       setReqs(await api.requisitions(token));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [token]);
 
@@ -68,7 +68,7 @@ export function Recruitment({ token }: { token: string }) {
         setDepartments(dep);
         setEmployees(emp);
       } catch (e) {
-        setError(e instanceof ApiError ? e.message : String(e));
+        setError(errorMessage(e));
       }
     })();
     void loadReqs();
@@ -79,7 +79,7 @@ export function Recruitment({ token }: { token: string }) {
       try {
         setApps(await api.applications(token, requisitionId));
       } catch (e) {
-        setError(e instanceof ApiError ? e.message : String(e));
+        setError(errorMessage(e));
       }
     },
     [token],
@@ -106,7 +106,7 @@ export function Recruitment({ token }: { token: string }) {
         await loadApps(selectedReqId);
       }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   };
 
@@ -356,7 +356,7 @@ function ApplicationDetail({
       setMoveStage(a.stageId);
       setOffer(a.hasOffer ? await api.offer(token, applicationId) : null);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, applicationId, onError]);
 
@@ -371,7 +371,7 @@ function ApplicationDetail({
       await load();
       onChanged();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   };
 
@@ -808,7 +808,7 @@ function NewRequisitionForm({
       await api.createRequisition(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -947,7 +947,7 @@ function NewCandidateForm({
       });
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

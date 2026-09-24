@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, Geofence, api } from '../api';
+import { Geofence, api } from '../api';
+import { errorMessage } from '../lib/errors';
 
 export function Geofences({ token }: { token: string }) {
   const [items, setItems] = useState<Geofence[]>([]);
@@ -14,7 +15,7 @@ export function Geofences({ token }: { token: string }) {
     try {
       setItems(await api.geofences(token));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -31,7 +32,7 @@ export function Geofences({ token }: { token: string }) {
       await api.setGeofenceActive(token, fence.id, !fence.active);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -132,7 +133,7 @@ function NewGeofenceForm({
       });
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

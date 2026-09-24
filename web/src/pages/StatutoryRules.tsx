@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError,
   CreateStatutoryRuleBody,
   LegalEntity,
   StatutoryCalculation,
   StatutoryRule,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Statutory deductions per jurisdiction (T-2.3, FR-M4-06). Rates are law and
 // change most years, so a rule is effective-dated: adding a later one supersedes
@@ -29,7 +29,7 @@ export function StatutoryRules({
     try {
       setRules(await api.statutoryRules(token));
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, onError]);
 
@@ -46,7 +46,7 @@ export function StatutoryRules({
       await api.setStatutoryRuleActive(token, rule.id, !rule.active);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -58,7 +58,7 @@ export function StatutoryRules({
       await api.deleteStatutoryRule(token, id);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -217,7 +217,7 @@ function NewStatutoryRuleForm({
       await api.createStatutoryRule(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

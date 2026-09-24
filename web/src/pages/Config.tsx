@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, AttendanceConfig, ConsentStatement, api } from '../api';
+import { AttendanceConfig, ConsentStatement, api } from '../api';
+import { errorMessage } from '../lib/errors';
 
 const CONSENT_SIGNALS = ['location', 'device_integrity', 'network'];
 
@@ -29,7 +30,7 @@ export function Config({ token }: { token: string }) {
     try {
       setConfig(await api.attendanceConfig(token));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [token]);
 
@@ -82,7 +83,7 @@ export function Config({ token }: { token: string }) {
       setConfig(saved);
       setNotice('Configuration saved. It applies from the next mark.');
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -262,7 +263,7 @@ function ConsentStatements({ token }: { token: string }) {
     try {
       setStatements(await api.consentStatements(token));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [token]);
 
@@ -292,7 +293,7 @@ function ConsentStatements({ token }: { token: string }) {
       setBody('');
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }

@@ -1,50 +1,37 @@
-import { useCallback, useEffect, useState } from 'react';
-import { api, ApiError, ApprovalRequest, Decision } from '../api';
+import { useCallback } from 'react';
+import { api, ApprovalRequest, Decision } from '../api';
+import { useMutation, useRequest } from '../lib/useRequest';
 
 const REQUEST_LABELS: Record<string, string> = {
   device_rebind: 'Device change',
 };
 
 export function Approvals({ token }: { token: string }) {
-  const [items, setItems] = useState<ApprovalRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const fetchPending = useCallback(() => api.pendingApprovals(token), [token]);
+  const {
+    data: items = [],
+    error,
+    loading,
+    reload,
+    setError,
+  } = useRequest<ApprovalRequest[]>(fetchPending);
+  const { run, isBusy } = useMutation(setError);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setItems(await api.pendingApprovals(token));
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const decide = async (id: string, decision: Decision) => {
-    setBusyId(id);
-    setError(null);
-    try {
+  const decide = (id: string, decision: Decision) =>
+    run(id, async () => {
       await api.decide(token, id, decision);
-      await load();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    } finally {
-      setBusyId(null);
-    }
-  };
+      await reload();
+    });
 
   return (
     <section>
       <div className="section-head">
         <h2>Pending approvals</h2>
-        <button className="btn" onClick={() => void load()} disabled={loading}>
+        <button
+          className="btn"
+          onClick={() => void reload()}
+          disabled={loading}
+        >
           Refresh
         </button>
       </div>
@@ -72,14 +59,14 @@ export function Approvals({ token }: { token: string }) {
             <div className="actions">
               <button
                 className="btn primary"
-                disabled={busyId === item.id}
+                disabled={isBusy(item.id)}
                 onClick={() => void decide(item.id, 'approve')}
               >
                 Approve
               </button>
               <button
                 className="btn danger"
-                disabled={busyId === item.id}
+                disabled={isBusy(item.id)}
                 onClick={() => void decide(item.id, 'reject')}
               >
                 Reject

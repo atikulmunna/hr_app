@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, ReviewCase, ReviewDecision, RiskRow, api } from '../api';
+import { ReviewCase, ReviewDecision, RiskRow, api } from '../api';
+import { errorMessage } from '../lib/errors';
 
 const STATUSES = ['open', 'accepted', 'rejected', 'adjusted', 'all'];
 const SIGNAL_LABELS: Record<string, string> = {
@@ -40,7 +41,7 @@ export function Review({ token }: { token: string }) {
       setCases(c);
       setRisk(r);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -61,7 +62,7 @@ export function Review({ token }: { token: string }) {
       await api.resolveReviewCase(token, id, decision, note || undefined);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusyId(null);
     }

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ApiError,
   DocumentDetail,
   DocumentSummary,
   DocumentVisibility,
@@ -8,6 +7,7 @@ import {
   MyDocument,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 const CATEGORIES = [
   'contract',
@@ -37,7 +37,7 @@ async function sha256Hex(file: File): Promise<string> {
 }
 
 function fail(onError: (m: string) => void, e: unknown) {
-  onError(e instanceof ApiError ? e.message : String(e));
+  onError(errorMessage(e));
 }
 
 // Documents and compliance (T-3.4, FR-M1-07, 08, 09). HR keeps a versioned

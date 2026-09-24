@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ApiError,
-  CreateAdjustmentBody,
-  Employee,
-  PayrollAdjustment,
-  api,
-} from '../api';
+import { CreateAdjustmentBody, Employee, PayrollAdjustment, api } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Off-cycle payroll adjustments (T-2.5, FR-M4-11). A locked period cannot be
 // rewritten, so a correction is a signed adjustment settled into a later run.
@@ -30,7 +25,7 @@ export function PayrollAdjustments({
       setRows(a);
       setEmployees(e);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, onError]);
 
@@ -44,7 +39,7 @@ export function PayrollAdjustments({
       await api.cancelPayrollAdjustment(token, id);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -159,7 +154,7 @@ function NewAdjustmentForm({
       await api.createPayrollAdjustment(token, body);
       onCreated();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

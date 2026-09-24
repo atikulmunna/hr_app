@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   AbsenceRecord,
-  ApiError,
   AttendanceSummary,
   CompensationRevision,
   CompensationSummary,
@@ -20,6 +19,7 @@ import {
   Shift,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Inclusive date string N days before today, as YYYY-MM-DD.
 function daysAgo(n: number): string {
@@ -84,7 +84,7 @@ export function Employees({ token }: { token: string }) {
           : (page.items[0]?.id ?? null),
       );
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -104,7 +104,7 @@ export function Employees({ token }: { token: string }) {
       setList((prev) => [...prev, ...page.items]);
       setTotal(page.total);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoadingMore(false);
     }
@@ -127,7 +127,7 @@ export function Employees({ token }: { token: string }) {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -150,7 +150,7 @@ export function Employees({ token }: { token: string }) {
       );
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -281,7 +281,7 @@ function NewEmployeeForm({
         setDepartments(depts);
         setForm((f) => ({ ...f, legalEntityId: ents[0]?.id ?? '' }));
       })
-      .catch((e) => onError(e instanceof ApiError ? e.message : String(e)));
+      .catch((e) => onError(errorMessage(e)));
   }, [token, onError]);
 
   const set = (key: keyof typeof form, value: string) =>
@@ -315,7 +315,7 @@ function NewEmployeeForm({
       });
       onCreated(created);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -470,7 +470,7 @@ function EmployeeDetail({
       setAbsences(abs);
       setRegularizations(reg);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   }, [token, employee.id]);
 
@@ -487,7 +487,7 @@ function EmployeeDetail({
       await api.assignGeofence(token, employee.id, geofenceId);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -499,7 +499,7 @@ function EmployeeDetail({
       await api.unassignGeofence(token, employee.id, geofenceId);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -512,7 +512,7 @@ function EmployeeDetail({
       await api.assignShift(token, employee.id, shiftId);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -524,7 +524,7 @@ function EmployeeDetail({
       await api.unassignShift(token, employee.id);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -536,7 +536,7 @@ function EmployeeDetail({
       await api.reverseAbsence(token, id);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -886,7 +886,7 @@ function PrivacyCard({
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -906,7 +906,7 @@ function PrivacyCard({
       setResult(r.retained);
       await onErased();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -1039,7 +1039,7 @@ function OvertimeCard({
     try {
       setRows(await api.employeeOvertime(token, employeeId));
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, employeeId, onError]);
 
@@ -1068,7 +1068,7 @@ function OvertimeCard({
       setForm({ ...form, hours: '', reason: '' });
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -1185,7 +1185,7 @@ function CompensationCard({
       setRevisions(r);
       setCatalog(c.filter((x) => x.active));
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, employeeId, asOf, onError]);
 
@@ -1221,7 +1221,7 @@ function CompensationCard({
         setAsOf(saved.asOf);
       }
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -1233,7 +1233,7 @@ function CompensationCard({
       await api.removeCompensation(token, employeeId, payComponentId);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -1391,7 +1391,7 @@ function RosterCard({
         await api.employeeRoster(token, employeeId, daysAgo(0), daysAhead(30)),
       );
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     }
   }, [token, employeeId, onError]);
 
@@ -1424,7 +1424,7 @@ function RosterCard({
       }
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -1436,7 +1436,7 @@ function RosterCard({
       await api.removeRoster(token, id);
       await load();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -1581,7 +1581,7 @@ function AdminRegularizationForm({
       });
       await onDone();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -1696,7 +1696,7 @@ function EditEmployeeForm({
       });
       await onSaved();
     } catch (e) {
-      onError(e instanceof ApiError ? e.message : String(e));
+      onError(errorMessage(e));
     } finally {
       setBusy(false);
     }

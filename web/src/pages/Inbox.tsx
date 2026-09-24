@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError, AppNotification, api } from '../api';
+import { AppNotification, api } from '../api';
+import { errorMessage } from '../lib/errors';
 
 const TYPE_LABELS: Record<string, string> = {
   'device.rebind_abuse': 'Re-bind abuse',
@@ -32,7 +33,7 @@ export function Inbox({ token }: { token: string }) {
       setItems(page.items);
       setTotal(page.total);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export function Inbox({ token }: { token: string }) {
       setItems((prev) => [...prev, ...page.items]);
       setTotal(page.total);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setLoadingMore(false);
     }
@@ -65,7 +66,7 @@ export function Inbox({ token }: { token: string }) {
       await api.markNotificationRead(token, id);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusyId(null);
     }

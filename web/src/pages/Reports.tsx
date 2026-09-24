@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ApiError,
   Department,
   LegalEntity,
   ReportDataset,
@@ -10,6 +9,7 @@ import {
   ReportSpec,
   api,
 } from '../api';
+import { errorMessage } from '../lib/errors';
 
 // Custom report builder (T-2.7, FR-M10-03). Pick a dataset, filter it, optionally
 // group it, preview, and export to CSV, Excel, or PDF.
@@ -39,7 +39,7 @@ export function Reports({ token }: { token: string }) {
           setDatasetKey(ds[0].key);
         }
       } catch (e) {
-        setError(e instanceof ApiError ? e.message : String(e));
+        setError(errorMessage(e));
       }
     })();
   }, [token]);
@@ -77,7 +77,7 @@ export function Reports({ token }: { token: string }) {
     try {
       setResult(await api.runReport(token, spec()));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -94,7 +94,7 @@ export function Reports({ token }: { token: string }) {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
+      setError(errorMessage(e));
     }
   };
 
